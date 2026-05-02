@@ -39,6 +39,11 @@ const edgeTypes = {
   smoothstep: AnimatedEdge,
 } satisfies EdgeTypes;
 
+const fitViewOptions = {
+  padding: 0.36,
+  maxZoom: 0.82,
+};
+
 export const DiagramCanvas = ({
   edges,
   nodes,
@@ -76,6 +81,7 @@ export const DiagramCanvas = ({
     <div className="canvas-shell">
       <ReactFlow
         fitView
+        fitViewOptions={fitViewOptions}
         edges={renderedEdges}
         nodes={nodes}
         nodeTypes={nodeTypes}

@@ -5,6 +5,7 @@ import {
   DiagramSidebar,
   type DiagramExportFormat,
 } from "../components/DiagramSidebar";
+import { HelpModal } from "../components/HelpModal";
 import { ThemeToggle } from "../components/ThemeToggle";
 import {
   parseEssaDiagram,
@@ -42,8 +43,21 @@ const downloadTextFile = (filename: string, contents: string, type: string) => {
   URL.revokeObjectURL(url);
 };
 
+const HELP_COOKIE_NAME = "essa.help.seen";
+const HELP_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
+
+const hasHelpCookie = () =>
+  document.cookie
+    .split(";")
+    .some((cookie) => cookie.trim().startsWith(`${HELP_COOKIE_NAME}=`));
+
+const setHelpCookie = () => {
+  document.cookie = `${HELP_COOKIE_NAME}=1; Max-Age=${HELP_COOKIE_MAX_AGE}; Path=/; SameSite=Lax`;
+};
+
 export const App = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(() => !hasHelpCookie());
   const [copiedNode, setCopiedNode] = useState<DiagramNode | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const copiedNodeRef = useRef<DiagramNode | null>(null);
@@ -220,6 +234,11 @@ export const App = () => {
     [importDiagram],
   );
 
+  const closeHelp = useCallback(() => {
+    setHelpCookie();
+    setHelpOpen(false);
+  }, []);
+
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
       if (!(target instanceof HTMLElement)) {
@@ -378,6 +397,23 @@ export const App = () => {
                   <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
                 </svg>
               </button>
+              <button
+                aria-label="Open help"
+                className="icon-button"
+                type="button"
+                onClick={() => setHelpOpen(true)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <circle cx="12" cy="12" r="8" />
+                  <path strokeLinecap="round" d="M9.8 9.6a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.9" />
+                  <path strokeLinecap="round" d="M12 17h.01" />
+                </svg>
+              </button>
               <div className="diagram-title">
                 <span className="eyebrow">Diagram</span>
                 <h2>{activeDiagram.name}</h2>
@@ -409,6 +445,7 @@ export const App = () => {
               setSelectedNodeId(null);
             }}
           />
+          <HelpModal open={helpOpen} onClose={closeHelp} />
         </div>
       </DiagramProvider>
     </ReactFlowProvider>
