@@ -80,6 +80,7 @@ export const psqlColumnTypeSchema = z.enum([
   "real",
   "double precision",
   "money",
+  "enum",
   "text",
   "varchar",
   "char",
@@ -122,6 +123,22 @@ export const psqlColumnTypeSchema = z.enum([
 ]);
 export type PsqlColumnType = z.infer<typeof psqlColumnTypeSchema>;
 
+export const psqlColumnOptionsSchema = z.object({
+  length: z.number().int().positive().optional(),
+  precision: z.number().int().nonnegative().optional(),
+  scale: z.number().int().nonnegative().optional(),
+  arrayItemType: psqlColumnTypeSchema.optional(),
+  enumId: z.string().optional(),
+});
+export type PsqlColumnOptions = z.infer<typeof psqlColumnOptionsSchema>;
+
+export const psqlEnumSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  values: z.array(z.string()),
+});
+export type PsqlEnum = z.infer<typeof psqlEnumSchema>;
+
 export const resourceSchemaFieldSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
@@ -145,6 +162,7 @@ export const psqlColumnSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   type: psqlColumnTypeSchema,
+  options: psqlColumnOptionsSchema.optional(),
   nullable: z.boolean(),
   primaryKey: z.boolean(),
   description: z.string().optional(),
@@ -267,6 +285,7 @@ export const diagramSchema = z.object({
   name: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  psqlEnums: z.array(psqlEnumSchema).default([]),
   nodes: z.array(diagramNodeSchema),
   edges: z.array(diagramEdgeSchema),
 });

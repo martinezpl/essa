@@ -53,6 +53,7 @@ export const createStarterDiagram = (): Diagram => {
     name: "Starter Diagram",
     createdAt,
     updatedAt: createdAt,
+    psqlEnums: [],
     nodes: [restNode, psqlNode],
     edges: [
       {

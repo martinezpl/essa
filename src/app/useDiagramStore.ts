@@ -14,6 +14,7 @@ import {
 } from "../domain/factories";
 import {
   createResourceSchemaField,
+  createPsqlEnum,
   createPsqlForeignKey,
   createRestMethodInput,
   createPsqlColumn,
@@ -33,6 +34,8 @@ import type {
   RestMethodKind,
   RestResourceMethod,
   PsqlColumn,
+  PsqlColumnOptions,
+  PsqlEnum,
   PsqlForeignKey,
   PsqlIndex,
 } from "../domain/types";
@@ -357,6 +360,49 @@ export const useDiagramStore = () => {
     [updateNodeData],
   );
 
+  const updatePsqlColumnOptions = useCallback(
+    (
+      nodeId: string,
+      columnId: string,
+      options: PsqlColumnOptions | undefined,
+    ) => {
+      const node = activeDiagram.nodes.find((item) => item.id === nodeId);
+
+      if (node?.data.kind !== "psqlTable") {
+        return;
+      }
+
+      replacePsqlColumns(
+        nodeId,
+        node.data.columns.map((column) =>
+          column.id === columnId ? { ...column, options } : column,
+        ),
+      );
+    },
+    [activeDiagram.nodes, replacePsqlColumns],
+  );
+
+  const replacePsqlEnums = useCallback(
+    (enums: PsqlEnum[]) => {
+      updateActiveDiagram((diagram) => ({
+        ...diagram,
+        psqlEnums: enums,
+      }));
+    },
+    [updateActiveDiagram],
+  );
+
+  const addPsqlEnum = useCallback(() => {
+    const psqlEnum = createPsqlEnum();
+
+    updateActiveDiagram((diagram) => ({
+      ...diagram,
+      psqlEnums: [...diagram.psqlEnums, psqlEnum],
+    }));
+
+    return psqlEnum.id;
+  }, [updateActiveDiagram]);
+
   const replacePsqlForeignKeys = useCallback(
     (nodeId: string, foreignKeys: PsqlForeignKey[]) => {
       updateNodeData(nodeId, { foreignKeys } as NodeDataPatch);
@@ -575,6 +621,7 @@ export const useDiagramStore = () => {
     addRestMethod,
     addRestMethodInput,
     addPsqlColumn,
+    addPsqlEnum,
     addPsqlForeignKey,
     addPsqlIndex,
     collection,
@@ -591,6 +638,7 @@ export const useDiagramStore = () => {
     replaceRestMethodInputs,
     replaceRestMethods,
     replacePsqlColumns,
+    replacePsqlEnums,
     replacePsqlForeignKeys,
     replacePsqlIndices,
     removeRestMethod,
@@ -601,6 +649,7 @@ export const useDiagramStore = () => {
     undo,
     updateEdgeData,
     updateNodeData,
+    updatePsqlColumnOptions,
     updateRestMethod,
   };
 };

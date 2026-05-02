@@ -17,6 +17,7 @@ const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
   real: "number",
   "double precision": "number",
   money: "number",
+  enum: "string",
   text: "string",
   varchar: "string",
   char: "string",

@@ -9,6 +9,7 @@ import {
   createRestMethodInput,
   createRestResourceMethodContract,
   createPsqlColumn,
+  createPsqlEnum,
   createPsqlForeignKey,
   createPsqlIndex,
   getCompatibleConnectionKind,
@@ -186,6 +187,10 @@ describe("block model", () => {
       targetTableId: "",
       targetColumnId: "",
     });
+    expect(createPsqlEnum()).toMatchObject({
+      name: "",
+      values: [],
+    });
   });
 });
 
@@ -207,6 +212,7 @@ describe("connection model", () => {
       name: "Test diagram",
       createdAt: "2026-05-02T00:00:00.000Z",
       updatedAt: "2026-05-02T00:00:00.000Z",
+      psqlEnums: [],
       nodes: [resource, table],
       edges: [],
     };

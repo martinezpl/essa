@@ -12,6 +12,7 @@ import type {
   RestResourceMethod,
   ResourceSchemaField,
   PsqlColumn,
+  PsqlEnum,
   PsqlForeignKey,
   PsqlIndex,
   PsqlTableData,
@@ -207,6 +208,12 @@ export const createPsqlForeignKey = (): PsqlForeignKey => ({
   nullable: false,
   targetTableId: "",
   targetColumnId: "",
+});
+
+export const createPsqlEnum = (): PsqlEnum => ({
+  id: createId("psql-enum"),
+  name: "",
+  values: [],
 });
 
 export class RestResourceBlock extends Block<RestResourceData> {

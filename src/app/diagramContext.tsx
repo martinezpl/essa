@@ -9,6 +9,8 @@ import type {
   RestMethodKind,
   RestResourceMethod,
   PsqlColumn,
+  PsqlColumnOptions,
+  PsqlEnum,
   PsqlForeignKey,
   PsqlIndex,
 } from "../domain/types";
@@ -16,6 +18,7 @@ import type {
 export type DiagramContextValue = {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  psqlEnums: PsqlEnum[];
   resourceSchemas: Map<string, ResourceSchemaField[]>;
   onAddResourceSchemaField: (
     nodeId: string,
@@ -24,6 +27,7 @@ export type DiagramContextValue = {
   onAddRestMethod: (nodeId: string, kind: RestMethodKind) => void;
   onAddRestMethodInput: (nodeId: string, methodId: string) => void;
   onAddPsqlColumn: (nodeId: string) => void;
+  onAddPsqlEnum: () => string;
   onAddPsqlForeignKey: (nodeId: string) => void;
   onAddPsqlIndex: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
@@ -38,11 +42,17 @@ export type DiagramContextValue = {
     inputs: RestMethodInputField[],
   ) => void;
   onReplacePsqlColumns: (nodeId: string, columns: PsqlColumn[]) => void;
+  onReplacePsqlEnums: (enums: PsqlEnum[]) => void;
   onReplacePsqlForeignKeys: (nodeId: string, foreignKeys: PsqlForeignKey[]) => void;
   onReplacePsqlIndices: (nodeId: string, indices: PsqlIndex[]) => void;
   onRemoveRestMethod: (nodeId: string, methodId: string) => void;
   onUpdateEdgeData: (edgeId: string, patch: Partial<EdgeData>) => void;
   onUpdateNodeData: (nodeId: string, patch: Partial<BlockData>) => void;
+  onUpdatePsqlColumnOptions: (
+    nodeId: string,
+    columnId: string,
+    options: PsqlColumnOptions | undefined,
+  ) => void;
   onUpdateRestMethod: (
     nodeId: string,
     methodId: string,

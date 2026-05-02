@@ -41,6 +41,14 @@ const psqlTableNode: DiagramNode = {
         primaryKey: false,
       },
       {
+        id: "column-status",
+        name: "status",
+        type: "enum",
+        options: { enumId: "enum-status" },
+        nullable: false,
+        primaryKey: false,
+      },
+      {
         id: "column-empty",
         name: " ",
         type: "text",
@@ -79,6 +87,7 @@ const createDiagram = (overrides: Partial<Diagram> = {}): Diagram => ({
   name: "Test diagram",
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
+  psqlEnums: [{ id: "enum-status", name: "status_enum", values: ["draft"] }],
   nodes: [resourceNode, psqlTableNode, disconnectedTableNode],
   edges: [
     {
@@ -111,6 +120,14 @@ describe("resource schema derivation", () => {
         sourceTableId: "table-1",
         sourceColumnId: "column-price",
       },
+      {
+        id: "table-1-column-status",
+        name: "status",
+        type: "string",
+        nullable: false,
+        sourceTableId: "table-1",
+        sourceColumnId: "column-status",
+      },
     ]);
   });
 
@@ -127,7 +144,7 @@ describe("resource schema derivation", () => {
       ],
     });
 
-    expect(deriveResourceSchema(diagram, resourceNode.id)).toHaveLength(2);
+    expect(deriveResourceSchema(diagram, resourceNode.id)).toHaveLength(3);
   });
 
   it("collects derived schemas for resource nodes only", () => {
@@ -137,6 +154,7 @@ describe("resource schema derivation", () => {
     expect(schemas.get(resourceNode.id)?.map((field) => field.name)).toEqual([
       "id",
       "price",
+      "status",
     ]);
   });
 

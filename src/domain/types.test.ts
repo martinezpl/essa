@@ -3,6 +3,8 @@ import {
   diagramSchema,
   edgeDataSchema,
   psqlColumnTypeSchema,
+  psqlColumnOptionsSchema,
+  psqlEnumSchema,
   psqlIndexSchema,
   restResourceMethodSchema,
   psqlColumnSchema,
@@ -83,6 +85,7 @@ describe("domain schemas", () => {
       expect.arrayContaining([
         "bigserial",
         "double precision",
+        "enum",
         "timestamptz",
         "inet",
         "point",
@@ -99,6 +102,36 @@ describe("domain schemas", () => {
         primaryKey: true,
       }),
     ).not.toHaveProperty("foreignKey");
+  });
+
+  it("parses PSQL column options and enum definitions", () => {
+    expect(
+      psqlColumnOptionsSchema.parse({
+        length: 255,
+        precision: 10,
+        scale: 2,
+        arrayItemType: "uuid",
+        enumId: "enum-status",
+      }),
+    ).toEqual({
+      length: 255,
+      precision: 10,
+      scale: 2,
+      arrayItemType: "uuid",
+      enumId: "enum-status",
+    });
+
+    expect(
+      psqlEnumSchema.parse({
+        id: "enum-status",
+        name: "status_enum",
+        values: ["draft", "published"],
+      }),
+    ).toEqual({
+      id: "enum-status",
+      name: "status_enum",
+      values: ["draft", "published"],
+    });
   });
 
   it("defaults PSQL index access method to btree", () => {
@@ -211,6 +244,7 @@ describe("domain schemas", () => {
       ],
       schema: [],
     });
+    expect(diagram.psqlEnums).toEqual([]);
     expect(diagram.edges[0].data).toEqual({ kind: "write", dataPath: "all" });
   });
 });
