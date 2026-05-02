@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { countDiagramConnections } from "../domain/diagramStats";
 import type { Diagram } from "../domain/types";
 
 type DiagramSidebarProps = {
@@ -106,6 +107,7 @@ export const DiagramSidebar = ({
 
           {diagrams.map((diagram) => {
             const active = diagram.id === activeDiagramId;
+            const linkCount = countDiagramConnections(diagram);
 
             return (
               <div
@@ -145,8 +147,7 @@ export const DiagramSidebar = ({
                   <span className="diagram-card__meta">
                     {diagram.nodes.length}{" "}
                     {diagram.nodes.length === 1 ? "block" : "blocks"} ·{" "}
-                    {diagram.edges.length}{" "}
-                    {diagram.edges.length === 1 ? "link" : "links"}
+                    {linkCount} {linkCount === 1 ? "link" : "links"}
                   </span>
                 </div>
                 <button
