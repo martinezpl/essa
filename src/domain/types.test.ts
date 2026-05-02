@@ -25,15 +25,53 @@ describe("domain schemas", () => {
     expect(restResourceMethodSchema.parse("GET /")).toEqual({
       id: "method-GET /",
       kind: "GET /",
-      input: { mode: "query", fields: [] },
-      output: { fields: ["all"], returnsArray: true },
+      input: [],
+      output: { returnsArray: true },
     });
     expect(restResourceMethodSchema.parse("DELETE /{id}")).toEqual({
       id: "method-DELETE /{id}",
       kind: "DELETE /{id}",
-      input: undefined,
-      output: { fields: [], returnsArray: false },
+      input: [],
+      output: { returnsArray: false },
     });
+  });
+
+  it("normalizes legacy method input/output shapes to the new array form", () => {
+    const parsed = restResourceMethodSchema.parse({
+      id: "method-1",
+      kind: "POST /",
+      input: { mode: "payload", fields: ["all"] },
+      output: { fields: ["id"], returnsArray: false },
+    });
+
+    expect(parsed.input).toEqual([]);
+    expect(parsed.output).toEqual({ returnsArray: false });
+  });
+
+  it("round-trips method input fields", () => {
+    const parsed = restResourceMethodSchema.parse({
+      id: "method-1",
+      kind: "POST /",
+      input: [
+        {
+          id: "input-1",
+          name: "title",
+          type: "string",
+          mode: "payload",
+        },
+      ],
+      output: { returnsArray: true },
+    });
+
+    expect(parsed.input).toEqual([
+      {
+        id: "input-1",
+        name: "title",
+        type: "string",
+        mode: "payload",
+      },
+    ]);
+    expect(parsed.output).toEqual({ returnsArray: true });
   });
 
   it("parses diagram edges through edge data migrations", () => {
@@ -69,7 +107,8 @@ describe("domain schemas", () => {
       methods: [
         {
           kind: "GET /",
-          output: { fields: ["all"], returnsArray: true },
+          input: [],
+          output: { returnsArray: true },
         },
       ],
       schema: [],

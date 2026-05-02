@@ -14,40 +14,52 @@ export const restMethodKindSchema = z.enum([
 export type RestMethodKind = z.infer<typeof restMethodKindSchema>;
 export type RestMethod = RestMethodKind;
 
-export const methodFieldSelectionSchema = z.array(z.string()).default(["all"]);
+export const jsonFieldTypeSchema = z.enum([
+  "string",
+  "integer",
+  "number",
+  "boolean",
+  "object",
+]);
+export type JsonFieldType = z.infer<typeof jsonFieldTypeSchema>;
 
-export const restMethodInputSchema = z.object({
+export const restMethodInputFieldSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  type: jsonFieldTypeSchema,
   mode: z.enum(["payload", "query"]),
-  fields: methodFieldSelectionSchema,
+  description: z.string().optional(),
 });
-export type RestMethodInput = z.infer<typeof restMethodInputSchema>;
+export type RestMethodInputField = z.infer<typeof restMethodInputFieldSchema>;
 
-export const restMethodOutputSchema = z.object({
-  fields: methodFieldSelectionSchema,
-  returnsArray: z.boolean(),
-});
+const restMethodInputArraySchema = z.preprocess((value) => {
+  if (Array.isArray(value)) return value;
+  return [];
+}, z.array(restMethodInputFieldSchema));
+
+export const restMethodOutputSchema = z.preprocess((value) => {
+  if (value && typeof value === "object" && "returnsArray" in value) {
+    return {
+      returnsArray: Boolean((value as { returnsArray?: unknown }).returnsArray),
+    };
+  }
+
+  return { returnsArray: false };
+}, z.object({ returnsArray: z.boolean() }));
 export type RestMethodOutput = z.infer<typeof restMethodOutputSchema>;
 
 const restMethodContractBaseSchema = z.object({
   id: z.string().min(1),
   kind: restMethodKindSchema,
-  input: restMethodInputSchema.optional(),
+  input: restMethodInputArraySchema,
   output: restMethodOutputSchema,
 });
 
 const defaultMethodContract = (kind: RestMethodKind) => ({
   id: `method-${kind}`,
   kind,
-  input:
-    kind === "POST /" || kind === "PATCH /{id}"
-      ? { mode: "payload" as const, fields: ["all"] }
-      : kind === "GET /"
-        ? { mode: "query" as const, fields: [] }
-        : undefined,
-  output: {
-    fields: kind === "DELETE /{id}" ? [] : ["all"],
-    returnsArray: kind === "GET /",
-  },
+  input: [] as RestMethodInputField[],
+  output: { returnsArray: kind === "GET /" },
 });
 
 export const restResourceMethodSchema = z.union([
@@ -88,15 +100,6 @@ export const appViewDataSchema = z.object({
 });
 export type AppViewData = z.infer<typeof appViewDataSchema> & Record<string, unknown>;
 
-export const jsonFieldTypeSchema = z.enum([
-  "string",
-  "integer",
-  "number",
-  "boolean",
-  "object",
-]);
-export type JsonFieldType = z.infer<typeof jsonFieldTypeSchema>;
-
 export const resourceSchemaFieldSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
@@ -104,6 +107,7 @@ export const resourceSchemaFieldSchema = z.object({
   nullable: z.boolean(),
   sourceTableId: z.string(),
   sourceColumnId: z.string(),
+  description: z.string().optional(),
 });
 export type ResourceSchemaField = z.infer<typeof resourceSchemaFieldSchema>;
 
@@ -121,13 +125,14 @@ export const sqlColumnSchema = z.object({
   type: postgresTypeSchema,
   nullable: z.boolean(),
   primaryKey: z.boolean(),
+  description: z.string().optional(),
 });
 export type SqlColumn = z.infer<typeof sqlColumnSchema>;
 
 export const sqlIndexSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
-  columns: z.array(z.string().min(1)).min(1),
+  name: z.string(),
+  columns: z.array(z.string()),
   unique: z.boolean(),
 });
 export type SqlIndex = z.infer<typeof sqlIndexSchema>;
@@ -136,7 +141,7 @@ export const sqlTableDataSchema = z.object({
   kind: z.literal("sqlTable"),
   tableName: z.string(),
   columns: z.array(sqlColumnSchema),
-  indices: z.array(sqlIndexSchema),
+  indices: z.array(sqlIndexSchema).default([]),
 });
 export type SqlTableData = z.infer<typeof sqlTableDataSchema> & Record<string, unknown>;
 

@@ -15,7 +15,9 @@ import {
 import {
   createAppViewComponent,
   createResourceSchemaField,
+  createRestMethodInput,
   createSqlColumn,
+  createSqlIndex,
   DiagramModel,
 } from "../domain/model";
 import type {
@@ -28,9 +30,11 @@ import type {
   DiagramNode,
   EdgeData,
   ResourceSchemaField,
+  RestMethodInputField,
   RestMethodKind,
   RestResourceMethod,
   SqlColumn,
+  SqlIndex,
 } from "../domain/types";
 import {
   createInitialCollection,
@@ -287,6 +291,58 @@ export const useDiagramStore = () => {
     [updateNodeData],
   );
 
+  const replaceSqlIndices = useCallback(
+    (nodeId: string, indices: SqlIndex[]) => {
+      updateNodeData(nodeId, { indices } as NodeDataPatch);
+    },
+    [updateNodeData],
+  );
+
+  const addSqlIndex = useCallback(
+    (nodeId: string) => {
+      const node = activeDiagram.nodes.find((item) => item.id === nodeId);
+
+      if (node?.data.kind !== "sqlTable") {
+        return;
+      }
+
+      replaceSqlIndices(nodeId, [...node.data.indices, createSqlIndex()]);
+    },
+    [activeDiagram.nodes, replaceSqlIndices],
+  );
+
+  const replaceRestMethodInputs = useCallback(
+    (nodeId: string, methodId: string, inputs: RestMethodInputField[]) => {
+      updateRestMethod(nodeId, methodId, (method) => ({
+        ...method,
+        input: inputs,
+      }));
+    },
+    [updateRestMethod],
+  );
+
+  const addRestMethodInput = useCallback(
+    (nodeId: string, methodId: string) => {
+      const node = activeDiagram.nodes.find((item) => item.id === nodeId);
+
+      if (node?.data.kind !== "restResource") {
+        return;
+      }
+
+      const method = node.data.methods.find((item) => item.id === methodId);
+
+      if (!method) {
+        return;
+      }
+
+      replaceRestMethodInputs(nodeId, methodId, [
+        ...method.input,
+        createRestMethodInput(),
+      ]);
+    },
+    [activeDiagram.nodes, replaceRestMethodInputs],
+  );
+
   const replaceResourceSchema = useCallback(
     (nodeId: string, schema: ResourceSchemaField[]) => {
       updateNodeData(nodeId, { schema } as NodeDataPatch);
@@ -410,7 +466,9 @@ export const useDiagramStore = () => {
     addNode,
     addResourceSchemaField,
     addRestMethod,
+    addRestMethodInput,
     addSqlColumn,
+    addSqlIndex,
     collection,
     connectNodes,
     createDiagram,
@@ -423,8 +481,10 @@ export const useDiagramStore = () => {
     renameDiagram,
     replaceAppComponents,
     replaceResourceSchema,
+    replaceRestMethodInputs,
     replaceRestMethods,
     replaceSqlColumns,
+    replaceSqlIndices,
     removeRestMethod,
     selectDiagram,
     updateEdgeData,

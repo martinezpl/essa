@@ -725,13 +725,19 @@ h3 {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  min-width: 240px;
-  max-width: 280px;
+  min-width: 260px;
+  max-width: 320px;
   padding: 0.85rem 0.95rem 0.95rem;
   color: var(--text);
   transition: border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease),
     transform var(--dur-fast) var(--ease);
+}
+
+.block-node--editable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
 }
 
 .block-node:hover {
@@ -781,6 +787,24 @@ h3 {
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.55rem;
+}
+
+.block-node--editable .block-node__head {
+  margin-bottom: 0;
+}
+
+.block-node__head-spacer {
+  flex: 1;
+}
+
+.block-node__head-trash {
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.block-node:hover .block-node__head-trash,
+.block-node--editing .block-node__head-trash {
+  opacity: 1;
 }
 
 .block-node__badge {
@@ -944,6 +968,269 @@ h3 {
   border-radius: 4px;
   background: var(--hover);
   color: var(--text-muted);
+}
+
+/* Inline-editable block title */
+.block-node__title-input {
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  margin: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  transition: background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.block-node__title-input:hover {
+  background: var(--hover);
+}
+
+.block-node__title-input:focus {
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+  outline: none;
+}
+
+.block-node__title-input--placeholder {
+  color: var(--text-subtle);
+  font-style: italic;
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+/* Sections inside an editable block */
+.block-node__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.block-node__section-title {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0.2rem 0 0.1rem;
+}
+
+/* Field-shaped clickable rows */
+.field-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.55rem;
+  background: var(--hover);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: var(--text);
+  font-family: inherit;
+  transition: background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.field-row:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+}
+
+.field-row--active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.field-row__name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-row__type {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.field-row__flags {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.field-row--button {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
+  font-weight: 600;
+  justify-content: flex-start;
+  display: flex;
+}
+
+.field-row--button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.field-row--sub {
+  background: var(--bg);
+  font-size: 0.74rem;
+}
+
+/* Method row (expandable) */
+.method-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+
+.method-row--expanded {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.method-row__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.method-row__head .method-pill {
+  flex: 0 0 auto;
+}
+
+.method-row__hint {
+  flex: 1;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.method-row__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.3rem;
+  border-top: 1px dashed var(--border);
+}
+
+.method-row__inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.method-row__returns {
+  font-size: 0.7rem;
+}
+
+.add-method-anchor {
+  position: relative;
+}
+
+/* Row-edit popover */
+.row-popover {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 12px);
+  z-index: 50;
+  min-width: 240px;
+  max-width: 280px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.7rem 0.8rem;
+  cursor: default;
+  animation: editor-in var(--dur-fast) var(--ease);
+}
+
+.row-popover__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.row-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.row-popover textarea {
+  resize: vertical;
+  min-height: 2.4rem;
+}
+
+/* Chip picker (used in popovers) */
+.chip-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.25rem;
+}
+
+.chip-picker--column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.chip--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.flag-chip--query {
+  background: var(--verb-patch-soft);
+  color: var(--verb-patch);
+}
+
+.flag-chip--payload {
+  background: var(--verb-post-soft);
+  color: var(--verb-post);
 }
 
 /* React Flow handles */

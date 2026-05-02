@@ -8,6 +8,7 @@ import type {
   DiagramEdge,
   DiagramNode,
   EdgeData,
+  RestMethodInputField,
   RestMethodKind,
   RestResourceData,
   RestResourceMethod,
@@ -82,16 +83,11 @@ const cloneMethods = (methods: RestResourceMethod[]): RestResourceMethod[] =>
   methods.map((method) => ({
     ...method,
     id: createId("method"),
-    input: method.input
-      ? {
-          ...method.input,
-          fields: [...method.input.fields],
-        }
-      : undefined,
-    output: {
-      ...method.output,
-      fields: [...method.output.fields],
-    },
+    input: method.input.map((field) => ({
+      ...field,
+      id: createId("input"),
+    })),
+    output: { ...method.output },
   }));
 
 export abstract class Block<D extends BlockData = BlockData> {
@@ -262,16 +258,24 @@ export const createRestResourceMethodContract = (
 ): RestResourceMethod => ({
   id: createId("method"),
   kind,
-  input:
-    kind === "POST /" || kind === "PATCH /{id}"
-      ? { mode: "payload", fields: ["all"] }
-      : kind === "GET /"
-        ? { mode: "query", fields: [] }
-        : undefined,
+  input: [],
   output: {
-    fields: kind === "DELETE /{id}" ? [] : ["all"],
     returnsArray: kind === "GET /",
   },
+});
+
+export const createRestMethodInput = (): RestMethodInputField => ({
+  id: createId("input"),
+  name: "",
+  type: "string",
+  mode: "payload",
+});
+
+export const createSqlIndex = (): SqlIndex => ({
+  id: createId("index"),
+  name: "",
+  columns: [],
+  unique: false,
 });
 
 export class RestResourceBlock extends Block<RestResourceData> {
@@ -527,6 +531,7 @@ export const blockList = Object.values(blockDefinitions);
 export const restMethodKinds = restMethodKindSchema.options;
 export const postgresTypes = postgresTypeSchema.options;
 export const jsonFieldTypes = jsonFieldTypeSchema.options;
+export const restMethodInputModes = ["payload", "query"] as const;
 export const createAppViewComponent = () => AppViewBlock.createComponent();
 export const createResourceSchemaField = () =>
   RestResourceBlock.createSchemaField();

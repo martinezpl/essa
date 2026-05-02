@@ -8,8 +8,10 @@ import {
   SqlTableBlock,
   createAppViewComponent,
   createResourceSchemaField,
+  createRestMethodInput,
   createRestResourceMethodContract,
   createSqlColumn,
+  createSqlIndex,
   getCompatibleConnectionKind,
   getCompatibleConnectionKinds,
   hydrateDiagram,
@@ -69,18 +71,18 @@ describe("block model", () => {
   it("creates REST method contracts from method kind defaults", () => {
     expect(createRestResourceMethodContract("POST /")).toMatchObject({
       kind: "POST /",
-      input: { mode: "payload", fields: ["all"] },
-      output: { fields: ["all"], returnsArray: false },
+      input: [],
+      output: { returnsArray: false },
     });
     expect(createRestResourceMethodContract("GET /")).toMatchObject({
       kind: "GET /",
-      input: { mode: "query", fields: [] },
-      output: { fields: ["all"], returnsArray: true },
+      input: [],
+      output: { returnsArray: true },
     });
     expect(createRestResourceMethodContract("DELETE /{id}")).toMatchObject({
       kind: "DELETE /{id}",
-      input: undefined,
-      output: { fields: [], returnsArray: false },
+      input: [],
+      output: { returnsArray: false },
     });
   });
 
@@ -100,6 +102,16 @@ describe("block model", () => {
       type: "text",
       nullable: true,
       primaryKey: false,
+    });
+    expect(createRestMethodInput()).toMatchObject({
+      name: "",
+      type: "string",
+      mode: "payload",
+    });
+    expect(createSqlIndex()).toMatchObject({
+      name: "",
+      columns: [],
+      unique: false,
     });
   });
 });

@@ -6,9 +6,11 @@ import type {
   DiagramNode,
   EdgeData,
   ResourceSchemaField,
+  RestMethodInputField,
   RestMethodKind,
   RestResourceMethod,
   SqlColumn,
+  SqlIndex,
 } from "../domain/types";
 
 export type DiagramContextValue = {
@@ -21,7 +23,9 @@ export type DiagramContextValue = {
     currentSchema: ResourceSchemaField[],
   ) => void;
   onAddRestMethod: (nodeId: string, kind: RestMethodKind) => void;
+  onAddRestMethodInput: (nodeId: string, methodId: string) => void;
   onAddSqlColumn: (nodeId: string) => void;
+  onAddSqlIndex: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onReplaceAppComponents: (
@@ -32,7 +36,13 @@ export type DiagramContextValue = {
     nodeId: string,
     schema: ResourceSchemaField[],
   ) => void;
+  onReplaceRestMethodInputs: (
+    nodeId: string,
+    methodId: string,
+    inputs: RestMethodInputField[],
+  ) => void;
   onReplaceSqlColumns: (nodeId: string, columns: SqlColumn[]) => void;
+  onReplaceSqlIndices: (nodeId: string, indices: SqlIndex[]) => void;
   onRemoveRestMethod: (nodeId: string, methodId: string) => void;
   onUpdateEdgeData: (edgeId: string, patch: Partial<EdgeData>) => void;
   onUpdateNodeData: (nodeId: string, patch: Partial<BlockData>) => void;
