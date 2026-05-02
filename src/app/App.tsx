@@ -1,20 +1,45 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { DiagramCanvas } from "../components/DiagramCanvas";
-import { DiagramSidebar } from "../components/DiagramSidebar";
+import {
+  DiagramSidebar,
+  type DiagramExportFormat,
+} from "../components/DiagramSidebar";
 import { ThemeToggle } from "../components/ThemeToggle";
+import {
+  parseEssaDiagram,
+  serializeEssaDiagram,
+  serializeMarkdownDiagram,
+} from "../domain/diagramExport";
 import { deriveResourceSchemas } from "../domain/resourceSchema";
 import {
   psqlColumnTargetHandleId,
   psqlForeignKeySourceHandleId,
 } from "../domain/psqlForeignKeys";
-import type { DiagramEdge, DiagramNode } from "../domain/types";
+import type { Diagram, DiagramEdge, DiagramNode } from "../domain/types";
 import { DiagramProvider } from "./diagramContext";
 import { useDiagramStore } from "./useDiagramStore";
 import { useTheme } from "./useTheme";
 
 type PsqlTableDiagramNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
+
+const slugifyFileName = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "diagram";
+
+const downloadTextFile = (filename: string, contents: string, type: string) => {
+  const blob = new Blob([contents], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 export const App = () => {
@@ -43,6 +68,7 @@ export const App = () => {
     deleteEdge,
     deleteNode,
     duplicateNode,
+    importDiagram,
     onEdgesChange,
     onNodesChange,
     renameDiagram,
@@ -156,6 +182,42 @@ export const App = () => {
       return nodeId;
     },
     [addNode],
+  );
+
+  const handleExportDiagram = useCallback(
+    (diagram: Diagram, format: DiagramExportFormat) => {
+      const filename = slugifyFileName(diagram.name);
+
+      if (format === "essa") {
+        downloadTextFile(
+          `${filename}.essa`,
+          serializeEssaDiagram(diagram),
+          "application/json",
+        );
+        return;
+      }
+
+      downloadTextFile(
+        `${filename}.md`,
+        serializeMarkdownDiagram(diagram),
+        "text/markdown",
+      );
+    },
+    [],
+  );
+
+  const handleImportEssa = useCallback(
+    async (file: File) => {
+      try {
+        const rawValue = await file.text();
+        const diagram = parseEssaDiagram(rawValue);
+        importDiagram(diagram);
+        setSelectedNodeId(null);
+      } catch {
+        window.alert("Could not import this .essa file.");
+      }
+    },
+    [importDiagram],
   );
 
   useEffect(() => {
@@ -339,6 +401,8 @@ export const App = () => {
               deleteDiagram(diagramId);
               setSelectedNodeId(null);
             }}
+            onExportDiagram={handleExportDiagram}
+            onImportEssa={handleImportEssa}
             onRenameDiagram={renameDiagram}
             onSelectDiagram={(diagramId) => {
               selectDiagram(diagramId);

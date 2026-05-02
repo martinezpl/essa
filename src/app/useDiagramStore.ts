@@ -12,6 +12,7 @@ import {
   createStarterDiagram,
   touchDiagram,
 } from "../domain/factories";
+import { prepareImportedDiagram } from "../domain/diagramExport";
 import {
   createResourceSchemaField,
   createPsqlEnum,
@@ -159,6 +160,20 @@ export const useDiagramStore = () => {
       }),
     );
   }, [collection.diagrams.length]);
+
+  const importDiagram = useCallback((diagram: Diagram) => {
+    const importedDiagram = prepareImportedDiagram(diagram);
+
+    setHistory((current) =>
+      recordHistory(current, {
+        ...current.present,
+        activeDiagramId: importedDiagram.id,
+        diagrams: [...current.present.diagrams, importedDiagram],
+      }),
+    );
+
+    return importedDiagram.id;
+  }, []);
 
   const renameDiagram = useCallback((diagramId: string, name: string) => {
     const trimmedName = name.trim();
@@ -629,6 +644,7 @@ export const useDiagramStore = () => {
     deleteEdge,
     deleteNode,
     duplicateNode,
+    importDiagram,
     onEdgesChange,
     onNodesChange,
     renameDiagram,

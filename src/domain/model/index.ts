@@ -239,6 +239,7 @@ export class RestResourceBlock extends Block<RestResourceData> {
     return {
       kind: "restResource",
       resourceName: "",
+      description: "",
       methods: [],
       schema: [],
     };
@@ -248,6 +249,7 @@ export class RestResourceBlock extends Block<RestResourceData> {
     return {
       kind: "restResource",
       resourceName: "items",
+      description: "",
       methods: [
         createRestResourceMethodContract("POST /"),
         createRestResourceMethodContract("GET /"),

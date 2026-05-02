@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { countDiagramConnections } from "../domain/diagramStats";
 import type { Diagram } from "../domain/types";
 
+export type DiagramExportFormat = "essa" | "markdown";
+
 type DiagramSidebarProps = {
   activeDiagramId: string;
   diagrams: Diagram[];
@@ -9,6 +11,8 @@ type DiagramSidebarProps = {
   onClose: () => void;
   onCreateDiagram: () => void;
   onDeleteDiagram: (diagramId: string) => void;
+  onExportDiagram: (diagram: Diagram, format: DiagramExportFormat) => void;
+  onImportEssa: (file: File) => void;
   onRenameDiagram: (diagramId: string, name: string) => void;
   onSelectDiagram: (diagramId: string) => void;
 };
@@ -20,10 +24,13 @@ export const DiagramSidebar = ({
   onClose,
   onCreateDiagram,
   onDeleteDiagram,
+  onExportDiagram,
+  onImportEssa,
   onRenameDiagram,
   onSelectDiagram,
 }: DiagramSidebarProps) => {
   const drawerRef = useRef<HTMLElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const canceledRenameIds = useRef(new Set<string>());
   const [draftNames, setDraftNames] = useState<Record<string, string>>({});
 
@@ -104,6 +111,31 @@ export const DiagramSidebar = ({
             </svg>
             New diagram
           </button>
+          <button
+            className="drawer__new"
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v10m0 0 4-4m-4 4-4-4M5 19h14" />
+            </svg>
+            Import .essa
+          </button>
+          <input
+            ref={importInputRef}
+            accept=".essa,application/json"
+            hidden
+            type="file"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+
+              if (file) {
+                onImportEssa(file);
+              }
+
+              event.currentTarget.value = "";
+            }}
+          />
 
           {diagrams.map((diagram) => {
             const active = diagram.id === activeDiagramId;
@@ -149,6 +181,25 @@ export const DiagramSidebar = ({
                     {diagram.nodes.length === 1 ? "block" : "blocks"} ·{" "}
                     {linkCount} {linkCount === 1 ? "link" : "links"}
                   </span>
+                  <select
+                    aria-label={`Export ${diagram.name}`}
+                    className="diagram-card__export"
+                    defaultValue=""
+                    onChange={(event) => {
+                      const format = event.target.value as DiagramExportFormat;
+                      if (format) {
+                        onExportDiagram(diagram, format);
+                        event.currentTarget.value = "";
+                      }
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <option value="" disabled>
+                      Export as...
+                    </option>
+                    <option value="essa">.essa</option>
+                    <option value="markdown">.md (with mermaid)</option>
+                  </select>
                 </div>
                 <button
                   aria-label={`Delete ${diagram.name}`}

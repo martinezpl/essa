@@ -82,6 +82,17 @@ export const RestResourceNode = ({
         }
       />
 
+      <textarea
+        aria-label="Resource description"
+        className="block-node__description-input nodrag"
+        placeholder="Context"
+        rows={2}
+        value={data.description ?? ""}
+        onChange={(event) =>
+          ctx.onUpdateNodeData(id, { description: event.target.value })
+        }
+      />
+
       <section className="block-node__section">
         <h4 className="block-node__section-title">Schema</h4>
 
@@ -169,9 +180,7 @@ export const RestResourceNode = ({
                 className="method-row__head"
                 role="button"
                 tabIndex={0}
-                onClick={() =>
-                  setExpandedMethodId(expanded ? null : method.id)
-                }
+                onClick={() => setExpandedMethodId(expanded ? null : method.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();

@@ -153,6 +153,7 @@ export type ResourceSchemaField = z.infer<typeof resourceSchemaFieldSchema>;
 export const restResourceDataSchema = z.object({
   kind: z.literal("restResource"),
   resourceName: z.string(),
+  description: z.string().optional(),
   methods: z.array(restResourceMethodSchema),
   schema: z.array(resourceSchemaFieldSchema).default([]),
 });
@@ -165,7 +166,6 @@ export const psqlColumnSchema = z.object({
   options: psqlColumnOptionsSchema.optional(),
   nullable: z.boolean(),
   primaryKey: z.boolean(),
-  description: z.string().optional(),
 });
 export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 

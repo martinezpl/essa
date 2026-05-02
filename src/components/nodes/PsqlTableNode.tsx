@@ -681,15 +681,6 @@ const ColumnPopover = ({
       </label>
     </div>
 
-    <label>
-      Description
-      <textarea
-        rows={2}
-        placeholder="Optional"
-        value={column.description ?? ""}
-        onChange={(event) => onChange({ description: event.target.value })}
-      />
-    </label>
   </div>
   );
 };
