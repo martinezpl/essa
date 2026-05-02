@@ -246,7 +246,7 @@ const restResourcePorts: readonly ConnectionPort[] = [
   {
     id: "view-input",
     direction: "input",
-    connectsTo: ["appView", "sqlTable"],
+    connectsTo: ["appView"],
     defaultKind: "read",
   },
   {
@@ -370,12 +370,6 @@ const sqlTablePorts: readonly ConnectionPort[] = [
     direction: "input",
     connectsTo: ["restResource"],
     defaultKind: "read",
-  },
-  {
-    id: "resource-output",
-    direction: "output",
-    connectsTo: ["restResource"],
-    defaultKind: "write",
   },
 ];
 

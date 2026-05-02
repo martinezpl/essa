@@ -112,10 +112,10 @@ describe("connection model", () => {
 
     expect(getCompatibleConnectionKind(appView, resource)).toBe("read");
     expect(getCompatibleConnectionKind(resource, table)).toBe("read");
-    expect(getCompatibleConnectionKind(table, resource)).toBe("write");
+    expect(getCompatibleConnectionKind(table, resource)).toBeNull();
     expect(getCompatibleConnectionKind(appView, table)).toBeNull();
     expect(getCompatibleConnectionKind(resource, appView)).toBeNull();
-    expect(getCompatibleConnectionKinds(table, resource)).toEqual(["write"]);
+    expect(getCompatibleConnectionKinds(table, resource)).toEqual([]);
   });
 
   it("creates valid edges and rejects duplicates", () => {
