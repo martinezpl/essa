@@ -45,8 +45,8 @@
   --verb-delete: #ef4444;
   --verb-delete-soft: rgb(239 68 68 / 14%);
 
-  --read: #22d3ee;
-  --write: #f97316;
+  --read: #ef4444;
+  --write: #b91c1c;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -95,6 +95,10 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
   --shadow-md: 0 8px 24px rgb(0 0 0 / 50%);
   --shadow-lg: 0 24px 60px rgb(0 0 0 / 70%);
+
+  --read: #22d3ee;
+  --write: #f97316;
+  --edge-flow-duration: 0.9s;
 
   color-scheme: dark;
 }
