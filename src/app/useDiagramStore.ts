@@ -8,12 +8,16 @@ import {
 import {
   cloneDiagramNode,
   createDiagramNode,
-  createId,
   createRestResourceMethod,
   createStarterDiagram,
   touchDiagram,
 } from "../domain/factories";
-import { DiagramModel } from "../domain/model";
+import {
+  createAppViewComponent,
+  createResourceSchemaField,
+  createSqlColumn,
+  DiagramModel,
+} from "../domain/model";
 import type {
   AppViewComponent,
   BlockData,
@@ -294,14 +298,7 @@ export const useDiagramStore = () => {
     (nodeId: string, currentSchema: ResourceSchemaField[]) => {
       replaceResourceSchema(nodeId, [
         ...currentSchema,
-        {
-          id: createId("schema-field"),
-          name: "",
-          type: "string",
-          nullable: true,
-          sourceTableId: "",
-          sourceColumnId: "",
-        },
+        createResourceSchemaField(),
       ]);
     },
     [replaceResourceSchema],
@@ -385,10 +382,7 @@ export const useDiagramStore = () => {
 
       replaceAppComponents(nodeId, [
         ...node.data.components,
-        {
-          id: createId("component"),
-          name: "",
-        },
+        createAppViewComponent(),
       ]);
     },
     [activeDiagram.nodes, replaceAppComponents],
@@ -404,13 +398,7 @@ export const useDiagramStore = () => {
 
       replaceSqlColumns(nodeId, [
         ...node.data.columns,
-        {
-          id: createId("column"),
-          name: "",
-          type: "text",
-          nullable: true,
-          primaryKey: false,
-        },
+        createSqlColumn(),
       ]);
     },
     [activeDiagram.nodes, replaceSqlColumns],

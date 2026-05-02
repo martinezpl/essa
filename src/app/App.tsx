@@ -3,17 +3,20 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { BlockToolbar } from "../components/BlockToolbar";
 import { DiagramCanvas } from "../components/DiagramCanvas";
 import { DiagramSidebar } from "../components/DiagramSidebar";
-import { Inspector } from "../components/Inspector";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { deriveResourceSchemas } from "../domain/resourceSchema";
 import type { DiagramNode } from "../domain/types";
+import { DiagramProvider } from "./diagramContext";
 import { useDiagramStore } from "./useDiagramStore";
+import { useTheme } from "./useTheme";
 
 export const App = () => {
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [copiedNode, setCopiedNode] = useState<DiagramNode | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const copiedNodeRef = useRef<DiagramNode | null>(null);
   const selectedNodeRef = useRef<DiagramNode | undefined>(undefined);
+  const { theme, toggleTheme } = useTheme();
   const {
     activeDiagram,
     addAppComponent,
@@ -65,11 +68,6 @@ export const App = () => {
     [activeDiagram.nodes, resourceSchemas],
   );
 
-  const selectedEdge = useMemo(
-    () => activeDiagram.edges.find((edge) => edge.id === selectedEdgeId),
-    [activeDiagram.edges, selectedEdgeId],
-  );
-
   const selectedNode = useMemo(
     () => canvasNodes.find((node) => node.id === selectedNodeId),
     [canvasNodes, selectedNodeId],
@@ -86,7 +84,6 @@ export const App = () => {
   const addAndSelectNode = useCallback(
     (kind: Parameters<typeof addNode>[0], position?: { x: number; y: number }) => {
       const nodeId = addNode(kind, position);
-      setSelectedEdgeId(null);
       setSelectedNodeId(nodeId);
 
       return nodeId;
@@ -126,7 +123,6 @@ export const App = () => {
         event.preventDefault();
         event.stopPropagation();
         const nodeId = duplicateNode(currentCopiedNode);
-        setSelectedEdgeId(null);
         setSelectedNodeId(nodeId);
         const nextCopiedNode = {
           ...currentCopiedNode,
@@ -143,81 +139,119 @@ export const App = () => {
 
     window.addEventListener("keydown", handleKeyboard, { capture: true });
 
-    return () => window.removeEventListener("keydown", handleKeyboard, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handleKeyboard, { capture: true });
   }, [duplicateNode]);
+
+  const contextValue = useMemo(
+    () => ({
+      nodes: canvasNodes,
+      edges: activeDiagram.edges,
+      resourceSchemas,
+      onAddAppComponent: addAppComponent,
+      onAddResourceSchemaField: addResourceSchemaField,
+      onAddRestMethod: addRestMethod,
+      onAddSqlColumn: addSqlColumn,
+      onDeleteEdge: deleteEdge,
+      onDeleteNode: (nodeId: string) => {
+        deleteNode(nodeId);
+        setSelectedNodeId((current) => (current === nodeId ? null : current));
+      },
+      onReplaceAppComponents: replaceAppComponents,
+      onReplaceResourceSchema: replaceResourceSchema,
+      onReplaceSqlColumns: replaceSqlColumns,
+      onRemoveRestMethod: removeRestMethod,
+      onUpdateEdgeData: updateEdgeData,
+      onUpdateNodeData: updateNodeData,
+      onUpdateRestMethod: updateRestMethod,
+    }),
+    [
+      activeDiagram.edges,
+      addAppComponent,
+      addResourceSchemaField,
+      addRestMethod,
+      addSqlColumn,
+      canvasNodes,
+      deleteEdge,
+      deleteNode,
+      removeRestMethod,
+      replaceAppComponents,
+      replaceResourceSchema,
+      replaceSqlColumns,
+      resourceSchemas,
+      updateEdgeData,
+      updateNodeData,
+      updateRestMethod,
+    ],
+  );
 
   return (
     <ReactFlowProvider>
-      <div className="app-shell">
-        <DiagramSidebar
-          activeDiagramId={collection.activeDiagramId}
-          diagrams={collection.diagrams}
-          onCreateDiagram={() => {
-            createDiagram();
-            setSelectedEdgeId(null);
-            setSelectedNodeId(null);
-          }}
-          onDeleteDiagram={(diagramId) => {
-            deleteDiagram(diagramId);
-            setSelectedEdgeId(null);
-            setSelectedNodeId(null);
-          }}
-          onRenameDiagram={renameDiagram}
-          onSelectDiagram={(diagramId) => {
-            selectDiagram(diagramId);
-            setSelectedEdgeId(null);
-            setSelectedNodeId(null);
-          }}
-        />
+      <DiagramProvider value={contextValue}>
+        <div className="app-shell">
+          <main className="workspace">
+            <DiagramCanvas
+              edges={activeDiagram.edges}
+              nodes={canvasNodes}
+              onAddNode={addAndSelectNode}
+              onConnect={connectNodes}
+              onEdgesChange={onEdgesChange}
+              onNodesChange={onNodesChange}
+              onSelectEdge={() => {}}
+              onSelectNode={setSelectedNodeId}
+            />
+          </main>
 
-        <main className="workspace">
-          <header className="workspace__header">
-            <div>
-              <span className="eyebrow">Current diagram</span>
-              <h2>{activeDiagram.name}</h2>
+          <BlockToolbar onAddNode={addAndSelectNode} />
+
+          <div className="app-topbar">
+            <div className="app-topbar__left">
+              <button
+                aria-label="Open diagrams"
+                className="icon-button"
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
+                  <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                </svg>
+              </button>
+              <div className="diagram-title">
+                <span className="eyebrow">Diagram</span>
+                <h2>{activeDiagram.name}</h2>
+              </div>
             </div>
-            <BlockToolbar onAddNode={addAndSelectNode} />
-          </header>
+            <div className="app-topbar__right">
+              <ThemeToggle theme={theme} onToggle={toggleTheme} />
+            </div>
+          </div>
 
-          <DiagramCanvas
-            edges={activeDiagram.edges}
-            nodes={canvasNodes}
-            onAddNode={addAndSelectNode}
-            onConnect={connectNodes}
-            onEdgesChange={onEdgesChange}
-            onNodesChange={onNodesChange}
-            onSelectEdge={setSelectedEdgeId}
-            onSelectNode={setSelectedNodeId}
+          <DiagramSidebar
+            activeDiagramId={collection.activeDiagramId}
+            diagrams={collection.diagrams}
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onCreateDiagram={() => {
+              createDiagram();
+              setSelectedNodeId(null);
+            }}
+            onDeleteDiagram={(diagramId) => {
+              deleteDiagram(diagramId);
+              setSelectedNodeId(null);
+            }}
+            onRenameDiagram={renameDiagram}
+            onSelectDiagram={(diagramId) => {
+              selectDiagram(diagramId);
+              setSelectedNodeId(null);
+            }}
           />
-        </main>
-
-        <Inspector
-          edge={selectedEdge}
-          edges={activeDiagram.edges}
-          node={selectedNode}
-          nodes={canvasNodes}
-          resourceSchemas={resourceSchemas}
-          onAddAppComponent={addAppComponent}
-          onAddResourceSchemaField={addResourceSchemaField}
-          onAddRestMethod={addRestMethod}
-          onAddSqlColumn={addSqlColumn}
-          onDeleteEdge={(edgeId) => {
-            deleteEdge(edgeId);
-            setSelectedEdgeId(null);
-          }}
-          onDeleteNode={(nodeId) => {
-            deleteNode(nodeId);
-            setSelectedNodeId(null);
-          }}
-          onReplaceAppComponents={replaceAppComponents}
-          onReplaceResourceSchema={replaceResourceSchema}
-          onReplaceSqlColumns={replaceSqlColumns}
-          onRemoveRestMethod={removeRestMethod}
-          onUpdateEdgeData={updateEdgeData}
-          onUpdateNodeData={updateNodeData}
-          onUpdateRestMethod={updateRestMethod}
-        />
-      </div>
+        </div>
+      </DiagramProvider>
     </ReactFlowProvider>
   );
 };

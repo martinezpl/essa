@@ -6,8 +6,12 @@ import {
   DiagramModel,
   RestResourceBlock,
   SqlTableBlock,
+  createAppViewComponent,
+  createResourceSchemaField,
   createRestResourceMethodContract,
+  createSqlColumn,
   getCompatibleConnectionKind,
+  getCompatibleConnectionKinds,
   hydrateDiagram,
   serializeDiagram,
 } from "./index";
@@ -79,6 +83,25 @@ describe("block model", () => {
       output: { fields: [], returnsArray: false },
     });
   });
+
+  it("creates child defaults from block classes", () => {
+    expect(createAppViewComponent()).toMatchObject({
+      name: "",
+    });
+    expect(createResourceSchemaField()).toMatchObject({
+      name: "",
+      type: "string",
+      nullable: true,
+      sourceTableId: "",
+      sourceColumnId: "",
+    });
+    expect(createSqlColumn()).toMatchObject({
+      name: "",
+      type: "text",
+      nullable: true,
+      primaryKey: false,
+    });
+  });
 });
 
 describe("connection model", () => {
@@ -92,6 +115,7 @@ describe("connection model", () => {
     expect(getCompatibleConnectionKind(table, resource)).toBe("write");
     expect(getCompatibleConnectionKind(appView, table)).toBeNull();
     expect(getCompatibleConnectionKind(resource, appView)).toBeNull();
+    expect(getCompatibleConnectionKinds(table, resource)).toEqual(["write"]);
   });
 
   it("creates valid edges and rejects duplicates", () => {

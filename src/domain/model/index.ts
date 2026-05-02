@@ -1,4 +1,5 @@
 import type {
+  AppViewComponent,
   AppViewData,
   BlockData,
   BlockKind,
@@ -168,6 +169,13 @@ export class AppViewBlock extends Block<AppViewData> {
   readonly label = "App View";
   readonly ports = appViewPorts;
 
+  static createComponent(): AppViewComponent {
+    return {
+      id: createId("component"),
+      name: "",
+    };
+  }
+
   static blankData(): AppViewData {
     return {
       kind: "appView",
@@ -274,6 +282,17 @@ export class RestResourceBlock extends Block<RestResourceData> {
     allowedTypes: jsonFieldTypeSchema.options,
   };
 
+  static createSchemaField(): ResourceSchemaField {
+    return {
+      id: createId("schema-field"),
+      name: "",
+      type: "string",
+      nullable: true,
+      sourceTableId: "",
+      sourceColumnId: "",
+    };
+  }
+
   static blankData(): RestResourceData {
     return {
       kind: "restResource",
@@ -367,6 +386,16 @@ export class SqlTableBlock extends Block<SqlTableData> {
   readonly schemaSpec: SchemaSpec = {
     allowedTypes: postgresTypeSchema.options,
   };
+
+  static createColumn(): SqlColumn {
+    return {
+      id: createId("column"),
+      name: "",
+      type: "text",
+      nullable: true,
+      primaryKey: false,
+    };
+  }
 
   static blankData(): SqlTableData {
     return {
@@ -504,6 +533,10 @@ export const blockList = Object.values(blockDefinitions);
 export const restMethodKinds = restMethodKindSchema.options;
 export const postgresTypes = postgresTypeSchema.options;
 export const jsonFieldTypes = jsonFieldTypeSchema.options;
+export const createAppViewComponent = () => AppViewBlock.createComponent();
+export const createResourceSchemaField = () =>
+  RestResourceBlock.createSchemaField();
+export const createSqlColumn = () => SqlTableBlock.createColumn();
 
 export const createBlock = (
   kind: BlockKind,
@@ -611,6 +644,36 @@ export const getCompatibleConnectionKind = (
   }
 
   return sourcePort.defaultKind;
+};
+
+export const getCompatibleConnectionKinds = (
+  source?: AnyBlock,
+  target?: AnyBlock,
+): ConnectionKind[] => {
+  if (!source || !target || source.id === target.id) {
+    return [];
+  }
+
+  const targetAcceptsSource = target.ports.some(
+    (port) =>
+      port.direction === "input" && port.connectsTo.includes(source.kind),
+  );
+
+  if (!targetAcceptsSource) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      source.ports
+        .filter(
+          (port) =>
+            port.direction === "output" &&
+            port.connectsTo.includes(target.kind),
+        )
+        .map((port) => port.defaultKind),
+    ),
+  ];
 };
 
 export class DiagramModel {

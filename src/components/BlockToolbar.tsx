@@ -6,14 +6,19 @@ type BlockToolbarProps = {
 };
 
 export const BlockToolbar = ({ onAddNode }: BlockToolbarProps) => (
-  <div className="toolbar">
-    <span className="eyebrow">Add block</span>
-    <div className="toolbar__actions">
-      {blockList.map(({ kind, label }) => (
-        <button key={kind} type="button" onClick={() => onAddNode(kind)}>
+  <div className="floating-dock" role="toolbar" aria-label="Add block">
+    {blockList.map(({ kind, label }, index) => (
+      <span key={kind} style={{ display: "contents" }}>
+        {index > 0 ? <span aria-hidden className="floating-dock__divider" /> : null}
+        <button
+          className="floating-dock__button"
+          type="button"
+          onClick={() => onAddNode(kind)}
+        >
+          <span className={`floating-dock__dot floating-dock__dot--${kind}`} />
           {label}
         </button>
-      ))}
-    </div>
+      </span>
+    ))}
   </div>
 );
