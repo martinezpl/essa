@@ -23,13 +23,13 @@ export type DiagramContextValue = {
   onAddResourceSchemaField: (
     nodeId: string,
     currentSchema: ResourceSchemaField[],
-  ) => void;
+  ) => string;
   onAddRestMethod: (nodeId: string, kind: RestMethodKind) => void;
-  onAddRestMethodInput: (nodeId: string, methodId: string) => void;
-  onAddPsqlColumn: (nodeId: string) => void;
+  onAddRestMethodInput: (nodeId: string, methodId: string) => string | null;
+  onAddPsqlColumn: (nodeId: string) => string | null;
   onAddPsqlEnum: () => string;
-  onAddPsqlForeignKey: (nodeId: string) => void;
-  onAddPsqlIndex: (nodeId: string) => void;
+  onAddPsqlForeignKey: (nodeId: string) => string | null;
+  onAddPsqlIndex: (nodeId: string) => string | null;
   onDeleteEdge: (edgeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onReplaceResourceSchema: (

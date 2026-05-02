@@ -143,7 +143,12 @@ export const RestResourceNode = ({
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddResourceSchemaField(id, data.schema)}
+          onClick={() => {
+            const newId = ctx.onAddResourceSchemaField(id, data.schema);
+            if (newId) {
+              setEditing({ kind: "schema", id: newId });
+            }
+          }}
         >
           + Add field
         </button>
@@ -205,7 +210,16 @@ export const RestResourceNode = ({
                   onChange={(updater) =>
                     ctx.onUpdateRestMethod(id, method.id, updater)
                   }
-                  onAddInput={() => ctx.onAddRestMethodInput(id, method.id)}
+                  onAddInput={() => {
+                    const newInputId = ctx.onAddRestMethodInput(id, method.id);
+                    if (newInputId) {
+                      setEditing({
+                        kind: "input",
+                        methodId: method.id,
+                        inputId: newInputId,
+                      });
+                    }
+                  }}
                   editingInputId={
                     editing?.kind === "input" && editing.methodId === method.id
                       ? editing.inputId

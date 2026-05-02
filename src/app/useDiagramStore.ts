@@ -418,30 +418,31 @@ export const useDiagramStore = () => {
   );
 
   const addPsqlIndex = useCallback(
-    (nodeId: string) => {
+    (nodeId: string): string | null => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
       if (node?.data.kind !== "psqlTable") {
-        return;
+        return null;
       }
 
-      replacePsqlIndices(nodeId, [...node.data.indices, createPsqlIndex()]);
+      const index = createPsqlIndex();
+      replacePsqlIndices(nodeId, [...node.data.indices, index]);
+      return index.id;
     },
     [activeDiagram.nodes, replacePsqlIndices],
   );
 
   const addPsqlForeignKey = useCallback(
-    (nodeId: string) => {
+    (nodeId: string): string | null => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
       if (node?.data.kind !== "psqlTable") {
-        return;
+        return null;
       }
 
-      replacePsqlForeignKeys(nodeId, [
-        ...node.data.foreignKeys,
-        createPsqlForeignKey(),
-      ]);
+      const foreignKey = createPsqlForeignKey();
+      replacePsqlForeignKeys(nodeId, [...node.data.foreignKeys, foreignKey]);
+      return foreignKey.id;
     },
     [activeDiagram.nodes, replacePsqlForeignKeys],
   );
@@ -457,23 +458,22 @@ export const useDiagramStore = () => {
   );
 
   const addRestMethodInput = useCallback(
-    (nodeId: string, methodId: string) => {
+    (nodeId: string, methodId: string): string | null => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
       if (node?.data.kind !== "restResource") {
-        return;
+        return null;
       }
 
       const method = node.data.methods.find((item) => item.id === methodId);
 
       if (!method) {
-        return;
+        return null;
       }
 
-      replaceRestMethodInputs(nodeId, methodId, [
-        ...method.input,
-        createRestMethodInput(),
-      ]);
+      const input = createRestMethodInput();
+      replaceRestMethodInputs(nodeId, methodId, [...method.input, input]);
+      return input.id;
     },
     [activeDiagram.nodes, replaceRestMethodInputs],
   );
@@ -486,11 +486,10 @@ export const useDiagramStore = () => {
   );
 
   const addResourceSchemaField = useCallback(
-    (nodeId: string, currentSchema: ResourceSchemaField[]) => {
-      replaceResourceSchema(nodeId, [
-        ...currentSchema,
-        createResourceSchemaField(),
-      ]);
+    (nodeId: string, currentSchema: ResourceSchemaField[]): string => {
+      const field = createResourceSchemaField();
+      replaceResourceSchema(nodeId, [...currentSchema, field]);
+      return field.id;
     },
     [replaceResourceSchema],
   );
@@ -589,17 +588,16 @@ export const useDiagramStore = () => {
   );
 
   const addPsqlColumn = useCallback(
-    (nodeId: string) => {
+    (nodeId: string): string | null => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
       if (node?.data.kind !== "psqlTable") {
-        return;
+        return null;
       }
 
-      replacePsqlColumns(nodeId, [
-        ...node.data.columns,
-        createPsqlColumn(),
-      ]);
+      const column = createPsqlColumn();
+      replacePsqlColumns(nodeId, [...node.data.columns, column]);
+      return column.id;
     },
     [activeDiagram.nodes, replacePsqlColumns],
   );

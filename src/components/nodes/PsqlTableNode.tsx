@@ -198,7 +198,12 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddPsqlColumn(id)}
+          onClick={() => {
+            const newId = ctx.onAddPsqlColumn(id);
+            if (newId) {
+              setEditing({ kind: "column", id: newId });
+            }
+          }}
         >
           + Add column
         </button>
@@ -284,7 +289,12 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddPsqlForeignKey(id)}
+          onClick={() => {
+            const newId = ctx.onAddPsqlForeignKey(id);
+            if (newId) {
+              setEditing({ kind: "foreignKey", id: newId });
+            }
+          }}
         >
           + Add foreign key
         </button>
@@ -364,7 +374,12 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddPsqlIndex(id)}
+          onClick={() => {
+            const newId = ctx.onAddPsqlIndex(id);
+            if (newId) {
+              setEditing({ kind: "index", id: newId });
+            }
+          }}
         >
           + Add index
         </button>
