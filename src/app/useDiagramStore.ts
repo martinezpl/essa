@@ -167,10 +167,14 @@ export const useDiagramStore = () => {
     setHistory((current) =>
       recordHistory(
         current,
-        patchDiagram(current.present, diagramId, (diagram) => ({
-          ...diagram,
-          name: trimmedName,
-        })),
+        patchDiagram(current.present, diagramId, (diagram) =>
+          diagram.name === trimmedName
+            ? diagram
+            : {
+                ...diagram,
+                name: trimmedName,
+              },
+        ),
       ),
     );
   }, []);
