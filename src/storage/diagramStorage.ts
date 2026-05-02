@@ -1,5 +1,9 @@
 import { diagramCollectionSchema, type DiagramCollection } from "../domain/types";
 import { createStarterDiagram } from "../domain/factories";
+import {
+  LATEST_DIAGRAM_COLLECTION_VERSION,
+  migrateDiagramCollection,
+} from "./diagramMigrations";
 
 const STORAGE_KEY = "essa.diagrams.v1";
 
@@ -7,7 +11,7 @@ export const createInitialCollection = (): DiagramCollection => {
   const starterDiagram = createStarterDiagram();
 
   return {
-    version: 1,
+    version: LATEST_DIAGRAM_COLLECTION_VERSION,
     activeDiagramId: starterDiagram.id,
     diagrams: [starterDiagram],
   };
@@ -22,13 +26,14 @@ export const loadDiagramCollection = (): DiagramCollection => {
     }
 
     const parsedValue = JSON.parse(rawValue) as unknown;
-    const result = diagramCollectionSchema.safeParse(parsedValue);
+    const shouldPersistMigration = !diagramCollectionSchema.safeParse(parsedValue).success;
+    const collection = migrateDiagramCollection(parsedValue);
 
-    if (!result.success) {
-      return createInitialCollection();
+    if (shouldPersistMigration) {
+      saveDiagramCollection(collection);
     }
 
-    return result.data;
+    return collection;
   } catch {
     return createInitialCollection();
   }

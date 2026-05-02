@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createInitialCollection, loadDiagramCollection, saveDiagramCollection } from "./diagramStorage";
+import { LATEST_DIAGRAM_COLLECTION_VERSION } from "./diagramMigrations";
 
 const STORAGE_KEY = "essa.diagrams.v1";
 
@@ -33,13 +34,12 @@ describe("diagram storage", () => {
   it("creates an initial collection with a starter diagram", () => {
     const collection = createInitialCollection();
 
-    expect(collection.version).toBe(1);
+    expect(collection.version).toBe(LATEST_DIAGRAM_COLLECTION_VERSION);
     expect(collection.diagrams).toHaveLength(1);
     expect(collection.activeDiagramId).toBe(collection.diagrams[0].id);
     expect(collection.diagrams[0]).toMatchObject({
       name: "Starter Diagram",
       nodes: expect.arrayContaining([
-        expect.objectContaining({ type: "appView" }),
         expect.objectContaining({ type: "restResource" }),
         expect.objectContaining({ type: "psqlTable" }),
       ]),
@@ -56,12 +56,13 @@ describe("diagram storage", () => {
       JSON.stringify(collection),
     );
     expect(loadDiagramCollection()).toEqual(collection);
+    expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
   });
 
   it("falls back to an initial collection when nothing is stored", () => {
     const collection = loadDiagramCollection();
 
-    expect(collection.version).toBe(1);
+    expect(collection.version).toBe(LATEST_DIAGRAM_COLLECTION_VERSION);
     expect(collection.diagrams[0].name).toBe("Starter Diagram");
   });
 
@@ -70,7 +71,7 @@ describe("diagram storage", () => {
 
     const collection = loadDiagramCollection();
 
-    expect(collection.version).toBe(1);
+    expect(collection.version).toBe(LATEST_DIAGRAM_COLLECTION_VERSION);
     expect(collection.diagrams[0].name).toBe("Starter Diagram");
   });
 
@@ -86,7 +87,7 @@ describe("diagram storage", () => {
 
     const collection = loadDiagramCollection();
 
-    expect(collection.version).toBe(1);
+    expect(collection.version).toBe(LATEST_DIAGRAM_COLLECTION_VERSION);
     expect(collection.diagrams[0].name).toBe("Starter Diagram");
   });
 });

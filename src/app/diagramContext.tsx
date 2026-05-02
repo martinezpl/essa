@@ -1,6 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type {
-  AppViewComponent,
   BlockData,
   DiagramEdge,
   DiagramNode,
@@ -18,7 +17,6 @@ export type DiagramContextValue = {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
   resourceSchemas: Map<string, ResourceSchemaField[]>;
-  onAddAppComponent: (nodeId: string) => void;
   onAddResourceSchemaField: (
     nodeId: string,
     currentSchema: ResourceSchemaField[],
@@ -30,10 +28,6 @@ export type DiagramContextValue = {
   onAddPsqlIndex: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
-  onReplaceAppComponents: (
-    nodeId: string,
-    components: AppViewComponent[],
-  ) => void;
   onReplaceResourceSchema: (
     nodeId: string,
     schema: ResourceSchemaField[],

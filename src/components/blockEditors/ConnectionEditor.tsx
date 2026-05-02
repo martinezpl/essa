@@ -18,12 +18,6 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
   const targetNode = ctx.nodes.find((item) => item.id === edge.target);
   const dataOptions = new Set<string>(["all"]);
 
-  if (sourceNode?.data.kind === "appView") {
-    sourceNode.data.components.forEach((component) =>
-      dataOptions.add(component.name),
-    );
-  }
-
   if (sourceNode?.data.kind === "restResource") {
     getResourceSchemaOptions(sourceNode.data.schema).forEach((option) =>
       dataOptions.add(option),

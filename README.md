@@ -1,14 +1,11 @@
 # Essa
 
-Essa is a web tool for designing application diagrams from a model-first perspective.
+Essa is a web tool for designing application diagrams from a model-first perspective that connects REST resources to PSQL tables.
 
-It lets you define app views, REST resources, and PostgreSQL table schemas, then connect them to show how UI, APIs, and data storage relate. The goal is to use one diagram as a source of truth that can later be exported to formats like Mermaid, OpenAPI, and SQL.
+## Easily translate your ideas into LLM-compatible input
 
-## Features
+Export your diagrams into Mermaid, REST resources into openAPI and PSQL tables into SQL. 
 
-- Create diagrams on a canvas using typed blocks.
-- Model app views, REST resources, and PostgreSQL tables.
-- Connect blocks to describe how views use APIs and how resources map to data.
-- Configure REST methods, JSON schemas, SQL columns, and table metadata.
-- Save diagrams locally in the browser.
-- Prepare diagrams for export to Mermaid, OpenAPI, and SQL.
+## Coming soon
+
+I'm adjusting this tool to my personal workstyle so I'll be adding features as I need them. Most likely different types of databases, non-REST APIs and frontend components.

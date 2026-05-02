@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 import { createDiagramNode, createStarterDiagram } from "../factories";
 import type { Diagram, DiagramNode } from "../types";
 import {
-  AppViewBlock,
   DiagramModel,
   RestResourceBlock,
   PsqlTableBlock,
-  createAppViewComponent,
   createResourceSchemaField,
   createRestMethodInput,
   createRestResourceMethodContract,
@@ -157,9 +155,6 @@ describe("block model", () => {
   });
 
   it("creates child defaults from block classes", () => {
-    expect(createAppViewComponent()).toMatchObject({
-      name: "",
-    });
     expect(createResourceSchemaField()).toMatchObject({
       name: "",
       type: "string",
@@ -196,35 +191,31 @@ describe("block model", () => {
 
 describe("connection model", () => {
   it("validates connections through block ports", () => {
-    const appView = AppViewBlock.create({ x: 0, y: 0 });
     const resource = RestResourceBlock.create({ x: 100, y: 0 });
     const table = PsqlTableBlock.create({ x: 200, y: 0 });
 
-    expect(getCompatibleConnectionKind(appView, resource)).toBe("read");
     expect(getCompatibleConnectionKind(resource, table)).toBe("read");
     expect(getCompatibleConnectionKind(table, resource)).toBeNull();
-    expect(getCompatibleConnectionKind(appView, table)).toBeNull();
-    expect(getCompatibleConnectionKind(resource, appView)).toBeNull();
     expect(getCompatibleConnectionKinds(table, resource)).toEqual([]);
   });
 
   it("creates valid edges and rejects duplicates", () => {
-    const appView = createDiagramNode("appView", { x: 0, y: 0 });
     const resource = createDiagramNode("restResource", { x: 100, y: 0 });
+    const table = createDiagramNode("psqlTable", { x: 200, y: 0 });
     const diagram: Diagram = {
       id: "diagram-1",
       name: "Test diagram",
       createdAt: "2026-05-02T00:00:00.000Z",
       updatedAt: "2026-05-02T00:00:00.000Z",
-      nodes: [appView, resource],
+      nodes: [resource, table],
       edges: [],
     };
     const model = DiagramModel.hydrate(diagram);
-    const connection = model.createConnection(appView.id, resource.id);
+    const connection = model.createConnection(resource.id, table.id);
 
     expect(connection?.serialize()).toMatchObject({
-      source: appView.id,
-      target: resource.id,
+      source: resource.id,
+      target: table.id,
       type: "smoothstep",
       data: { kind: "read", dataPath: "all" },
     });
@@ -234,7 +225,7 @@ describe("connection model", () => {
       edges: connection ? [connection.serialize()] : [],
     });
 
-    expect(modelWithConnection.createConnection(appView.id, resource.id)).toBeNull();
+    expect(modelWithConnection.createConnection(resource.id, table.id)).toBeNull();
   });
 });
 
@@ -249,7 +240,7 @@ describe("diagram model", () => {
   it("collects intermediate export specs", () => {
     const model = hydrateDiagram(createStarterDiagram());
 
-    expect(model.toMermaidSpecs().blocks).toHaveLength(3);
+    expect(model.toMermaidSpecs().blocks).toHaveLength(2);
     expect(model.toMermaidSpecs().connections).toHaveLength(1);
     expect(model.toOpenApiSpecs()).toHaveLength(1);
     expect(model.toPsqlSpecs()).toHaveLength(1);

@@ -1,5 +1,4 @@
 import type {
-  AppViewData,
   BlockKind,
   Diagram,
   DiagramNode,
@@ -22,13 +21,13 @@ export const createRestResourceMethod = (
   kind: RestMethodKind,
 ): RestResourceMethod => createRestResourceMethodContract(kind);
 
-export const blankBlockData = (kind: BlockKind): AppViewData | RestResourceData | PsqlTableData => {
+export const blankBlockData = (kind: BlockKind): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 });
 
   return block.data;
 };
 
-export const seededBlockData = (kind: BlockKind): AppViewData | RestResourceData | PsqlTableData => {
+export const seededBlockData = (kind: BlockKind): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 }, { seed: true });
 
   return block.data;
@@ -46,27 +45,15 @@ export const cloneDiagramNode = (node: DiagramNode): DiagramNode => {
 
 export const createStarterDiagram = (): Diagram => {
   const createdAt = nowIso();
-  const appNode = createDiagramNode("appView", { x: 80, y: 120 }, { seed: true });
-  const restNode = createDiagramNode("restResource", { x: 420, y: 120 }, { seed: true });
-  const psqlNode = createDiagramNode("psqlTable", { x: 760, y: 120 }, { seed: true });
-
-  if (appNode.data.kind === "appView") {
-    appNode.data.components = appNode.data.components.map((component) => ({
-      ...component,
-      dataUsage: {
-        resourceId: restNode.id,
-        operation: "read",
-        dataPath: "all",
-      },
-    }));
-  }
+  const restNode = createDiagramNode("restResource", { x: 240, y: 120 }, { seed: true });
+  const psqlNode = createDiagramNode("psqlTable", { x: 600, y: 120 }, { seed: true });
 
   return {
     id: createId("diagram"),
     name: "Starter Diagram",
     createdAt,
     updatedAt: createdAt,
-    nodes: [appNode, restNode, psqlNode],
+    nodes: [restNode, psqlNode],
     edges: [
       {
         id: createId("edge"),

@@ -13,7 +13,6 @@ import {
   type NodeTypes,
 } from "@xyflow/react";
 import { blockList } from "../domain/model";
-import { AppViewNode } from "./nodes/AppViewNode";
 import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
@@ -31,7 +30,6 @@ type DiagramCanvasProps = {
 };
 
 const nodeTypes = {
-  appView: AppViewNode,
   restResource: RestResourceNode,
   psqlTable: PsqlTableNode,
 } satisfies NodeTypes;

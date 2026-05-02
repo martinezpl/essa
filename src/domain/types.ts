@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockKindSchema = z.enum(["appView", "restResource", "psqlTable"]);
+export const blockKindSchema = z.enum(["restResource", "psqlTable"]);
 export type BlockKind = z.infer<typeof blockKindSchema>;
 
 export const restMethodKindSchema = z.enum([
@@ -122,27 +122,6 @@ export const psqlColumnTypeSchema = z.enum([
 ]);
 export type PsqlColumnType = z.infer<typeof psqlColumnTypeSchema>;
 
-export const dataUsageSchema = z.object({
-  resourceId: z.string(),
-  operation: z.enum(["read", "write"]),
-  dataPath: z.string().default("all"),
-});
-export type ComponentDataUsage = z.infer<typeof dataUsageSchema>;
-
-export const appViewComponentSchema = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  dataUsage: dataUsageSchema.optional(),
-});
-export type AppViewComponent = z.infer<typeof appViewComponentSchema>;
-
-export const appViewDataSchema = z.object({
-  kind: z.literal("appView"),
-  route: z.string(),
-  components: z.array(appViewComponentSchema),
-});
-export type AppViewData = z.infer<typeof appViewDataSchema> & Record<string, unknown>;
-
 export const resourceSchemaFieldSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
@@ -224,7 +203,6 @@ export const psqlTableDataSchema = z.object({
 export type PsqlTableData = z.infer<typeof psqlTableDataSchema> & Record<string, unknown>;
 
 export const blockDataSchema = z.union([
-  appViewDataSchema,
   restResourceDataSchema,
   psqlTableDataSchema,
 ]);

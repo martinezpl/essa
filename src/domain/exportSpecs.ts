@@ -1,5 +1,4 @@
 import type {
-  AppViewComponent,
   BlockKind,
   ConnectionKind,
   JsonFieldType,
@@ -38,12 +37,6 @@ export type PsqlTableSpec = {
   columns: PsqlColumn[];
   foreignKeys: PsqlForeignKey[];
   indices: PsqlIndex[];
-};
-
-export type AppViewSpec = {
-  id: string;
-  route: string;
-  components: AppViewComponent[];
 };
 
 export type SchemaSpec = {

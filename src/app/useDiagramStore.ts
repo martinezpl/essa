@@ -13,7 +13,6 @@ import {
   touchDiagram,
 } from "../domain/factories";
 import {
-  createAppViewComponent,
   createResourceSchemaField,
   createPsqlForeignKey,
   createRestMethodInput,
@@ -22,7 +21,6 @@ import {
   DiagramModel,
 } from "../domain/model";
 import type {
-  AppViewComponent,
   BlockData,
   BlockKind,
   Diagram,
@@ -288,13 +286,6 @@ export const useDiagramStore = () => {
     [updateActiveDiagram],
   );
 
-  const replaceAppComponents = useCallback(
-    (nodeId: string, components: AppViewComponent[]) => {
-      updateNodeData(nodeId, { components } as NodeDataPatch);
-    },
-    [updateNodeData],
-  );
-
   const replaceRestMethods = useCallback(
     (nodeId: string, methods: RestResourceMethod[]) => {
       updateNodeData(nodeId, { methods } as NodeDataPatch);
@@ -551,22 +542,6 @@ export const useDiagramStore = () => {
     [updateActiveDiagram],
   );
 
-  const addAppComponent = useCallback(
-    (nodeId: string) => {
-      const node = activeDiagram.nodes.find((item) => item.id === nodeId);
-
-      if (node?.data.kind !== "appView") {
-        return;
-      }
-
-      replaceAppComponents(nodeId, [
-        ...node.data.components,
-        createAppViewComponent(),
-      ]);
-    },
-    [activeDiagram.nodes, replaceAppComponents],
-  );
-
   const addPsqlColumn = useCallback(
     (nodeId: string) => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
@@ -595,7 +570,6 @@ export const useDiagramStore = () => {
 
   return {
     activeDiagram,
-    addAppComponent,
     addNode,
     addResourceSchemaField,
     addRestMethod,
@@ -613,7 +587,6 @@ export const useDiagramStore = () => {
     onEdgesChange,
     onNodesChange,
     renameDiagram,
-    replaceAppComponents,
     replaceResourceSchema,
     replaceRestMethodInputs,
     replaceRestMethods,

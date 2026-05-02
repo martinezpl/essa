@@ -1,18 +1,8 @@
 import type {
-  AppViewComponent,
   ResourceSchemaField,
   RestMethodKind,
   PsqlColumn,
 } from "../../domain/types";
-
-export const updateComponent = (
-  components: AppViewComponent[],
-  componentId: string,
-  patch: Partial<AppViewComponent>,
-) =>
-  components.map((component) =>
-    component.id === componentId ? { ...component, ...patch } : component,
-  );
 
 export const updateColumn = (
   columns: PsqlColumn[],

@@ -1,6 +1,4 @@
 import type {
-  AppViewComponent,
-  AppViewData,
   BlockData,
   BlockKind,
   ConnectionKind,
@@ -26,7 +24,6 @@ import {
 } from "../types";
 import { createId } from "../id";
 import type {
-  AppViewSpec,
   ConnectionSpec,
   MermaidBlockSpec,
   MermaidConnectionSpec,
@@ -52,15 +49,6 @@ const clonePosition = (position: Position, offset = 48): Position => ({
   x: position.x + offset,
   y: position.y + offset,
 });
-
-const cloneComponents = (
-  components: AppViewData["components"],
-): AppViewData["components"] =>
-  components.map((component) => ({
-    ...component,
-    id: createId("component"),
-    dataUsage: component.dataUsage ? { ...component.dataUsage } : undefined,
-  }));
 
 const cloneColumns = (
   columns: PsqlColumn[],
@@ -168,10 +156,6 @@ export abstract class Block<D extends BlockData = BlockData> {
     };
   }
 
-  toAppViewSpec(): AppViewSpec | null {
-    return null;
-  }
-
   toOpenApiSpec(): OpenApiResourceSpec | null {
     return null;
   }
@@ -181,100 +165,7 @@ export abstract class Block<D extends BlockData = BlockData> {
   }
 }
 
-const appViewPorts: readonly ConnectionPort[] = [
-  {
-    id: "resource-output",
-    direction: "output",
-    connectsTo: ["restResource"],
-    defaultKind: "read",
-  },
-];
-
-export class AppViewBlock extends Block<AppViewData> {
-  readonly kind = "appView";
-  readonly label = "App View";
-  readonly ports = appViewPorts;
-
-  static createComponent(): AppViewComponent {
-    return {
-      id: createId("component"),
-      name: "",
-    };
-  }
-
-  static blankData(): AppViewData {
-    return {
-      kind: "appView",
-      route: "",
-      components: [],
-    };
-  }
-
-  static seededData(): AppViewData {
-    return {
-      kind: "appView",
-      route: "/dashboard",
-      components: [
-        {
-          id: createId("component"),
-          name: "Results List",
-        },
-      ],
-    };
-  }
-
-  static create(position: Position, options: CreateBlockOptions = {}) {
-    return new AppViewBlock({
-      id: createId("node"),
-      position,
-      data: options.seed ? AppViewBlock.seededData() : AppViewBlock.blankData(),
-    });
-  }
-
-  static hydrate(node: DiagramNode) {
-    if (node.data.kind !== "appView") {
-      throw new Error(`Cannot hydrate ${node.data.kind} as appView`);
-    }
-
-    return new AppViewBlock({
-      id: node.id,
-      position: node.position,
-      selected: node.selected,
-      data: node.data,
-    });
-  }
-
-  clone() {
-    return new AppViewBlock({
-      id: createId("node"),
-      position: clonePosition(this.position),
-      data: {
-        ...this.data,
-        components: cloneComponents(this.data.components),
-      },
-    });
-  }
-
-  title() {
-    return this.data.route || "App view";
-  }
-
-  toAppViewSpec(): AppViewSpec {
-    return {
-      id: this.id,
-      route: this.data.route,
-      components: this.data.components,
-    };
-  }
-}
-
 const restResourcePorts: readonly ConnectionPort[] = [
-  {
-    id: "view-input",
-    direction: "input",
-    connectsTo: ["appView"],
-    defaultKind: "read",
-  },
   {
     id: "table-output",
     direction: "output",
@@ -529,7 +420,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 }
 
-export type AnyBlock = AppViewBlock | RestResourceBlock | PsqlTableBlock;
+export type AnyBlock = RestResourceBlock | PsqlTableBlock;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
   kind: B["kind"];
@@ -542,14 +433,6 @@ export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
 };
 
 export const blockDefinitions = {
-  appView: {
-    kind: "appView",
-    label: "App View",
-    ports: appViewPorts,
-    create: AppViewBlock.create,
-    hydrate: AppViewBlock.hydrate,
-    title: (data: AppViewData) => data.route || "App view",
-  },
   restResource: {
     kind: "restResource",
     label: "Resource",
@@ -579,7 +462,6 @@ export const psqlColumnTypes = psqlColumnTypeSchema.options;
 export const psqlIndexMethods = psqlIndexMethodSchema.options;
 export const jsonFieldTypes = jsonFieldTypeSchema.options;
 export const restMethodInputModes = ["payload", "query"] as const;
-export const createAppViewComponent = () => AppViewBlock.createComponent();
 export const createResourceSchemaField = () =>
   RestResourceBlock.createSchemaField();
 export const createPsqlColumn = () => PsqlTableBlock.createColumn();

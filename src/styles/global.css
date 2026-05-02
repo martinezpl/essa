@@ -693,7 +693,6 @@ h3 {
   border-radius: 50%;
 }
 
-.floating-dock__dot--appView { background: var(--view); }
 .floating-dock__dot--restResource { background: var(--resource); }
 .floating-dock__dot--psqlTable { background: var(--table); }
 
@@ -1392,7 +1391,6 @@ h3 {
   border-radius: 5px;
 }
 
-.block-editor__kind--appView { background: var(--view-soft); color: var(--view); }
 .block-editor__kind--restResource { background: var(--resource-soft); color: var(--resource); }
 .block-editor__kind--psqlTable { background: var(--table-soft); color: var(--table); }
 

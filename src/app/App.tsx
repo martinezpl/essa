@@ -26,7 +26,6 @@ export const App = () => {
   const { theme, toggleTheme } = useTheme();
   const {
     activeDiagram,
-    addAppComponent,
     addNode,
     addResourceSchemaField,
     addRestMethod,
@@ -46,7 +45,6 @@ export const App = () => {
     onEdgesChange,
     onNodesChange,
     renameDiagram,
-    replaceAppComponents,
     replaceResourceSchema,
     replaceRestMethodInputs,
     replacePsqlColumns,
@@ -228,7 +226,6 @@ export const App = () => {
       nodes: canvasNodes,
       edges: activeDiagram.edges,
       resourceSchemas,
-      onAddAppComponent: addAppComponent,
       onAddResourceSchemaField: addResourceSchemaField,
       onAddRestMethod: addRestMethod,
       onAddRestMethodInput: addRestMethodInput,
@@ -240,7 +237,6 @@ export const App = () => {
         deleteNode(nodeId);
         setSelectedNodeId((current) => (current === nodeId ? null : current));
       },
-      onReplaceAppComponents: replaceAppComponents,
       onReplaceResourceSchema: replaceResourceSchema,
       onReplaceRestMethodInputs: replaceRestMethodInputs,
       onReplacePsqlColumns: replacePsqlColumns,
@@ -253,7 +249,6 @@ export const App = () => {
     }),
     [
       activeDiagram.edges,
-      addAppComponent,
       addResourceSchemaField,
       addRestMethod,
       addRestMethodInput,
@@ -264,7 +259,6 @@ export const App = () => {
       deleteEdge,
       deleteNode,
       removeRestMethod,
-      replaceAppComponents,
       replaceResourceSchema,
       replaceRestMethodInputs,
       replacePsqlColumns,
