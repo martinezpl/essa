@@ -15,9 +15,10 @@ import {
 import {
   createAppViewComponent,
   createResourceSchemaField,
+  createPsqlForeignKey,
   createRestMethodInput,
-  createSqlColumn,
-  createSqlIndex,
+  createPsqlColumn,
+  createPsqlIndex,
   DiagramModel,
 } from "../domain/model";
 import type {
@@ -33,8 +34,9 @@ import type {
   RestMethodInputField,
   RestMethodKind,
   RestResourceMethod,
-  SqlColumn,
-  SqlIndex,
+  PsqlColumn,
+  PsqlForeignKey,
+  PsqlIndex,
 } from "../domain/types";
 import {
   createInitialCollection,
@@ -357,31 +359,54 @@ export const useDiagramStore = () => {
     [activeDiagram.nodes, replaceRestMethods],
   );
 
-  const replaceSqlColumns = useCallback(
-    (nodeId: string, columns: SqlColumn[]) => {
+  const replacePsqlColumns = useCallback(
+    (nodeId: string, columns: PsqlColumn[]) => {
       updateNodeData(nodeId, { columns } as NodeDataPatch);
     },
     [updateNodeData],
   );
 
-  const replaceSqlIndices = useCallback(
-    (nodeId: string, indices: SqlIndex[]) => {
+  const replacePsqlForeignKeys = useCallback(
+    (nodeId: string, foreignKeys: PsqlForeignKey[]) => {
+      updateNodeData(nodeId, { foreignKeys } as NodeDataPatch);
+    },
+    [updateNodeData],
+  );
+
+  const replacePsqlIndices = useCallback(
+    (nodeId: string, indices: PsqlIndex[]) => {
       updateNodeData(nodeId, { indices } as NodeDataPatch);
     },
     [updateNodeData],
   );
 
-  const addSqlIndex = useCallback(
+  const addPsqlIndex = useCallback(
     (nodeId: string) => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
-      if (node?.data.kind !== "sqlTable") {
+      if (node?.data.kind !== "psqlTable") {
         return;
       }
 
-      replaceSqlIndices(nodeId, [...node.data.indices, createSqlIndex()]);
+      replacePsqlIndices(nodeId, [...node.data.indices, createPsqlIndex()]);
     },
-    [activeDiagram.nodes, replaceSqlIndices],
+    [activeDiagram.nodes, replacePsqlIndices],
+  );
+
+  const addPsqlForeignKey = useCallback(
+    (nodeId: string) => {
+      const node = activeDiagram.nodes.find((item) => item.id === nodeId);
+
+      if (node?.data.kind !== "psqlTable") {
+        return;
+      }
+
+      replacePsqlForeignKeys(nodeId, [
+        ...node.data.foreignKeys,
+        createPsqlForeignKey(),
+      ]);
+    },
+    [activeDiagram.nodes, replacePsqlForeignKeys],
   );
 
   const replaceRestMethodInputs = useCallback(
@@ -542,20 +567,20 @@ export const useDiagramStore = () => {
     [activeDiagram.nodes, replaceAppComponents],
   );
 
-  const addSqlColumn = useCallback(
+  const addPsqlColumn = useCallback(
     (nodeId: string) => {
       const node = activeDiagram.nodes.find((item) => item.id === nodeId);
 
-      if (node?.data.kind !== "sqlTable") {
+      if (node?.data.kind !== "psqlTable") {
         return;
       }
 
-      replaceSqlColumns(nodeId, [
+      replacePsqlColumns(nodeId, [
         ...node.data.columns,
-        createSqlColumn(),
+        createPsqlColumn(),
       ]);
     },
-    [activeDiagram.nodes, replaceSqlColumns],
+    [activeDiagram.nodes, replacePsqlColumns],
   );
 
   const undo = useCallback(() => {
@@ -575,8 +600,9 @@ export const useDiagramStore = () => {
     addResourceSchemaField,
     addRestMethod,
     addRestMethodInput,
-    addSqlColumn,
-    addSqlIndex,
+    addPsqlColumn,
+    addPsqlForeignKey,
+    addPsqlIndex,
     collection,
     connectNodes,
     createDiagram,
@@ -591,8 +617,9 @@ export const useDiagramStore = () => {
     replaceResourceSchema,
     replaceRestMethodInputs,
     replaceRestMethods,
-    replaceSqlColumns,
-    replaceSqlIndices,
+    replacePsqlColumns,
+    replacePsqlForeignKeys,
+    replacePsqlIndices,
     removeRestMethod,
     selectDiagram,
     canRedo: history.future.length > 0,

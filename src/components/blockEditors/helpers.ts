@@ -2,7 +2,7 @@ import type {
   AppViewComponent,
   ResourceSchemaField,
   RestMethodKind,
-  SqlColumn,
+  PsqlColumn,
 } from "../../domain/types";
 
 export const updateComponent = (
@@ -15,9 +15,9 @@ export const updateComponent = (
   );
 
 export const updateColumn = (
-  columns: SqlColumn[],
+  columns: PsqlColumn[],
   columnId: string,
-  patch: Partial<SqlColumn>,
+  patch: Partial<PsqlColumn>,
 ) =>
   columns.map((column) =>
     column.id === columnId ? { ...column, ...patch } : column,

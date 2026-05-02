@@ -1,18 +1,61 @@
 import type {
   Diagram,
   JsonFieldType,
-  PostgresType,
+  PsqlColumnType,
   ResourceSchemaField,
 } from "./types";
 
-const postgresToJsonType: Record<PostgresType, JsonFieldType> = {
-  uuid: "string",
-  text: "string",
+const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
+  smallint: "integer",
   integer: "integer",
+  bigint: "integer",
+  serial: "integer",
+  bigserial: "integer",
+  smallserial: "integer",
   numeric: "number",
+  decimal: "number",
+  real: "number",
+  "double precision": "number",
+  money: "number",
+  text: "string",
+  varchar: "string",
+  char: "string",
   boolean: "boolean",
+  uuid: "string",
+  date: "string",
+  time: "string",
+  timetz: "string",
   timestamp: "string",
+  timestamptz: "string",
+  datetime: "string",
+  interval: "string",
+  json: "object",
   jsonb: "object",
+  bytea: "string",
+  inet: "string",
+  cidr: "string",
+  macaddr: "string",
+  macaddr8: "string",
+  bit: "string",
+  varbit: "string",
+  point: "object",
+  line: "object",
+  lseg: "object",
+  box: "object",
+  path: "object",
+  polygon: "object",
+  circle: "object",
+  tsvector: "string",
+  tsquery: "string",
+  "uuid[]": "object",
+  "text[]": "object",
+  "integer[]": "object",
+  "bigint[]": "object",
+  "numeric[]": "object",
+  "boolean[]": "object",
+  "timestamp[]": "object",
+  "timestamptz[]": "object",
+  "jsonb[]": "object",
 };
 
 const isResourceTableEdge = (
@@ -29,12 +72,12 @@ export const deriveResourceSchema = (
 ): ResourceSchemaField[] => {
   const connectedTables = diagram.nodes.filter(
     (node) =>
-      node.data.kind === "sqlTable" &&
+      node.data.kind === "psqlTable" &&
       diagram.edges.some((edge) => isResourceTableEdge(edge, resourceId, node.id)),
   );
 
   return connectedTables.flatMap((tableNode) => {
-    if (tableNode.data.kind !== "sqlTable") {
+    if (tableNode.data.kind !== "psqlTable") {
       return [];
     }
 
@@ -43,7 +86,7 @@ export const deriveResourceSchema = (
       .map((column) => ({
         id: `${tableNode.id}-${column.id}`,
         name: column.name,
-        type: postgresToJsonType[column.type],
+        type: psqlToJsonType[column.type],
         nullable: column.nullable,
         sourceTableId: tableNode.id,
         sourceColumnId: column.id,

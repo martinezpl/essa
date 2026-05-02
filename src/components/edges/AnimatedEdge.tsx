@@ -38,6 +38,7 @@ export const AnimatedEdge = ({
   const kind: ConnectionKind = (data?.kind as ConnectionKind) ?? "read";
   const dataPath = (data?.dataPath as string | undefined) ?? "all";
   const linked = Boolean(data?.linked);
+  const readonly = Boolean(data?.readonly);
   const kindClass = `essa-edge--${kind}`;
   const stateClass = selected ? " essa-edge--selected" : "";
   const linkedClass = linked ? " essa-edge--linked" : "";
@@ -56,7 +57,7 @@ export const AnimatedEdge = ({
       <path className="essa-edge__path" d={path} />
       <path className="essa-edge__flow" d={path} />
       <EdgeLabelRenderer>
-        {selected ? (
+        {selected && !readonly ? (
           <div
             className="nodrag nopan"
             style={{

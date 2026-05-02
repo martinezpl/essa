@@ -1,40 +1,97 @@
 import { useState } from "react";
-import type { NodeProps } from "@xyflow/react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
-import { postgresTypes } from "../../domain/options";
+import { psqlColumnTypes, psqlIndexMethods } from "../../domain/options";
+import {
+  psqlColumnTargetHandleId,
+  psqlForeignKeySourceHandleId,
+} from "../../domain/psqlForeignKeys";
 import type {
+  DiagramNode,
   EssaNode,
-  SqlColumn,
-  SqlIndex,
-  SqlTableData,
+  PsqlColumn,
+  PsqlColumnType,
+  PsqlForeignKey,
+  PsqlIndex,
+  PsqlTableData,
 } from "../../domain/types";
+import { ComboInput } from "../blockEditors/ComboInput";
 import { updateColumn } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
 import { BlockHandles } from "./BlockHandles";
 
-type SqlTableNodeProps = NodeProps<EssaNode> & {
-  data: SqlTableData;
+type PsqlTableNodeProps = NodeProps<EssaNode> & {
+  data: PsqlTableData;
 };
 
 type EditingTarget =
   | { kind: "column"; id: string }
+  | { kind: "foreignKey"; id: string }
   | { kind: "index"; id: string }
   | null;
 
+type PsqlTableDiagramNode = DiagramNode & {
+  data: PsqlTableData;
+};
+
+type ForeignKeyTarget = {
+  table: PsqlTableDiagramNode;
+  primaryKey: PsqlColumn;
+};
+
 const updateIndex = (
-  indices: SqlIndex[],
+  indices: PsqlIndex[],
   indexId: string,
-  patch: Partial<SqlIndex>,
+  patch: Partial<PsqlIndex>,
 ) =>
   indices.map((index) =>
     index.id === indexId ? { ...index, ...patch } : index,
   );
 
-export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
+const updateForeignKey = (
+  foreignKeys: PsqlForeignKey[],
+  foreignKeyId: string,
+  patch: Partial<PsqlForeignKey>,
+) =>
+  foreignKeys.map((foreignKey) =>
+    foreignKey.id === foreignKeyId ? { ...foreignKey, ...patch } : foreignKey,
+  );
+
+const formatForeignKeyReference = (
+  foreignKey: PsqlForeignKey,
+  tables: PsqlTableDiagramNode[],
+) => {
+  const targetTable = tables.find(
+    (table) => table.id === foreignKey.targetTableId,
+  );
+  const targetColumn = targetTable?.data.columns.find(
+    (item) => item.id === foreignKey.targetColumnId,
+  );
+
+  if (!targetTable || !targetColumn) {
+    return null;
+  }
+
+  return `${targetTable.data.tableName || "table"}.${targetColumn.name || "column"}`;
+};
+
+export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
   const closeEditing = () => setEditing(null);
+  const psqlTables = ctx.nodes.filter(
+    (node): node is PsqlTableDiagramNode => node.data.kind === "psqlTable",
+  );
+  const foreignKeyTargets: ForeignKeyTarget[] = psqlTables.flatMap((table) => {
+    if (table.id === id) {
+      return [];
+    }
+
+    return table.data.columns
+      .filter((column) => column.primaryKey)
+      .map((primaryKey) => ({ table, primaryKey }));
+  });
 
   return (
     <article
@@ -42,10 +99,10 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
         selected ? " block-node--editing" : ""
       }`}
     >
-      <BlockHandles kind="sqlTable" />
+      <BlockHandles kind="psqlTable" />
 
       <header className="block-node__head">
-        <span className="block-node__badge">SQL table</span>
+        <span className="block-node__badge">PSQL table</span>
         <span className="block-node__head-spacer" />
         <span className="block-node__head-trash">
           <TrashButton
@@ -88,6 +145,15 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
                 }
               }}
             >
+              {column.primaryKey ? (
+                <Handle
+                  className="field-row__handle field-row__handle--target"
+                  id={psqlColumnTargetHandleId(column.id)}
+                  position={Position.Left}
+                  type="target"
+                  isConnectable={false}
+                />
+              ) : null}
               <span className="field-row__name">{column.name || "—"}</span>
               <span className="field-row__type">{column.type}</span>
               <span className="field-row__flags">
@@ -102,13 +168,13 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
                   <ColumnPopover
                     column={column}
                     onChange={(patch) =>
-                      ctx.onReplaceSqlColumns(
+                      ctx.onReplacePsqlColumns(
                         id,
                         updateColumn(data.columns, column.id, patch),
                       )
                     }
                     onDelete={() => {
-                      ctx.onReplaceSqlColumns(
+                      ctx.onReplacePsqlColumns(
                         id,
                         data.columns.filter((item) => item.id !== column.id),
                       );
@@ -125,9 +191,95 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddSqlColumn(id)}
+          onClick={() => ctx.onAddPsqlColumn(id)}
         >
           + Add column
+        </button>
+      </section>
+
+      <section className="block-node__section">
+        <h4 className="block-node__section-title">Foreign keys</h4>
+
+        {data.foreignKeys.length === 0 ? (
+          <p className="block-node__empty">No foreign keys yet.</p>
+        ) : null}
+
+        {data.foreignKeys.map((foreignKey) => {
+          const isEditing =
+            editing?.kind === "foreignKey" && editing.id === foreignKey.id;
+          const reference = formatForeignKeyReference(foreignKey, psqlTables);
+
+          return (
+            <div
+              key={foreignKey.id}
+              className={`field-row nodrag${isEditing ? " field-row--active" : ""}`}
+              role="button"
+              tabIndex={0}
+              onClick={() =>
+                setEditing({ kind: "foreignKey", id: foreignKey.id })
+              }
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setEditing({ kind: "foreignKey", id: foreignKey.id });
+                }
+              }}
+            >
+              <Handle
+                className="field-row__handle field-row__handle--source"
+                id={psqlForeignKeySourceHandleId(foreignKey.id)}
+                position={Position.Right}
+                type="source"
+                isConnectable={false}
+              />
+              <span className="field-row__name">
+                {foreignKey.name || "—"}
+              </span>
+              <span className="field-row__type">
+                {reference ? `→ ${reference}` : "no reference"}
+                {foreignKey.type ? ` · ${foreignKey.type}` : ""}
+              </span>
+              <span className="field-row__flags">
+                <span className="flag-chip flag-chip--fk">FK</span>
+                {foreignKey.nullable ? (
+                  <span className="flag-chip flag-chip--null">?</span>
+                ) : null}
+              </span>
+
+              {isEditing ? (
+                <RowEditPopover onClose={closeEditing}>
+                  <ForeignKeyPopover
+                    foreignKey={foreignKey}
+                    foreignKeyTargets={foreignKeyTargets}
+                    onChange={(patch) =>
+                      ctx.onReplacePsqlForeignKeys(
+                        id,
+                        updateForeignKey(data.foreignKeys, foreignKey.id, patch),
+                      )
+                    }
+                    onDelete={() => {
+                      ctx.onReplacePsqlForeignKeys(
+                        id,
+                        data.foreignKeys.filter(
+                          (item) => item.id !== foreignKey.id,
+                        ),
+                      );
+                      closeEditing();
+                    }}
+                    onClose={closeEditing}
+                  />
+                </RowEditPopover>
+              ) : null}
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          className="field-row field-row--button nodrag"
+          onClick={() => ctx.onAddPsqlForeignKey(id)}
+        >
+          + Add foreign key
         </button>
       </section>
 
@@ -168,6 +320,9 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
                   : "no columns"}
               </span>
               <span className="field-row__flags">
+                <span className="flag-chip flag-chip--null">
+                  {index.method}
+                </span>
                 {index.unique ? (
                   <span className="flag-chip">UNIQUE</span>
                 ) : null}
@@ -179,13 +334,13 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
                     index={index}
                     columns={data.columns}
                     onChange={(patch) =>
-                      ctx.onReplaceSqlIndices(
+                      ctx.onReplacePsqlIndices(
                         id,
                         updateIndex(data.indices, index.id, patch),
                       )
                     }
                     onDelete={() => {
-                      ctx.onReplaceSqlIndices(
+                      ctx.onReplacePsqlIndices(
                         id,
                         data.indices.filter((item) => item.id !== index.id),
                       );
@@ -202,7 +357,7 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
         <button
           type="button"
           className="field-row field-row--button nodrag"
-          onClick={() => ctx.onAddSqlIndex(id)}
+          onClick={() => ctx.onAddPsqlIndex(id)}
         >
           + Add index
         </button>
@@ -212,13 +367,18 @@ export const SqlTableNode = ({ id, data, selected }: SqlTableNodeProps) => {
 };
 
 type ColumnPopoverProps = {
-  column: SqlColumn;
-  onChange: (patch: Partial<SqlColumn>) => void;
+  column: PsqlColumn;
+  onChange: (patch: Partial<PsqlColumn>) => void;
   onDelete: () => void;
   onClose: () => void;
 };
 
-const ColumnPopover = ({ column, onChange, onDelete, onClose }: ColumnPopoverProps) => (
+const ColumnPopover = ({
+  column,
+  onChange,
+  onDelete,
+  onClose,
+}: ColumnPopoverProps) => (
   <div className="row-popover__inner">
     <div className="row-popover__header">
       <span className="eyebrow">Column</span>
@@ -242,18 +402,14 @@ const ColumnPopover = ({ column, onChange, onDelete, onClose }: ColumnPopoverPro
 
     <label>
       Type
-      <select
+      <ComboInput
+        ariaLabel="Column type"
+        options={psqlColumnTypes}
         value={column.type}
-        onChange={(event) =>
-          onChange({ type: event.target.value as SqlColumn["type"] })
+        onChange={(next) =>
+          onChange({ type: next as PsqlColumn["type"] })
         }
-      >
-        {postgresTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
+      />
     </label>
 
     <div className="row">
@@ -287,10 +443,112 @@ const ColumnPopover = ({ column, onChange, onDelete, onClose }: ColumnPopoverPro
   </div>
 );
 
+type ForeignKeyPopoverProps = {
+  foreignKey: PsqlForeignKey;
+  foreignKeyTargets: ForeignKeyTarget[];
+  onChange: (patch: Partial<PsqlForeignKey>) => void;
+  onDelete: () => void;
+  onClose: () => void;
+};
+
+const targetValue = (tableId: string, columnId: string) =>
+  `${tableId}:${columnId}`;
+
+const ForeignKeyPopover = ({
+  foreignKey,
+  foreignKeyTargets,
+  onChange,
+  onDelete,
+  onClose,
+}: ForeignKeyPopoverProps) => {
+  const currentTargetValue =
+    foreignKey.targetTableId && foreignKey.targetColumnId
+      ? targetValue(foreignKey.targetTableId, foreignKey.targetColumnId)
+      : "";
+
+  return (
+    <div className="row-popover__inner">
+      <div className="row-popover__header">
+        <span className="eyebrow">Foreign key</span>
+        <TrashButton ariaLabel="Remove foreign key" onClick={onDelete} />
+      </div>
+
+      <label>
+        References
+        <select
+          autoFocus
+          value={currentTargetValue}
+          onChange={(event) => {
+            const [targetTableId = "", targetColumnId = ""] =
+              event.target.value.split(":");
+            const target = foreignKeyTargets.find(
+              ({ table, primaryKey }) =>
+                table.id === targetTableId && primaryKey.id === targetColumnId,
+            );
+
+            onChange({
+              targetTableId,
+              targetColumnId,
+              type: (target?.primaryKey.type as PsqlColumnType | undefined) ??
+                foreignKey.type,
+            });
+          }}
+        >
+          <option value="">Select primary key</option>
+          {foreignKeyTargets.map(({ table, primaryKey }) => (
+            <option
+              key={`${table.id}-${primaryKey.id}`}
+              value={targetValue(table.id, primaryKey.id)}
+            >
+              {(table.data.tableName || "table")}.
+              {primaryKey.name || "column"} ({primaryKey.type})
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {foreignKeyTargets.length === 0 ? (
+        <p className="block-node__empty">
+          Add a primary key to another PSQL table to reference it.
+        </p>
+      ) : null}
+
+      <label>
+        Name
+        <input
+          placeholder="user_id"
+          value={foreignKey.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onClose();
+            }
+          }}
+        />
+      </label>
+
+      <div className="row">
+        <label>
+          Type
+          <input readOnly value={foreignKey.type} aria-label="Foreign key type" />
+        </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={foreignKey.nullable}
+            onChange={(event) => onChange({ nullable: event.target.checked })}
+          />
+          nullable
+        </label>
+      </div>
+    </div>
+  );
+};
+
 type IndexPopoverProps = {
-  index: SqlIndex;
-  columns: SqlColumn[];
-  onChange: (patch: Partial<SqlIndex>) => void;
+  index: PsqlIndex;
+  columns: PsqlColumn[];
+  onChange: (patch: Partial<PsqlIndex>) => void;
   onDelete: () => void;
   onClose: () => void;
 };
@@ -321,6 +579,22 @@ const IndexPopover = ({
           }
         }}
       />
+    </label>
+
+    <label>
+      Method
+      <select
+        value={index.method}
+        onChange={(event) =>
+          onChange({ method: event.target.value as PsqlIndex["method"] })
+        }
+      >
+        {psqlIndexMethods.map((method) => (
+          <option key={method} value={method}>
+            {method}
+          </option>
+        ))}
+      </select>
     </label>
 
     <div>

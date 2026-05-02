@@ -30,11 +30,11 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
     );
   }
 
-  if (sourceNode?.data.kind === "sqlTable") {
+  if (sourceNode?.data.kind === "psqlTable") {
     sourceNode.data.columns.forEach((column) => dataOptions.add(column.name));
   }
 
-  if (targetNode?.data.kind === "sqlTable") {
+  if (targetNode?.data.kind === "psqlTable") {
     targetNode.data.columns.forEach((column) => dataOptions.add(column.name));
   }
 

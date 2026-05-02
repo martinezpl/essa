@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockKindSchema = z.enum(["appView", "restResource", "sqlTable"]);
+export const blockKindSchema = z.enum(["appView", "restResource", "psqlTable"]);
 export type BlockKind = z.infer<typeof blockKindSchema>;
 
 export const restMethodKindSchema = z.enum([
@@ -68,16 +68,59 @@ export const restResourceMethodSchema = z.union([
 ]);
 export type RestResourceMethod = z.infer<typeof restResourceMethodSchema>;
 
-export const postgresTypeSchema = z.enum([
-  "uuid",
-  "text",
+export const psqlColumnTypeSchema = z.enum([
+  "smallint",
   "integer",
+  "bigint",
+  "serial",
+  "bigserial",
+  "smallserial",
   "numeric",
+  "decimal",
+  "real",
+  "double precision",
+  "money",
+  "text",
+  "varchar",
+  "char",
   "boolean",
+  "uuid",
+  "date",
+  "time",
+  "timetz",
   "timestamp",
+  "timestamptz",
+  "datetime",
+  "interval",
+  "json",
   "jsonb",
+  "bytea",
+  "inet",
+  "cidr",
+  "macaddr",
+  "macaddr8",
+  "bit",
+  "varbit",
+  "point",
+  "line",
+  "lseg",
+  "box",
+  "path",
+  "polygon",
+  "circle",
+  "tsvector",
+  "tsquery",
+  "uuid[]",
+  "text[]",
+  "integer[]",
+  "bigint[]",
+  "numeric[]",
+  "boolean[]",
+  "timestamp[]",
+  "timestamptz[]",
+  "jsonb[]",
 ]);
-export type PostgresType = z.infer<typeof postgresTypeSchema>;
+export type PsqlColumnType = z.infer<typeof psqlColumnTypeSchema>;
 
 export const dataUsageSchema = z.object({
   resourceId: z.string(),
@@ -119,36 +162,71 @@ export const restResourceDataSchema = z.object({
 });
 export type RestResourceData = z.infer<typeof restResourceDataSchema> & Record<string, unknown>;
 
-export const sqlColumnSchema = z.object({
+export const psqlColumnSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
-  type: postgresTypeSchema,
+  type: psqlColumnTypeSchema,
   nullable: z.boolean(),
   primaryKey: z.boolean(),
   description: z.string().optional(),
 });
-export type SqlColumn = z.infer<typeof sqlColumnSchema>;
+export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 
-export const sqlIndexSchema = z.object({
+export const psqlForeignKeySchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object") return value;
+
+  const v = value as Record<string, unknown>;
+
+  return {
+    id: typeof v.id === "string" ? v.id : "",
+    name: typeof v.name === "string" ? v.name : "",
+    type: typeof v.type === "string" ? v.type : "uuid",
+    nullable: typeof v.nullable === "boolean" ? v.nullable : false,
+    targetTableId: typeof v.targetTableId === "string" ? v.targetTableId : "",
+    targetColumnId: typeof v.targetColumnId === "string" ? v.targetColumnId : "",
+  };
+}, z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  type: psqlColumnTypeSchema,
+  nullable: z.boolean(),
+  targetTableId: z.string(),
+  targetColumnId: z.string(),
+}));
+export type PsqlForeignKey = z.infer<typeof psqlForeignKeySchema>;
+
+export const psqlIndexMethodSchema = z.enum([
+  "btree",
+  "hash",
+  "gist",
+  "spgist",
+  "gin",
+  "brin",
+]);
+export type PsqlIndexMethod = z.infer<typeof psqlIndexMethodSchema>;
+
+export const psqlIndexSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   columns: z.array(z.string()),
+  method: psqlIndexMethodSchema.default("btree"),
   unique: z.boolean(),
 });
-export type SqlIndex = z.infer<typeof sqlIndexSchema>;
+export type PsqlIndex = z.infer<typeof psqlIndexSchema>;
 
-export const sqlTableDataSchema = z.object({
-  kind: z.literal("sqlTable"),
+export const psqlTableDataSchema = z.object({
+  kind: z.literal("psqlTable"),
   tableName: z.string(),
-  columns: z.array(sqlColumnSchema),
-  indices: z.array(sqlIndexSchema).default([]),
+  columns: z.array(psqlColumnSchema),
+  foreignKeys: z.array(psqlForeignKeySchema).default([]),
+  indices: z.array(psqlIndexSchema).default([]),
 });
-export type SqlTableData = z.infer<typeof sqlTableDataSchema> & Record<string, unknown>;
+export type PsqlTableData = z.infer<typeof psqlTableDataSchema> & Record<string, unknown>;
 
-export const blockDataSchema = z.discriminatedUnion("kind", [
+export const blockDataSchema = z.union([
   appViewDataSchema,
   restResourceDataSchema,
-  sqlTableDataSchema,
+  psqlTableDataSchema,
 ]);
 export type BlockData = z.infer<typeof blockDataSchema> & Record<string, unknown>;
 
@@ -197,7 +275,9 @@ export type EdgeData = z.infer<typeof edgeDataSchema> & Record<string, unknown>;
 export const diagramEdgeSchema = z.object({
   id: z.string().min(1),
   source: z.string().min(1),
+  sourceHandle: z.string().optional().nullable(),
   target: z.string().min(1),
+  targetHandle: z.string().optional().nullable(),
   type: z.string().optional(),
   data: edgeDataSchema,
 });

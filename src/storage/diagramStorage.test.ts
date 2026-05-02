@@ -41,7 +41,7 @@ describe("diagram storage", () => {
       nodes: expect.arrayContaining([
         expect.objectContaining({ type: "appView" }),
         expect.objectContaining({ type: "restResource" }),
-        expect.objectContaining({ type: "sqlTable" }),
+        expect.objectContaining({ type: "psqlTable" }),
       ]),
     });
   });

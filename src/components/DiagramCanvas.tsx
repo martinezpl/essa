@@ -15,7 +15,7 @@ import {
 import { blockList } from "../domain/model";
 import { AppViewNode } from "./nodes/AppViewNode";
 import { RestResourceNode } from "./nodes/RestResourceNode";
-import { SqlTableNode } from "./nodes/SqlTableNode";
+import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
 import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
 
@@ -33,7 +33,7 @@ type DiagramCanvasProps = {
 const nodeTypes = {
   appView: AppViewNode,
   restResource: RestResourceNode,
-  sqlTable: SqlTableNode,
+  psqlTable: PsqlTableNode,
 } satisfies NodeTypes;
 
 const edgeTypes = {

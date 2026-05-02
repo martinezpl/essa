@@ -5,13 +5,14 @@ import {
   AppViewBlock,
   DiagramModel,
   RestResourceBlock,
-  SqlTableBlock,
+  PsqlTableBlock,
   createAppViewComponent,
   createResourceSchemaField,
   createRestMethodInput,
   createRestResourceMethodContract,
-  createSqlColumn,
-  createSqlIndex,
+  createPsqlColumn,
+  createPsqlForeignKey,
+  createPsqlIndex,
   getCompatibleConnectionKind,
   getCompatibleConnectionKinds,
   hydrateDiagram,
@@ -22,12 +23,24 @@ type RestResourceNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "restResource" }>;
 };
 
+type PsqlTableNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
+
 const asRestResourceNode = (node: DiagramNode): RestResourceNode => {
   if (node.data.kind !== "restResource") {
     throw new Error("Expected rest resource test node");
   }
 
   return node as RestResourceNode;
+};
+
+const asPsqlTableNode = (node: DiagramNode): PsqlTableNode => {
+  if (node.data.kind !== "psqlTable") {
+    throw new Error("Expected PSQL table test node");
+  }
+
+  return node as PsqlTableNode;
 };
 
 describe("block model", () => {
@@ -68,6 +81,63 @@ describe("block model", () => {
     });
   });
 
+  it("preserves external foreign keys and drops self references when cloning PSQL tables", () => {
+    const source = asPsqlTableNode(createDiagramNode("psqlTable", { x: 0, y: 0 }));
+    const target = asPsqlTableNode(createDiagramNode("psqlTable", { x: 100, y: 0 }));
+    const targetPrimaryKey = target.data.columns[0];
+    source.data.columns = [
+      source.data.columns[0],
+      {
+        id: "self-reference",
+        name: "parent_id",
+        type: "uuid",
+        nullable: true,
+        primaryKey: false,
+      },
+    ];
+    source.data.foreignKeys = [
+      {
+        id: "external-fk",
+        name: "ref_id",
+        type: "uuid",
+        nullable: false,
+        targetTableId: target.id,
+        targetColumnId: targetPrimaryKey.id,
+      },
+      {
+        id: "self-fk",
+        name: "self_ref",
+        type: "uuid",
+        nullable: true,
+        targetTableId: source.id,
+        targetColumnId: source.data.columns[0].id,
+      },
+    ];
+
+    const clone = asPsqlTableNode(PsqlTableBlock.hydrate(source).clone().serialize());
+
+    expect(clone.data.columns[0].id).not.toBe(source.data.columns[0].id);
+    expect(clone.data.foreignKeys).toHaveLength(1);
+    expect(clone.data.foreignKeys[0]).toMatchObject({
+      name: "ref_id",
+      type: "uuid",
+      nullable: false,
+      targetTableId: target.id,
+      targetColumnId: targetPrimaryKey.id,
+    });
+  });
+
+  it("creates new PSQL tables with an id UUID primary key", () => {
+    const table = asPsqlTableNode(createDiagramNode("psqlTable", { x: 0, y: 0 }));
+
+    expect(table.data.columns[0]).toMatchObject({
+      name: "id",
+      type: "uuid",
+      nullable: false,
+      primaryKey: true,
+    });
+  });
+
   it("creates REST method contracts from method kind defaults", () => {
     expect(createRestResourceMethodContract("POST /")).toMatchObject({
       kind: "POST /",
@@ -97,10 +167,10 @@ describe("block model", () => {
       sourceTableId: "",
       sourceColumnId: "",
     });
-    expect(createSqlColumn()).toMatchObject({
+    expect(createPsqlColumn()).toMatchObject({
       name: "",
       type: "text",
-      nullable: true,
+      nullable: false,
       primaryKey: false,
     });
     expect(createRestMethodInput()).toMatchObject({
@@ -108,10 +178,18 @@ describe("block model", () => {
       type: "string",
       mode: "payload",
     });
-    expect(createSqlIndex()).toMatchObject({
+    expect(createPsqlIndex()).toMatchObject({
       name: "",
       columns: [],
+      method: "btree",
       unique: false,
+    });
+    expect(createPsqlForeignKey()).toMatchObject({
+      name: "",
+      type: "uuid",
+      nullable: false,
+      targetTableId: "",
+      targetColumnId: "",
     });
   });
 });
@@ -120,7 +198,7 @@ describe("connection model", () => {
   it("validates connections through block ports", () => {
     const appView = AppViewBlock.create({ x: 0, y: 0 });
     const resource = RestResourceBlock.create({ x: 100, y: 0 });
-    const table = SqlTableBlock.create({ x: 200, y: 0 });
+    const table = PsqlTableBlock.create({ x: 200, y: 0 });
 
     expect(getCompatibleConnectionKind(appView, resource)).toBe("read");
     expect(getCompatibleConnectionKind(resource, table)).toBe("read");
@@ -174,6 +252,6 @@ describe("diagram model", () => {
     expect(model.toMermaidSpecs().blocks).toHaveLength(3);
     expect(model.toMermaidSpecs().connections).toHaveLength(1);
     expect(model.toOpenApiSpecs()).toHaveLength(1);
-    expect(model.toSqlSpecs()).toHaveLength(1);
+    expect(model.toPsqlSpecs()).toHaveLength(1);
   });
 });

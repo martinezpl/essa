@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { BlockToolbar } from "../components/BlockToolbar";
 import { DiagramCanvas } from "../components/DiagramCanvas";
 import { DiagramSidebar } from "../components/DiagramSidebar";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { deriveResourceSchemas } from "../domain/resourceSchema";
-import type { DiagramNode } from "../domain/types";
+import {
+  psqlColumnTargetHandleId,
+  psqlForeignKeySourceHandleId,
+} from "../domain/psqlForeignKeys";
+import type { DiagramEdge, DiagramNode } from "../domain/types";
 import { DiagramProvider } from "./diagramContext";
 import { useDiagramStore } from "./useDiagramStore";
 import { useTheme } from "./useTheme";
+
+type PsqlTableDiagramNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
 
 export const App = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -24,8 +31,9 @@ export const App = () => {
     addResourceSchemaField,
     addRestMethod,
     addRestMethodInput,
-    addSqlColumn,
-    addSqlIndex,
+    addPsqlColumn,
+    addPsqlForeignKey,
+    addPsqlIndex,
     collection,
     connectNodes,
     createDiagram,
@@ -41,8 +49,9 @@ export const App = () => {
     replaceAppComponents,
     replaceResourceSchema,
     replaceRestMethodInputs,
-    replaceSqlColumns,
-    replaceSqlIndices,
+    replacePsqlColumns,
+    replacePsqlForeignKeys,
+    replacePsqlIndices,
     removeRestMethod,
     redo,
     selectDiagram,
@@ -75,6 +84,49 @@ export const App = () => {
       ),
     [activeDiagram.nodes, resourceSchemas],
   );
+
+  const canvasEdges = useMemo<DiagramEdge[]>(() => {
+    const psqlTables = activeDiagram.nodes.filter(
+      (node): node is PsqlTableDiagramNode => node.data.kind === "psqlTable",
+    );
+    const psqlTableById = new Map(psqlTables.map((node) => [node.id, node]));
+
+    const foreignKeyEdges = activeDiagram.nodes.flatMap((node) => {
+      if (node.data.kind !== "psqlTable") {
+        return [];
+      }
+
+      return node.data.foreignKeys.flatMap((foreignKey): DiagramEdge[] => {
+        if (!foreignKey.targetTableId || !foreignKey.targetColumnId) {
+          return [];
+        }
+
+        const targetTable = psqlTableById.get(foreignKey.targetTableId);
+        const targetColumn = targetTable?.data.columns.find(
+          (column) =>
+            column.id === foreignKey.targetColumnId && column.primaryKey,
+        );
+
+        if (!targetTable || !targetColumn) {
+          return [];
+        }
+
+        return [
+          {
+            id: `fk-edge-${node.id}-${foreignKey.id}`,
+            source: node.id,
+            sourceHandle: psqlForeignKeySourceHandleId(foreignKey.id),
+            target: foreignKey.targetTableId,
+            targetHandle: psqlColumnTargetHandleId(foreignKey.targetColumnId),
+            type: "smoothstep",
+            data: { kind: "read", dataPath: "FK", readonly: true } as DiagramEdge["data"],
+          },
+        ];
+      });
+    });
+
+    return [...activeDiagram.edges, ...foreignKeyEdges];
+  }, [activeDiagram.edges, activeDiagram.nodes]);
 
   const selectedNode = useMemo(
     () => canvasNodes.find((node) => node.id === selectedNodeId),
@@ -180,8 +232,9 @@ export const App = () => {
       onAddResourceSchemaField: addResourceSchemaField,
       onAddRestMethod: addRestMethod,
       onAddRestMethodInput: addRestMethodInput,
-      onAddSqlColumn: addSqlColumn,
-      onAddSqlIndex: addSqlIndex,
+      onAddPsqlColumn: addPsqlColumn,
+      onAddPsqlForeignKey: addPsqlForeignKey,
+      onAddPsqlIndex: addPsqlIndex,
       onDeleteEdge: deleteEdge,
       onDeleteNode: (nodeId: string) => {
         deleteNode(nodeId);
@@ -190,8 +243,9 @@ export const App = () => {
       onReplaceAppComponents: replaceAppComponents,
       onReplaceResourceSchema: replaceResourceSchema,
       onReplaceRestMethodInputs: replaceRestMethodInputs,
-      onReplaceSqlColumns: replaceSqlColumns,
-      onReplaceSqlIndices: replaceSqlIndices,
+      onReplacePsqlColumns: replacePsqlColumns,
+      onReplacePsqlForeignKeys: replacePsqlForeignKeys,
+      onReplacePsqlIndices: replacePsqlIndices,
       onRemoveRestMethod: removeRestMethod,
       onUpdateEdgeData: updateEdgeData,
       onUpdateNodeData: updateNodeData,
@@ -203,8 +257,9 @@ export const App = () => {
       addResourceSchemaField,
       addRestMethod,
       addRestMethodInput,
-      addSqlColumn,
-      addSqlIndex,
+      addPsqlColumn,
+      addPsqlForeignKey,
+      addPsqlIndex,
       canvasNodes,
       deleteEdge,
       deleteNode,
@@ -212,8 +267,9 @@ export const App = () => {
       replaceAppComponents,
       replaceResourceSchema,
       replaceRestMethodInputs,
-      replaceSqlColumns,
-      replaceSqlIndices,
+      replacePsqlColumns,
+      replacePsqlForeignKeys,
+      replacePsqlIndices,
       resourceSchemas,
       updateEdgeData,
       updateNodeData,
@@ -227,7 +283,7 @@ export const App = () => {
         <div className="app-shell">
           <main className="workspace">
             <DiagramCanvas
-              edges={activeDiagram.edges}
+              edges={canvasEdges}
               nodes={canvasNodes}
               onAddNode={addAndSelectNode}
               onConnect={connectNodes}
@@ -237,8 +293,6 @@ export const App = () => {
               onSelectNode={setSelectedNodeId}
             />
           </main>
-
-          <BlockToolbar onAddNode={addAndSelectNode} />
 
           <div className="app-topbar">
             <div className="app-topbar__left">

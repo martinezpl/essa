@@ -18,12 +18,12 @@ const resourceNode: DiagramNode = {
   },
 };
 
-const sqlTableNode: DiagramNode = {
+const psqlTableNode: DiagramNode = {
   id: "table-1",
-  type: "sqlTable",
+  type: "psqlTable",
   position: { x: 100, y: 0 },
   data: {
-    kind: "sqlTable",
+    kind: "psqlTable",
     tableName: "items",
     columns: [
       {
@@ -48,16 +48,17 @@ const sqlTableNode: DiagramNode = {
         primaryKey: false,
       },
     ],
+    foreignKeys: [],
     indices: [],
   },
 };
 
 const disconnectedTableNode: DiagramNode = {
   id: "table-2",
-  type: "sqlTable",
+  type: "psqlTable",
   position: { x: 200, y: 0 },
   data: {
-    kind: "sqlTable",
+    kind: "psqlTable",
     tableName: "audit_log",
     columns: [
       {
@@ -68,6 +69,7 @@ const disconnectedTableNode: DiagramNode = {
         primaryKey: false,
       },
     ],
+    foreignKeys: [],
     indices: [],
   },
 };
@@ -77,12 +79,12 @@ const createDiagram = (overrides: Partial<Diagram> = {}): Diagram => ({
   name: "Test diagram",
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
-  nodes: [resourceNode, sqlTableNode, disconnectedTableNode],
+  nodes: [resourceNode, psqlTableNode, disconnectedTableNode],
   edges: [
     {
       id: "edge-1",
       source: resourceNode.id,
-      target: sqlTableNode.id,
+      target: psqlTableNode.id,
       type: "smoothstep",
       data: { kind: "read", dataPath: "all" },
     },
@@ -91,7 +93,7 @@ const createDiagram = (overrides: Partial<Diagram> = {}): Diagram => ({
 });
 
 describe("resource schema derivation", () => {
-  it("derives resource fields from connected SQL table columns", () => {
+  it("derives resource fields from connected PSQL table columns", () => {
     expect(deriveResourceSchema(createDiagram(), resourceNode.id)).toEqual([
       {
         id: "table-1-column-id",
@@ -117,7 +119,7 @@ describe("resource schema derivation", () => {
       edges: [
         {
           id: "edge-1",
-          source: sqlTableNode.id,
+          source: psqlTableNode.id,
           target: resourceNode.id,
           type: "smoothstep",
           data: { kind: "write", dataPath: "all" },

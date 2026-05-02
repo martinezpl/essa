@@ -9,8 +9,9 @@ import type {
   RestMethodInputField,
   RestMethodKind,
   RestResourceMethod,
-  SqlColumn,
-  SqlIndex,
+  PsqlColumn,
+  PsqlForeignKey,
+  PsqlIndex,
 } from "../domain/types";
 
 export type DiagramContextValue = {
@@ -24,8 +25,9 @@ export type DiagramContextValue = {
   ) => void;
   onAddRestMethod: (nodeId: string, kind: RestMethodKind) => void;
   onAddRestMethodInput: (nodeId: string, methodId: string) => void;
-  onAddSqlColumn: (nodeId: string) => void;
-  onAddSqlIndex: (nodeId: string) => void;
+  onAddPsqlColumn: (nodeId: string) => void;
+  onAddPsqlForeignKey: (nodeId: string) => void;
+  onAddPsqlIndex: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onReplaceAppComponents: (
@@ -41,8 +43,9 @@ export type DiagramContextValue = {
     methodId: string,
     inputs: RestMethodInputField[],
   ) => void;
-  onReplaceSqlColumns: (nodeId: string, columns: SqlColumn[]) => void;
-  onReplaceSqlIndices: (nodeId: string, indices: SqlIndex[]) => void;
+  onReplacePsqlColumns: (nodeId: string, columns: PsqlColumn[]) => void;
+  onReplacePsqlForeignKeys: (nodeId: string, foreignKeys: PsqlForeignKey[]) => void;
+  onReplacePsqlIndices: (nodeId: string, indices: PsqlIndex[]) => void;
   onRemoveRestMethod: (nodeId: string, methodId: string) => void;
   onUpdateEdgeData: (edgeId: string, patch: Partial<EdgeData>) => void;
   onUpdateNodeData: (nodeId: string, patch: Partial<BlockData>) => void;

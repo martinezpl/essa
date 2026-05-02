@@ -87,7 +87,7 @@ export const RestResourceNode = ({
 
         {data.schema.length === 0 ? (
           <p className="block-node__empty">
-            Connect to a SQL table or add fields manually.
+            Connect to a PSQL table or add fields manually.
           </p>
         ) : null}
 

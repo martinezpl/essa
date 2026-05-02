@@ -3,11 +3,12 @@ import type {
   BlockKind,
   ConnectionKind,
   JsonFieldType,
-  PostgresType,
+  PsqlColumnType,
   ResourceSchemaField,
   RestResourceMethod,
-  SqlColumn,
-  SqlIndex,
+  PsqlColumn,
+  PsqlForeignKey,
+  PsqlIndex,
 } from "./types";
 
 export type MermaidBlockSpec = {
@@ -31,11 +32,12 @@ export type OpenApiResourceSpec = {
   schema: ResourceSchemaField[];
 };
 
-export type SqlTableSpec = {
+export type PsqlTableSpec = {
   id: string;
   tableName: string;
-  columns: SqlColumn[];
-  indices: SqlIndex[];
+  columns: PsqlColumn[];
+  foreignKeys: PsqlForeignKey[];
+  indices: PsqlIndex[];
 };
 
 export type AppViewSpec = {
@@ -45,7 +47,7 @@ export type AppViewSpec = {
 };
 
 export type SchemaSpec = {
-  allowedTypes: readonly JsonFieldType[] | readonly PostgresType[];
+  allowedTypes: readonly JsonFieldType[] | readonly PsqlColumnType[];
 };
 
 export type ConnectionSpec = {

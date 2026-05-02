@@ -13,13 +13,15 @@ import type {
   RestResourceData,
   RestResourceMethod,
   ResourceSchemaField,
-  SqlColumn,
-  SqlIndex,
-  SqlTableData,
+  PsqlColumn,
+  PsqlForeignKey,
+  PsqlIndex,
+  PsqlTableData,
 } from "../types";
 import {
   jsonFieldTypeSchema,
-  postgresTypeSchema,
+  psqlIndexMethodSchema,
+  psqlColumnTypeSchema,
   restMethodKindSchema,
 } from "../types";
 import { createId } from "../id";
@@ -30,7 +32,7 @@ import type {
   MermaidConnectionSpec,
   OpenApiResourceSpec,
   SchemaSpec,
-  SqlTableSpec,
+  PsqlTableSpec,
 } from "../exportSpecs";
 
 type Position = DiagramNode["position"];
@@ -60,13 +62,41 @@ const cloneComponents = (
     dataUsage: component.dataUsage ? { ...component.dataUsage } : undefined,
   }));
 
-const cloneColumns = (columns: SqlColumn[]): SqlColumn[] =>
-  columns.map((column) => ({
-    ...column,
-    id: createId("column"),
-  }));
+const cloneColumns = (
+  columns: PsqlColumn[],
+): { columns: PsqlColumn[]; columnIdMap: Map<string, string> } => {
+  const columnIdMap = new Map<string, string>();
+  const clonedColumns = columns.map((column) => {
+    const id = createId("column");
+    columnIdMap.set(column.id, id);
 
-const cloneIndices = (indices: SqlIndex[]): SqlIndex[] =>
+    return {
+      ...column,
+      id,
+    };
+  });
+
+  return { columns: clonedColumns, columnIdMap };
+};
+
+const cloneForeignKeys = (
+  foreignKeys: PsqlForeignKey[],
+  sourceTableId: string,
+): PsqlForeignKey[] =>
+  foreignKeys.flatMap((foreignKey) => {
+    if (foreignKey.targetTableId === sourceTableId) {
+      return [];
+    }
+
+    return [
+      {
+        ...foreignKey,
+        id: createId("foreign-key"),
+      },
+    ];
+  });
+
+const cloneIndices = (indices: PsqlIndex[]): PsqlIndex[] =>
   indices.map((index) => ({
     ...index,
     id: createId("index"),
@@ -146,7 +176,7 @@ export abstract class Block<D extends BlockData = BlockData> {
     return null;
   }
 
-  toSqlSpec(): SqlTableSpec | null {
+  toPsqlSpec(): PsqlTableSpec | null {
     return null;
   }
 }
@@ -248,7 +278,7 @@ const restResourcePorts: readonly ConnectionPort[] = [
   {
     id: "table-output",
     direction: "output",
-    connectsTo: ["sqlTable"],
+    connectsTo: ["psqlTable"],
     defaultKind: "read",
   },
 ];
@@ -271,11 +301,21 @@ export const createRestMethodInput = (): RestMethodInputField => ({
   mode: "payload",
 });
 
-export const createSqlIndex = (): SqlIndex => ({
+export const createPsqlIndex = (): PsqlIndex => ({
   id: createId("index"),
   name: "",
   columns: [],
+  method: "btree",
   unique: false,
+});
+
+export const createPsqlForeignKey = (): PsqlForeignKey => ({
+  id: createId("foreign-key"),
+  name: "",
+  type: "uuid",
+  nullable: false,
+  targetTableId: "",
+  targetColumnId: "",
 });
 
 export class RestResourceBlock extends Block<RestResourceData> {
@@ -368,7 +408,7 @@ export class RestResourceBlock extends Block<RestResourceData> {
   }
 }
 
-const sqlTablePorts: readonly ConnectionPort[] = [
+const psqlTablePorts: readonly ConnectionPort[] = [
   {
     id: "resource-input",
     direction: "input",
@@ -377,44 +417,45 @@ const sqlTablePorts: readonly ConnectionPort[] = [
   },
 ];
 
-export class SqlTableBlock extends Block<SqlTableData> {
-  readonly kind = "sqlTable";
-  readonly label = "SQL Table";
-  readonly ports = sqlTablePorts;
+export class PsqlTableBlock extends Block<PsqlTableData> {
+  readonly kind = "psqlTable";
+  readonly label = "PSQL Table";
+  readonly ports = psqlTablePorts;
   readonly schemaSpec: SchemaSpec = {
-    allowedTypes: postgresTypeSchema.options,
+    allowedTypes: psqlColumnTypeSchema.options,
   };
 
-  static createColumn(): SqlColumn {
+  static createColumn(): PsqlColumn {
     return {
       id: createId("column"),
       name: "",
       type: "text",
-      nullable: true,
+      nullable: false,
       primaryKey: false,
     };
   }
 
-  static blankData(): SqlTableData {
+  static blankData(): PsqlTableData {
     return {
-      kind: "sqlTable",
+      kind: "psqlTable",
       tableName: "",
       columns: [
         {
           id: createId("column"),
-          name: "",
+          name: "id",
           type: "uuid",
           nullable: false,
           primaryKey: true,
         },
       ],
+      foreignKeys: [],
       indices: [],
     };
   }
 
-  static seededData(): SqlTableData {
+  static seededData(): PsqlTableData {
     return {
-      kind: "sqlTable",
+      kind: "psqlTable",
       tableName: "items",
       columns: [
         {
@@ -432,24 +473,25 @@ export class SqlTableBlock extends Block<SqlTableData> {
           primaryKey: false,
         },
       ],
+      foreignKeys: [],
       indices: [],
     };
   }
 
   static create(position: Position, options: CreateBlockOptions = {}) {
-    return new SqlTableBlock({
+    return new PsqlTableBlock({
       id: createId("node"),
       position,
-      data: options.seed ? SqlTableBlock.seededData() : SqlTableBlock.blankData(),
+      data: options.seed ? PsqlTableBlock.seededData() : PsqlTableBlock.blankData(),
     });
   }
 
   static hydrate(node: DiagramNode) {
-    if (node.data.kind !== "sqlTable") {
-      throw new Error(`Cannot hydrate ${node.data.kind} as sqlTable`);
+    if (node.data.kind !== "psqlTable") {
+      throw new Error(`Cannot hydrate ${node.data.kind} as psqlTable`);
     }
 
-    return new SqlTableBlock({
+    return new PsqlTableBlock({
       id: node.id,
       position: node.position,
       selected: node.selected,
@@ -458,32 +500,36 @@ export class SqlTableBlock extends Block<SqlTableData> {
   }
 
   clone() {
-    return new SqlTableBlock({
+    const { columns } = cloneColumns(this.data.columns);
+
+    return new PsqlTableBlock({
       id: createId("node"),
       position: clonePosition(this.position),
       data: {
         ...this.data,
-        columns: cloneColumns(this.data.columns),
+        columns,
+        foreignKeys: cloneForeignKeys(this.data.foreignKeys, this.id),
         indices: cloneIndices(this.data.indices),
       },
     });
   }
 
   title() {
-    return this.data.tableName || "SQL table";
+    return this.data.tableName || "PSQL table";
   }
 
-  toSqlSpec(): SqlTableSpec {
+  toPsqlSpec(): PsqlTableSpec {
     return {
       id: this.id,
       tableName: this.data.tableName,
       columns: this.data.columns,
+      foreignKeys: this.data.foreignKeys,
       indices: this.data.indices,
     };
   }
 }
 
-export type AnyBlock = AppViewBlock | RestResourceBlock | SqlTableBlock;
+export type AnyBlock = AppViewBlock | RestResourceBlock | PsqlTableBlock;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
   kind: B["kind"];
@@ -514,14 +560,14 @@ export const blockDefinitions = {
     title: (data: RestResourceData) =>
       data.resourceName ? `/${data.resourceName}` : "resource",
   },
-  sqlTable: {
-    kind: "sqlTable",
-    label: "SQL Table",
-    ports: sqlTablePorts,
-    schemaSpec: { allowedTypes: postgresTypeSchema.options },
-    create: SqlTableBlock.create,
-    hydrate: SqlTableBlock.hydrate,
-    title: (data: SqlTableData) => data.tableName || "SQL table",
+  psqlTable: {
+    kind: "psqlTable",
+    label: "PSQL Table",
+    ports: psqlTablePorts,
+    schemaSpec: { allowedTypes: psqlColumnTypeSchema.options },
+    create: PsqlTableBlock.create,
+    hydrate: PsqlTableBlock.hydrate,
+    title: (data: PsqlTableData) => data.tableName || "PSQL table",
   },
 } satisfies {
   [K in BlockKind]: BlockDefinition<Extract<AnyBlock, { kind: K }>>;
@@ -529,13 +575,14 @@ export const blockDefinitions = {
 
 export const blockList = Object.values(blockDefinitions);
 export const restMethodKinds = restMethodKindSchema.options;
-export const postgresTypes = postgresTypeSchema.options;
+export const psqlColumnTypes = psqlColumnTypeSchema.options;
+export const psqlIndexMethods = psqlIndexMethodSchema.options;
 export const jsonFieldTypes = jsonFieldTypeSchema.options;
 export const restMethodInputModes = ["payload", "query"] as const;
 export const createAppViewComponent = () => AppViewBlock.createComponent();
 export const createResourceSchemaField = () =>
   RestResourceBlock.createSchemaField();
-export const createSqlColumn = () => SqlTableBlock.createColumn();
+export const createPsqlColumn = () => PsqlTableBlock.createColumn();
 
 export const createBlock = (
   kind: BlockKind,
@@ -741,8 +788,8 @@ export class DiagramModel {
     return this.blocks.flatMap((block) => block.toOpenApiSpec() ?? []);
   }
 
-  toSqlSpecs() {
-    return this.blocks.flatMap((block) => block.toSqlSpec() ?? []);
+  toPsqlSpecs() {
+    return this.blocks.flatMap((block) => block.toPsqlSpec() ?? []);
   }
 }
 

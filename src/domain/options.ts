@@ -1,13 +1,15 @@
 import type {
   BlockKind,
   JsonFieldType,
-  PostgresType,
+  PsqlColumnType,
+  PsqlIndexMethod,
   RestMethodKind,
 } from "./types";
 import {
   blockList,
   jsonFieldTypes as jsonFieldTypeOptions,
-  postgresTypes as postgresTypeOptions,
+  psqlColumnTypes as psqlColumnTypeOptions,
+  psqlIndexMethods as psqlIndexMethodOptions,
   restMethodInputModes as restMethodInputModeOptions,
   restMethodKinds,
 } from "./model";
@@ -18,7 +20,11 @@ export const blockKinds: Array<{ kind: BlockKind; label: string }> = blockList.m
 
 export const restMethods: RestMethodKind[] = Array.from(restMethodKinds);
 
-export const postgresTypes: PostgresType[] = Array.from(postgresTypeOptions);
+export const psqlColumnTypes: PsqlColumnType[] = Array.from(psqlColumnTypeOptions);
+
+export const psqlIndexMethods: PsqlIndexMethod[] = Array.from(
+  psqlIndexMethodOptions,
+);
 
 export const jsonFieldTypes: JsonFieldType[] = Array.from(jsonFieldTypeOptions);
 

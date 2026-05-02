@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   diagramSchema,
   edgeDataSchema,
+  psqlColumnTypeSchema,
+  psqlIndexSchema,
   restResourceMethodSchema,
+  psqlColumnSchema,
+  psqlTableDataSchema,
 } from "./types";
 
 describe("domain schemas", () => {
@@ -72,6 +76,100 @@ describe("domain schemas", () => {
       },
     ]);
     expect(parsed.output).toEqual({ returnsArray: true });
+  });
+
+  it("parses PSQL columns without foreign keys", () => {
+    expect(psqlColumnTypeSchema.options).toEqual(
+      expect.arrayContaining([
+        "bigserial",
+        "double precision",
+        "timestamptz",
+        "inet",
+        "point",
+        "tsvector",
+        "jsonb[]",
+      ]),
+    );
+    expect(
+      psqlColumnSchema.parse({
+        id: "column-id",
+        name: "id",
+        type: "uuid",
+        nullable: false,
+        primaryKey: true,
+      }),
+    ).not.toHaveProperty("foreignKey");
+  });
+
+  it("defaults PSQL index access method to btree", () => {
+    expect(
+      psqlIndexSchema.parse({
+        id: "index-1",
+        name: "idx_items_name",
+        columns: ["column-name"],
+        unique: false,
+      }),
+    ).toMatchObject({
+      method: "btree",
+    });
+  });
+
+  it("parses PSQL table foreign keys", () => {
+    const table = psqlTableDataSchema.parse({
+      kind: "psqlTable",
+      tableName: "posts",
+      columns: [],
+      foreignKeys: [
+        {
+          id: "foreign-key-1",
+          name: "user_id",
+          type: "uuid",
+          nullable: false,
+          targetTableId: "table-users",
+          targetColumnId: "column-id",
+        },
+      ],
+      indices: [],
+    });
+
+    expect(table.foreignKeys).toEqual([
+      {
+        id: "foreign-key-1",
+        name: "user_id",
+        type: "uuid",
+        nullable: false,
+        targetTableId: "table-users",
+        targetColumnId: "column-id",
+      },
+    ]);
+  });
+
+  it("normalizes legacy foreign key shapes (columnId-based)", () => {
+    const table = psqlTableDataSchema.parse({
+      kind: "psqlTable",
+      tableName: "posts",
+      columns: [],
+      foreignKeys: [
+        {
+          id: "foreign-key-legacy",
+          columnId: "column-user-id",
+          targetTableId: "table-users",
+          targetColumnId: "column-id",
+        },
+      ],
+      indices: [],
+    });
+
+    expect(table.foreignKeys).toEqual([
+      {
+        id: "foreign-key-legacy",
+        name: "",
+        type: "uuid",
+        nullable: false,
+        targetTableId: "table-users",
+        targetColumnId: "column-id",
+      },
+    ]);
   });
 
   it("parses diagram edges through edge data migrations", () => {
