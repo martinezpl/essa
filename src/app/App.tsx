@@ -29,6 +29,8 @@ export const App = () => {
     collection,
     connectNodes,
     createDiagram,
+    canRedo,
+    canUndo,
     deleteDiagram,
     deleteEdge,
     deleteNode,
@@ -42,7 +44,9 @@ export const App = () => {
     replaceSqlColumns,
     replaceSqlIndices,
     removeRestMethod,
+    redo,
     selectDiagram,
+    undo,
     updateEdgeData,
     updateNodeData,
     updateRestMethod,
@@ -82,6 +86,12 @@ export const App = () => {
   }, [selectedNode]);
 
   useEffect(() => {
+    if (selectedNodeId && !selectedNode) {
+      setSelectedNodeId(null);
+    }
+  }, [selectedNode, selectedNodeId]);
+
+  useEffect(() => {
     copiedNodeRef.current = copiedNode;
   }, [copiedNode]);
 
@@ -117,6 +127,20 @@ export const App = () => {
       const currentSelectedNode = selectedNodeRef.current;
       const currentCopiedNode = copiedNodeRef.current;
 
+      if (key === "z") {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const runHistoryAction = event.shiftKey ? redo : undo;
+        const canRunHistoryAction = event.shiftKey ? canRedo : canUndo;
+
+        if (canRunHistoryAction) {
+          runHistoryAction();
+        }
+
+        return;
+      }
+
       if (key === "c" && currentSelectedNode) {
         event.preventDefault();
         event.stopPropagation();
@@ -145,7 +169,7 @@ export const App = () => {
 
     return () =>
       window.removeEventListener("keydown", handleKeyboard, { capture: true });
-  }, [duplicateNode]);
+  }, [canRedo, canUndo, duplicateNode, redo, undo]);
 
   const contextValue = useMemo(
     () => ({
