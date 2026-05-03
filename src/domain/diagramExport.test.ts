@@ -50,6 +50,7 @@ const createDiagram = (): Diagram => ({
             id: "schema-field-1",
             name: "status",
             type: "string",
+            enum: ["draft", "published"],
             nullable: false,
             sourceTableId: "table-posts",
             sourceColumnId: "column-status",
@@ -208,5 +209,25 @@ describe("diagram export", () => {
     expect(markdown).not.toContain("PK; required; Current publication status");
     expect(markdown).toContain('POSTS ||--o{ POSTS_2 : "read: all"');
     expect(markdown).toContain('USERS ||--o{ POSTS_2 : "FK: author_id');
+    expect(markdown).toContain("## OpenAPI");
+    expect(markdown).toContain('```json\n{\n  "openapi": "3.1.0"');
+    expect(markdown).toContain('"title": "Export Test"');
+    expect(markdown).toContain('"/posts":');
+    expect(markdown).toContain('"get":');
+    expect(markdown).toContain('"name": "status"');
+    expect(markdown).toContain('"in": "query"');
+    expect(markdown).toContain('"type": "array"');
+    expect(markdown).toContain('"enum": [');
+    expect(markdown).toContain('"draft"');
+    expect(markdown).toContain('"required": [\n                      "status"\n                    ]');
+    expect(markdown).toContain("## PostgreSQL Schema");
+    expect(markdown).toContain("```sql\nCREATE TYPE \"status_enum\" AS ENUM ('draft', 'published');");
+    expect(markdown).toContain("CREATE TABLE \"posts\" (");
+    expect(markdown).toContain('"id" uuid NOT NULL');
+    expect(markdown).toContain('"status" "status_enum" NOT NULL');
+    expect(markdown).toContain('"author_id" uuid NOT NULL');
+    expect(markdown).toContain('PRIMARY KEY ("id")');
+    expect(markdown).toContain('FOREIGN KEY ("author_id") REFERENCES "users" ("id")');
+    expect(markdown).toContain('CREATE INDEX "idx_posts_status" ON "posts" ("status");');
   });
 });

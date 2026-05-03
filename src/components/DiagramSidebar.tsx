@@ -94,7 +94,12 @@ export const DiagramSidebar = ({
             type="button"
             onClick={onClose}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
               <path strokeLinecap="round" d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
@@ -106,7 +111,14 @@ export const DiagramSidebar = ({
             type="button"
             onClick={onCreateDiagram}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              width="16"
+              height="16"
+            >
               <path strokeLinecap="round" d="M12 5v14M5 12h14" />
             </svg>
             New diagram
@@ -116,8 +128,19 @@ export const DiagramSidebar = ({
             type="button"
             onClick={() => importInputRef.current?.click()}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v10m0 0 4-4m-4 4-4-4M5 19h14" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              width="16"
+              height="16"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 5v10m0 0 4-4m-4 4-4-4M5 19h14"
+              />
             </svg>
             Import .essa
           </button>
@@ -198,7 +221,9 @@ export const DiagramSidebar = ({
                       Export as...
                     </option>
                     <option value="essa">.essa</option>
-                    <option value="markdown">.md (with mermaid)</option>
+                    <option value="markdown">
+                      .md (Mermaid, openAPI, SQL)
+                    </option>
                   </select>
                 </div>
                 <button
@@ -210,8 +235,18 @@ export const DiagramSidebar = ({
                     onDeleteDiagram(diagram.id);
                   }}
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="14" height="14">
-                    <path strokeLinecap="round" d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    width="14"
+                    height="14"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"
+                    />
                   </svg>
                 </button>
               </div>

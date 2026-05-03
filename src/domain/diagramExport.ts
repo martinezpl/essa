@@ -16,6 +16,64 @@ type PsqlTableDiagramNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
 };
 
+type RestResourceDiagramNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "restResource" }>;
+};
+
+type OpenApiSchema = {
+  type?: string;
+  format?: string;
+  description?: string;
+  enum?: string[];
+  nullable?: boolean;
+  properties?: Record<string, OpenApiSchema>;
+  required?: string[];
+  items?: OpenApiSchema;
+  additionalProperties?: boolean;
+};
+
+type OpenApiParameter = {
+  name: string;
+  in: "query" | "path";
+  required: boolean;
+  description?: string;
+  schema: OpenApiSchema;
+};
+
+type OpenApiOperation = {
+  summary: string;
+  description?: string;
+  parameters?: OpenApiParameter[];
+  requestBody?: {
+    required: boolean;
+    content: {
+      "application/json": {
+        schema: OpenApiSchema;
+      };
+    };
+  };
+  responses: Record<
+    string,
+    {
+      description: string;
+      content?: {
+        "application/json": {
+          schema: OpenApiSchema;
+        };
+      };
+    }
+  >;
+};
+
+type OpenApiDocument = {
+  openapi: "3.1.0";
+  info: {
+    title: string;
+    version: "1.0.0";
+  };
+  paths: Record<string, Record<string, OpenApiOperation>>;
+};
+
 const ESSA_DIAGRAM_EXPORT_KIND = "essa.diagram";
 const ESSA_DIAGRAM_EXPORT_VERSION = 1;
 
@@ -602,6 +660,395 @@ const serializeErDiagram = (diagram: Diagram) => {
   return `${lines.join("\n")}\n`;
 };
 
+const openApiFormatByType: Partial<Record<ResourceSchemaField["type"], string>> = {
+  integer: "int64",
+};
+
+const getRestResourceNodes = (diagram: Diagram) =>
+  diagram.nodes.filter(
+    (node): node is RestResourceDiagramNode => node.data.kind === "restResource",
+  );
+
+const getPsqlTableNodes = (diagram: Diagram) =>
+  diagram.nodes.filter(
+    (node): node is PsqlTableDiagramNode => node.data.kind === "psqlTable",
+  );
+
+const normalizeOpenApiResourcePath = (resourceName: string) => {
+  const path = resourceName.trim().replace(/^\/+|\/+$/g, "") || "resource";
+  return `/${path}`;
+};
+
+const getOpenApiMethodPath = (kind: RestResourceDiagramNode["data"]["methods"][number]["kind"]) =>
+  kind.endsWith("/{id}") ? "/{id}" : "/";
+
+const getOpenApiMethodName = (
+  kind: RestResourceDiagramNode["data"]["methods"][number]["kind"],
+) => kind.split(" ")[0].toLowerCase();
+
+const createOpenApiJsonSchema = (
+  type: ResourceSchemaField["type"],
+  options: {
+    description?: string;
+    enum?: string[];
+    nullable?: boolean;
+  } = {},
+): OpenApiSchema => ({
+  type,
+  ...(openApiFormatByType[type] ? { format: openApiFormatByType[type] } : {}),
+  ...(options.description?.trim()
+    ? { description: options.description.trim() }
+    : {}),
+  ...(options.enum?.length ? { enum: options.enum } : {}),
+  ...(options.nullable ? { nullable: true } : {}),
+  ...(type === "object" ? { additionalProperties: true } : {}),
+});
+
+const createOpenApiObjectSchema = (fields: ResourceSchemaField[]): OpenApiSchema => {
+  if (fields.length === 0) {
+    return {
+      type: "object",
+      additionalProperties: true,
+    };
+  }
+
+  const properties = Object.fromEntries(
+    fields
+      .filter((field) => field.name.trim())
+      .map((field) => [
+        field.name.trim(),
+        createOpenApiJsonSchema(field.type, {
+          description: field.description,
+          enum: field.enum,
+          nullable: field.nullable,
+        }),
+      ]),
+  );
+  const required = fields
+    .filter((field) => field.name.trim() && !field.nullable)
+    .map((field) => field.name.trim());
+
+  return {
+    type: "object",
+    properties,
+    ...(required.length ? { required } : {}),
+  };
+};
+
+const createOpenApiResponseSchema = (
+  fields: ResourceSchemaField[],
+  returnsArray: boolean,
+): OpenApiSchema => {
+  const itemSchema = createOpenApiObjectSchema(fields);
+
+  return returnsArray
+    ? {
+        type: "array",
+        items: itemSchema,
+      }
+    : itemSchema;
+};
+
+const createOpenApiRequestSchema = (
+  fields: RestResourceDiagramNode["data"]["methods"][number]["input"],
+): OpenApiSchema => {
+  const payloadFields = fields.filter(
+    (field) => field.mode === "payload" && field.name.trim(),
+  );
+  const properties = Object.fromEntries(
+    payloadFields.map((field) => [
+      field.name.trim(),
+      createOpenApiJsonSchema(field.type, {
+        description: field.description,
+      }),
+    ]),
+  );
+
+  return {
+    type: "object",
+    properties,
+    ...(payloadFields.length
+      ? { required: payloadFields.map((field) => field.name.trim()) }
+      : {}),
+  };
+};
+
+const createOpenApiParameters = (
+  method: RestResourceDiagramNode["data"]["methods"][number],
+): OpenApiParameter[] => {
+  const parameters: OpenApiParameter[] = [];
+
+  if (method.kind.endsWith("/{id}")) {
+    parameters.push({
+      name: "id",
+      in: "path",
+      required: true,
+      schema: {
+        type: "string",
+      },
+    });
+  }
+
+  method.input
+    .filter((field) => field.mode === "query" && field.name.trim())
+    .forEach((field) => {
+      parameters.push({
+        name: field.name.trim(),
+        in: "query",
+        required: false,
+        ...(field.description?.trim()
+          ? { description: field.description.trim() }
+          : {}),
+        schema: createOpenApiJsonSchema(field.type),
+      });
+    });
+
+  return parameters;
+};
+
+const createOpenApiOperation = (
+  resource: RestResourceDiagramNode,
+  method: RestResourceDiagramNode["data"]["methods"][number],
+  schema: ResourceSchemaField[],
+): OpenApiOperation => {
+  const payloadFields = method.input.filter((field) => field.mode === "payload");
+  const responseStatus = method.kind === "POST /" ? "201" : "200";
+  const responses: OpenApiOperation["responses"] =
+    method.kind === "DELETE /{id}"
+      ? {
+          "204": {
+            description: "No content",
+          },
+        }
+      : {
+          [responseStatus]: {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: createOpenApiResponseSchema(
+                  schema,
+                  method.output.returnsArray,
+                ),
+              },
+            },
+          },
+        };
+  const parameters = createOpenApiParameters(method);
+
+  return {
+    summary: method.kind,
+    ...(resource.data.description?.trim()
+      ? { description: resource.data.description.trim() }
+      : {}),
+    ...(parameters.length ? { parameters } : {}),
+    ...(payloadFields.length
+      ? {
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: createOpenApiRequestSchema(method.input),
+              },
+            },
+          },
+        }
+      : {}),
+    responses,
+  };
+};
+
+const serializeOpenApiDocument = (diagram: Diagram) => {
+  const resourceSchemas = deriveResourceSchemas(diagram);
+  const paths: OpenApiDocument["paths"] = {};
+
+  getRestResourceNodes(diagram).forEach((resource) => {
+    const basePath = normalizeOpenApiResourcePath(resource.data.resourceName);
+    const schema =
+      resource.data.schema.length > 0
+        ? resource.data.schema
+        : (resourceSchemas.get(resource.id) ?? []);
+
+    resource.data.methods.forEach((method) => {
+      const path = `${basePath}${getOpenApiMethodPath(method.kind)}`.replace(
+        /\/$/,
+        "",
+      );
+      paths[path] = {
+        ...(paths[path] ?? {}),
+        [getOpenApiMethodName(method.kind)]: createOpenApiOperation(
+          resource,
+          method,
+          schema,
+        ),
+      };
+    });
+  });
+
+  return JSON.stringify(
+    {
+      openapi: "3.1.0",
+      info: {
+        title: escapeMarkdownHeading(diagram.name),
+        version: "1.0.0",
+      },
+      paths,
+    } satisfies OpenApiDocument,
+    null,
+    2,
+  );
+};
+
+const quoteSqlIdentifier = (value: string, fallback: string) =>
+  `"${(value.trim() || fallback).replaceAll('"', '""')}"`;
+
+const quoteSqlLiteral = (value: string) => `'${value.replaceAll("'", "''")}'`;
+
+const getPsqlEnum = (diagram: Diagram, enumId?: string) =>
+  diagram.psqlEnums.find((psqlEnum) => psqlEnum.id === enumId);
+
+const formatPsqlColumnTypeForDdl = (column: PsqlColumn, diagram: Diagram) => {
+  if (column.type === "enum") {
+    const psqlEnum = getPsqlEnum(diagram, column.options?.enumId);
+    return quoteSqlIdentifier(psqlEnum?.name ?? "", "enum");
+  }
+
+  return formatPsqlColumnType(column, diagram.psqlEnums);
+};
+
+const createPsqlTableLookup = (diagram: Diagram) =>
+  new Map(getPsqlTableNodes(diagram).map((node) => [node.id, node]));
+
+const serializePsqlEnumDdl = (diagram: Diagram) => {
+  const usedEnumIds = new Set(
+    getPsqlTableNodes(diagram).flatMap((node) =>
+      node.data.columns
+        .filter((column) => column.type === "enum" && column.options?.enumId)
+        .map((column) => column.options?.enumId ?? ""),
+    ),
+  );
+
+  return diagram.psqlEnums
+    .filter((psqlEnum) => usedEnumIds.has(psqlEnum.id))
+    .map(
+      (psqlEnum) =>
+        `CREATE TYPE ${quoteSqlIdentifier(
+          psqlEnum.name,
+          "enum",
+        )} AS ENUM (${psqlEnum.values.map(quoteSqlLiteral).join(", ")});`,
+    );
+};
+
+const serializePsqlTableDdl = (
+  table: PsqlTableDiagramNode,
+  diagram: Diagram,
+  tableLookup: Map<string, PsqlTableDiagramNode>,
+) => {
+  const tableName = quoteSqlIdentifier(table.data.tableName, "table");
+  const columnLines = table.data.columns
+    .filter((column) => column.name.trim())
+    .map(
+      (column) =>
+        `  ${quoteSqlIdentifier(column.name, "column")} ${formatPsqlColumnTypeForDdl(
+          column,
+          diagram,
+        )}${column.nullable ? "" : " NOT NULL"}`,
+    );
+  const foreignKeyColumnLines = table.data.foreignKeys
+    .filter((foreignKey) => foreignKey.name.trim())
+    .map(
+      (foreignKey) =>
+        `  ${quoteSqlIdentifier(foreignKey.name, "foreign_key")} ${foreignKey.type}${
+          foreignKey.nullable ? "" : " NOT NULL"
+        }`,
+    );
+  const primaryKeyColumns = table.data.columns.filter(
+    (column) => column.primaryKey && column.name.trim(),
+  );
+  const primaryKeyLine = primaryKeyColumns.length
+    ? [
+        `  PRIMARY KEY (${primaryKeyColumns
+          .map((column) => quoteSqlIdentifier(column.name, "column"))
+          .join(", ")})`,
+      ]
+    : [];
+  const foreignKeyConstraintLines = table.data.foreignKeys.flatMap((foreignKey) => {
+    if (
+      !foreignKey.name.trim() ||
+      !foreignKey.targetTableId ||
+      !foreignKey.targetColumnId
+    ) {
+      return [];
+    }
+
+    const targetTable = tableLookup.get(foreignKey.targetTableId);
+    const targetColumn = targetTable?.data.columns.find(
+      (column) => column.id === foreignKey.targetColumnId && column.name.trim(),
+    );
+
+    if (!targetTable || !targetColumn) {
+      return [];
+    }
+
+    return [
+      `  FOREIGN KEY (${quoteSqlIdentifier(
+        foreignKey.name,
+        "foreign_key",
+      )}) REFERENCES ${quoteSqlIdentifier(
+        targetTable.data.tableName,
+        "table",
+      )} (${quoteSqlIdentifier(targetColumn.name, "column")})`,
+    ];
+  });
+  const definitionLines = [
+    ...columnLines,
+    ...foreignKeyColumnLines,
+    ...primaryKeyLine,
+    ...foreignKeyConstraintLines,
+  ];
+
+  if (definitionLines.length === 0) {
+    return `CREATE TABLE ${tableName} ();`;
+  }
+
+  return `CREATE TABLE ${tableName} (\n${definitionLines.join(",\n")}\n);`;
+};
+
+const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
+  table.data.indices.flatMap((index) => {
+    const columns = index.columns
+      .map((columnId) =>
+        table.data.columns.find((column) => column.id === columnId && column.name.trim()),
+      )
+      .filter((column): column is PsqlColumn => Boolean(column));
+
+    if (columns.length === 0) {
+      return [];
+    }
+
+    return [
+      `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(
+        index.name,
+        "index",
+      )} ON ${quoteSqlIdentifier(table.data.tableName, "table")}${
+        index.method === "btree" ? "" : ` USING ${index.method}`
+      } (${columns
+        .map((column) => quoteSqlIdentifier(column.name, "column"))
+        .join(", ")});`,
+    ];
+  });
+
+const serializePsqlDdl = (diagram: Diagram) => {
+  const tableLookup = createPsqlTableLookup(diagram);
+  const tableNodes = getPsqlTableNodes(diagram);
+  const statements = [
+    ...serializePsqlEnumDdl(diagram),
+    ...tableNodes.map((table) => serializePsqlTableDdl(table, diagram, tableLookup)),
+    ...tableNodes.flatMap(serializePsqlIndexDdl),
+  ];
+
+  return statements.length ? `${statements.join("\n\n")}\n` : "-- No PostgreSQL tables.";
+};
+
 const escapeMarkdownHeading = (value: string) =>
   value.replace(/^[#\s]+/, "").trim() || "Diagram";
 
@@ -618,4 +1065,15 @@ ${serializeMermaidDiagram(diagram)}\`\`\`
 
 \`\`\`mermaid
 ${serializeErDiagram(diagram)}\`\`\`
+
+## OpenAPI
+
+\`\`\`json
+${serializeOpenApiDocument(diagram)}
+\`\`\`
+
+## PostgreSQL Schema
+
+\`\`\`sql
+${serializePsqlDdl(diagram)}\`\`\`
 `;
