@@ -230,6 +230,15 @@ h3 {
   text-transform: uppercase;
 }
 
+.eyebrow_workspace {
+  color: var(--text-subtle);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  margin-left: 0.5rem;
+  text-transform: uppercase;
+}
+
 .icon-button {
   display: inline-flex;
   align-items: center;
@@ -671,6 +680,8 @@ h3 {
 
 .drawer__brand {
   display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
   gap: 0.1rem;
 }
 
@@ -1134,7 +1145,7 @@ h3 {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.62rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1169,8 +1180,8 @@ h3 {
 }
 
 .block-node__title {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.24rem;
+  font-weight: 700;
   letter-spacing: -0.005em;
   font-family: var(--font-mono);
   word-break: break-word;
@@ -1213,7 +1224,7 @@ h3 {
   align-items: center;
   gap: 0.35rem;
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
   font-family: var(--font-mono);
 }
 
@@ -1246,7 +1257,7 @@ h3 {
 .block-node__column-type {
   font-family: var(--font-mono);
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
 }
 
 .block-node__column-flags {
@@ -1290,7 +1301,7 @@ h3 {
   align-items: center;
   gap: 0.25rem;
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: 0.18rem 0.45rem;
@@ -1306,7 +1317,7 @@ h3 {
 
 .type-chip {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
   background: var(--hover);
@@ -1316,14 +1327,14 @@ h3 {
 /* Inline-editable block title */
 .block-node__title-input {
   width: 100%;
-  padding: 0.25rem 0.4rem;
+  padding: 0.3rem 0.4rem;
   margin: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 1.8rem;
+  font-weight: 700;
   letter-spacing: -0.005em;
   color: var(--text);
   transition: background var(--dur-fast) var(--ease),
@@ -1425,7 +1436,7 @@ h3 {
 .field-row__type {
   font-family: var(--font-mono);
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.82rem;
 }
 
 .field-row__reference {

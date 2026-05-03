@@ -85,8 +85,8 @@ export const DiagramSidebar = ({
       >
         <div className="drawer__header">
           <div className="drawer__brand">
-            <span className="eyebrow">Workspace</span>
-            <h1>essa</h1>
+            <img src="/logo-mini.png" alt="Essa" className="drawer__logo" />
+            <span className="eyebrow_workspace">Workspace</span>
           </div>
           <button
             aria-label="Close diagrams"
