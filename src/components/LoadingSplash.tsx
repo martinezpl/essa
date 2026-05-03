@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const SPLASH_DURATION = 1400;
+const SPLASH_DURATION = 1300;
 
 export const LoadingSplash = () => {
   const [mounted, setMounted] = useState(true);

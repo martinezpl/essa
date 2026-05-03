@@ -350,6 +350,7 @@ h3 {
   transform-origin: 42% 58%;
   animation: splash-logo-in 220ms var(--ease) 420ms both,
     splash-logo-shaka 750ms var(--ease-spring) 640ms 2;
+  margin-left: 10px;
 }
 
 .splash__word {
@@ -407,20 +408,19 @@ h3 {
 @keyframes splash-logo-in {
   from {
     opacity: 0;
-    transform: translateY(16px) rotate(55deg) scale(0.94);
+    transform: translateY(16px) rotate(0deg) scale(0.94);
   }
   to {
     opacity: 1;
-    transform: translateY(0) rotate(60deg) scale(1);
+    transform: translateY(0) rotate(0deg) scale(1);
   }
 }
 
 @keyframes splash-logo-shaka {
-  0%, 100% { transform: translateY(0) rotate(60deg); }
-  18% { transform: translateY(-10px) rotate(52deg); }
-  36% { transform: translateY(8px) rotate(68deg); }
-  54% { transform: translateY(-7px) rotate(54deg); }
-  72% { transform: translateY(5px) rotate(66deg); }
+  18% { transform: translateY(-10px) rotate(-10deg); }
+  36% { transform: translateY(8px) rotate(28deg); }
+  54% { transform: translateY(-10px) rotate(-10deg); }
+  72% { transform: translateY(8px) rotate(28deg); }
 }
 
 @keyframes splash-letter {
