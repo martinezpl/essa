@@ -33,29 +33,32 @@ const restMethodInputBaseSchema = z.object({
   description: z.string().optional(),
 });
 
-export const restMethodInputFieldSchema = z.preprocess((value) => {
-  if (!value || typeof value !== "object") return value;
+export const restMethodInputFieldSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") return value;
 
-  const input = value as Record<string, unknown>;
+    const input = value as Record<string, unknown>;
 
-  if (input.mode !== "query") {
-    return value;
-  }
+    if (input.mode !== "query") {
+      return value;
+    }
 
-  return {
-    ...input,
-    type: "string",
-  };
-}, z.discriminatedUnion("mode", [
-  restMethodInputBaseSchema.extend({
-    mode: z.literal("payload"),
-    type: jsonFieldTypeSchema,
-  }),
-  restMethodInputBaseSchema.extend({
-    mode: z.literal("query"),
-    type: z.literal("string"),
-  }),
-]));
+    return {
+      ...input,
+      type: "string",
+    };
+  },
+  z.discriminatedUnion("mode", [
+    restMethodInputBaseSchema.extend({
+      mode: z.literal("payload"),
+      type: jsonFieldTypeSchema,
+    }),
+    restMethodInputBaseSchema.extend({
+      mode: z.literal("query"),
+      type: z.literal("string"),
+    }),
+  ]),
+);
 export type RestMethodInputField = z.infer<typeof restMethodInputFieldSchema>;
 
 const restMethodInputArraySchema = z.preprocess((value) => {
@@ -63,15 +66,20 @@ const restMethodInputArraySchema = z.preprocess((value) => {
   return [];
 }, z.array(restMethodInputFieldSchema));
 
-export const restMethodOutputSchema = z.preprocess((value) => {
-  if (value && typeof value === "object" && "returnsArray" in value) {
-    return {
-      returnsArray: Boolean((value as { returnsArray?: unknown }).returnsArray),
-    };
-  }
+export const restMethodOutputSchema = z.preprocess(
+  (value) => {
+    if (value && typeof value === "object" && "returnsArray" in value) {
+      return {
+        returnsArray: Boolean(
+          (value as { returnsArray?: unknown }).returnsArray,
+        ),
+      };
+    }
 
-  return { returnsArray: false };
-}, z.object({ returnsArray: z.boolean() }));
+    return { returnsArray: false };
+  },
+  z.object({ returnsArray: z.boolean() }),
+);
 export type RestMethodOutput = z.infer<typeof restMethodOutputSchema>;
 
 const restMethodContractBaseSchema = z.object({
@@ -184,7 +192,8 @@ export const restResourceDataSchema = z.object({
   methods: z.array(restResourceMethodSchema),
   schema: z.array(resourceSchemaFieldSchema).default([]),
 });
-export type RestResourceData = z.infer<typeof restResourceDataSchema> & Record<string, unknown>;
+export type RestResourceData = z.infer<typeof restResourceDataSchema> &
+  Record<string, unknown>;
 
 export const psqlColumnSchema = z.object({
   id: z.string().min(1),
@@ -196,27 +205,31 @@ export const psqlColumnSchema = z.object({
 });
 export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 
-export const psqlForeignKeySchema = z.preprocess((value) => {
-  if (!value || typeof value !== "object") return value;
+export const psqlForeignKeySchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") return value;
 
-  const v = value as Record<string, unknown>;
+    const v = value as Record<string, unknown>;
 
-  return {
-    id: typeof v.id === "string" ? v.id : "",
-    name: typeof v.name === "string" ? v.name : "",
-    type: typeof v.type === "string" ? v.type : "uuid",
-    nullable: typeof v.nullable === "boolean" ? v.nullable : false,
-    targetTableId: typeof v.targetTableId === "string" ? v.targetTableId : "",
-    targetColumnId: typeof v.targetColumnId === "string" ? v.targetColumnId : "",
-  };
-}, z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  type: psqlColumnTypeSchema,
-  nullable: z.boolean(),
-  targetTableId: z.string(),
-  targetColumnId: z.string(),
-}));
+    return {
+      id: typeof v.id === "string" ? v.id : "",
+      name: typeof v.name === "string" ? v.name : "",
+      type: typeof v.type === "string" ? v.type : "uuid",
+      nullable: typeof v.nullable === "boolean" ? v.nullable : false,
+      targetTableId: typeof v.targetTableId === "string" ? v.targetTableId : "",
+      targetColumnId:
+        typeof v.targetColumnId === "string" ? v.targetColumnId : "",
+    };
+  },
+  z.object({
+    id: z.string().min(1),
+    name: z.string(),
+    type: psqlColumnTypeSchema,
+    nullable: z.boolean(),
+    targetTableId: z.string(),
+    targetColumnId: z.string(),
+  }),
+);
 export type PsqlForeignKey = z.infer<typeof psqlForeignKeySchema>;
 
 export const psqlIndexMethodSchema = z.enum([
@@ -245,7 +258,8 @@ export const psqlTableDataSchema = z.object({
   foreignKeys: z.array(psqlForeignKeySchema).default([]),
   indices: z.array(psqlIndexSchema).default([]),
 });
-export type PsqlTableData = z.infer<typeof psqlTableDataSchema> & Record<string, unknown>;
+export type PsqlTableData = z.infer<typeof psqlTableDataSchema> &
+  Record<string, unknown>;
 
 export const annotationDataSchema = z.object({
   kind: z.literal("annotation"),
@@ -254,14 +268,16 @@ export const annotationDataSchema = z.object({
   width: z.number().positive().default(520),
   height: z.number().positive().default(320),
 });
-export type AnnotationData = z.infer<typeof annotationDataSchema> & Record<string, unknown>;
+export type AnnotationData = z.infer<typeof annotationDataSchema> &
+  Record<string, unknown>;
 
 export const blockDataSchema = z.union([
   restResourceDataSchema,
   psqlTableDataSchema,
   annotationDataSchema,
 ]);
-export type BlockData = z.infer<typeof blockDataSchema> & Record<string, unknown>;
+export type BlockData = z.infer<typeof blockDataSchema> &
+  Record<string, unknown>;
 
 export const positionSchema = z.object({
   x: z.number(),

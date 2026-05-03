@@ -125,15 +125,15 @@ export const App = () => {
       activeDiagram.nodes.map((node) => {
         if (node.data.kind === "restResource") {
           return {
-              ...node,
-              data: {
-                ...node.data,
-                schema:
-                  node.data.schema.length > 0
-                    ? node.data.schema
-                    : (resourceSchemas.get(node.id) ?? []),
-              },
-            };
+            ...node,
+            data: {
+              ...node.data,
+              schema:
+                node.data.schema.length > 0
+                  ? node.data.schema
+                  : (resourceSchemas.get(node.id) ?? []),
+            },
+          };
         }
 
         if (node.data.kind === "annotation") {
@@ -184,7 +184,11 @@ export const App = () => {
             target: foreignKey.targetTableId,
             targetHandle: psqlColumnTargetHandleId(foreignKey.targetColumnId),
             type: "smoothstep",
-            data: { kind: "read", dataPath: "FK", readonly: true } as DiagramEdge["data"],
+            data: {
+              kind: "read",
+              dataPath: "FK",
+              readonly: true,
+            } as DiagramEdge["data"],
           },
         ];
       });
@@ -193,17 +197,14 @@ export const App = () => {
     return [...activeDiagram.edges, ...foreignKeyEdges];
   }, [activeDiagram.edges, activeDiagram.nodes]);
 
-  const selectedNodes = useMemo(
-    () => {
-      const selected = activeDiagram.nodes.filter((node) => node.selected);
-      const fallback = selectedNodeId
-        ? activeDiagram.nodes.find((node) => node.id === selectedNodeId)
-        : null;
+  const selectedNodes = useMemo(() => {
+    const selected = activeDiagram.nodes.filter((node) => node.selected);
+    const fallback = selectedNodeId
+      ? activeDiagram.nodes.find((node) => node.id === selectedNodeId)
+      : null;
 
-      return selected.length > 0 ? selected : fallback ? [fallback] : [];
-    },
-    [activeDiagram.nodes, selectedNodeId],
-  );
+    return selected.length > 0 ? selected : fallback ? [fallback] : [];
+  }, [activeDiagram.nodes, selectedNodeId]);
 
   useEffect(() => {
     selectedNodesRef.current = selectedNodes;
@@ -292,7 +293,11 @@ export const App = () => {
       const isModifierPressed = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
 
-      if (!isModifierPressed && !event.altKey && !isEditableTarget(event.target)) {
+      if (
+        !isModifierPressed &&
+        !event.altKey &&
+        !isEditableTarget(event.target)
+      ) {
         const modeByKey: Partial<Record<string, CanvasMode>> = {
           q: "grip",
           w: "select",
@@ -308,7 +313,11 @@ export const App = () => {
         }
       }
 
-      if (!isModifierPressed || event.altKey || isEditableTarget(event.target)) {
+      if (
+        !isModifierPressed ||
+        event.altKey ||
+        isEditableTarget(event.target)
+      ) {
         return;
       }
 
@@ -338,9 +347,9 @@ export const App = () => {
       if (key === "v" && currentCopiedNodes.length > 0) {
         event.preventDefault();
         event.stopPropagation();
-        const nextCopiedNodes = currentCopiedNodes.length === 1
-          ? [duplicateNode(currentCopiedNodes[0])]
-              .map((nodeId) => ({
+        const nextCopiedNodes =
+          currentCopiedNodes.length === 1
+            ? [duplicateNode(currentCopiedNodes[0])].map((nodeId) => ({
                 ...currentCopiedNodes[0],
                 id: nodeId,
                 position: {
@@ -348,7 +357,7 @@ export const App = () => {
                   y: currentCopiedNodes[0].position.y + 48,
                 },
               }))
-          : duplicateNodes(currentCopiedNodes);
+            : duplicateNodes(currentCopiedNodes);
 
         if (nextCopiedNodes[0]) {
           setSelectedNodeId(nextCopiedNodes[0].id);
@@ -446,17 +455,21 @@ export const App = () => {
 
           <div className="canvas-mode-dock" aria-label="Canvas mode">
             <div className="canvas-mode-dock__section">
-              {([
-                ["grip", "Grip", "Q"],
-                ["select", "Select", "W"],
-                ["annotate", "Annotate", "E"],
-              ] as const).map(([mode, label, shortcut]) => (
+              {(
+                [
+                  ["grip", "Grip", "Q"],
+                  ["select", "Select", "W"],
+                  ["annotate", "Annotate", "E"],
+                ] as const
+              ).map(([mode, label, shortcut]) => (
                 <button
                   key={mode}
                   type="button"
                   title={`${label} (${shortcut})`}
                   className={`canvas-mode-dock__button${
-                    canvasMode === mode ? " canvas-mode-dock__button--active" : ""
+                    canvasMode === mode
+                      ? " canvas-mode-dock__button--active"
+                      : ""
                   }`}
                   onClick={() => setCanvasMode(mode)}
                 >
@@ -479,7 +492,9 @@ export const App = () => {
                   )
                 }
               >
-                <span>{canvasInputMode === "touchpad" ? "Touchpad" : "Mouse"}</span>
+                <span>
+                  {canvasInputMode === "touchpad" ? "Touchpad" : "Mouse"}
+                </span>
               </button>
             </div>
           </div>
@@ -514,7 +529,10 @@ export const App = () => {
                   strokeWidth="1.8"
                 >
                   <circle cx="12" cy="12" r="8" />
-                  <path strokeLinecap="round" d="M9.8 9.6a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.9" />
+                  <path
+                    strokeLinecap="round"
+                    d="M9.8 9.6a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.9"
+                  />
                   <path strokeLinecap="round" d="M12 17h.01" />
                 </svg>
               </button>
@@ -564,7 +582,10 @@ export const App = () => {
                     className="minimap-button__icon"
                   >
                     <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
-                    <path strokeLinecap="round" d="M8 5.5v13M16 5.5v13M3.5 10h17M3.5 14h17" />
+                    <path
+                      strokeLinecap="round"
+                      d="M8 5.5v13M16 5.5v13M3.5 10h17M3.5 14h17"
+                    />
                   </svg>
                   {minimapHovered ? (
                     <CanvasMinimap

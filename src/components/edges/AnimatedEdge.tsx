@@ -29,6 +29,7 @@ export const AnimatedEdge = ({
     targetY,
     sourcePosition,
     targetPosition,
+    curvature: 0.7,
   });
 
   const kind: ConnectionKind = (data?.kind as ConnectionKind) ?? "read";
@@ -51,9 +52,7 @@ export const AnimatedEdge = ({
   };
 
   return (
-    <g
-      className={`essa-edge ${kindClass}${stateClass}${linkedClass}`}
-    >
+    <g className={`essa-edge ${kindClass}${stateClass}${linkedClass}`}>
       <path className="essa-edge__hit" d={path} />
       <path className="essa-edge__path" d={path} />
       <path className="essa-edge__flow" d={path} />
