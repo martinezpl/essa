@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useReactFlow, useStore, useViewport } from "@xyflow/react";
-import { getNodeObstacle } from "./canvasObstacle";
-import type { EdgeRouteObstacle } from "./edges/edgeRouting";
+import { getNodeObstacle, type CanvasNodeBounds } from "./canvasObstacle";
 import type { DiagramEdge, DiagramNode } from "../domain/types";
 
 const MINIMAP_WIDTH = 320;
@@ -10,7 +9,7 @@ const MINIMAP_PADDING = 18;
 const MIN_CENTER_ZOOM = 0.1;
 const MAX_CENTER_ZOOM = 1.18;
 
-const getObstacleCenter = (obstacle: EdgeRouteObstacle) => ({
+const getObstacleCenter = (obstacle: CanvasNodeBounds) => ({
   x: (obstacle.left + obstacle.right) / 2,
   y: (obstacle.top + obstacle.bottom) / 2,
 });
@@ -71,7 +70,7 @@ export const CanvasMinimap = ({ edges, nodes, className }: CanvasMinimapProps) =
     x: offsetX + (point.x - bounds.left) * scale,
     y: offsetY + (point.y - bounds.top) * scale,
   });
-  const toMinimapRect = (obstacle: EdgeRouteObstacle) => {
+  const toMinimapRect = (obstacle: CanvasNodeBounds) => {
     const point = toMinimapPoint({ x: obstacle.left, y: obstacle.top });
 
     return {
@@ -108,15 +107,15 @@ export const CanvasMinimap = ({ edges, nodes, className }: CanvasMinimapProps) =
       <svg viewBox={`0 0 ${MINIMAP_WIDTH} ${MINIMAP_HEIGHT}`} aria-hidden="true">
         <g className="canvas-minimap__edges">
           {edges.map((edge) => {
-            const sourceObstacle = obstacleById.get(edge.source);
-            const targetObstacle = obstacleById.get(edge.target);
+            const sourceBounds = obstacleById.get(edge.source);
+            const targetBounds = obstacleById.get(edge.target);
 
-            if (!sourceObstacle || !targetObstacle) {
+            if (!sourceBounds || !targetBounds) {
               return null;
             }
 
-            const source = toMinimapPoint(getObstacleCenter(sourceObstacle));
-            const target = toMinimapPoint(getObstacleCenter(targetObstacle));
+            const source = toMinimapPoint(getObstacleCenter(sourceBounds));
+            const target = toMinimapPoint(getObstacleCenter(targetBounds));
 
             return (
               <line

@@ -1,8 +1,15 @@
 import type { DiagramNode } from "../domain/types";
-import type { EdgeRouteObstacle } from "./edges/edgeRouting";
 
 const DEFAULT_NODE_WIDTH = 360;
 const DEFAULT_NODE_HEIGHT = 420;
+
+export type CanvasNodeBounds = {
+  id: string;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
 
 type LayoutDiagramNode = DiagramNode & {
   measured?: { width?: number; height?: number };
@@ -10,7 +17,7 @@ type LayoutDiagramNode = DiagramNode & {
   height?: number;
 };
 
-export const getNodeObstacle = (node: DiagramNode): EdgeRouteObstacle => {
+export const getNodeObstacle = (node: DiagramNode): CanvasNodeBounds => {
   const layoutNode = node as LayoutDiagramNode;
   const width =
     layoutNode.measured?.width ??

@@ -25,7 +25,6 @@ import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnnotationNode } from "./nodes/AnnotationNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
-import type { EdgeRouteObstacle } from "./edges/edgeRouting";
 import { getNodeObstacle } from "./canvasObstacle";
 import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
 
@@ -88,7 +87,6 @@ type AnnotationResizeDraft = {
 };
 
 const MIN_ANNOTATION_SIZE = 24;
-const EMPTY_OBSTACLES: EdgeRouteObstacle[] = [];
 const WHEEL_LINE_HEIGHT = 16;
 
 const getWheelDeltaScale = (
@@ -152,50 +150,14 @@ export const DiagramCanvas = ({
     const selectedNodeIds = new Set(
       nodes.filter((node) => node.selected).map((node) => node.id),
     );
-    const isAnyDragging = nodes.some(
-      (node) =>
-        (node as DiagramNode & { dragging?: boolean }).dragging === true,
-    );
-
-    if (isAnyDragging) {
-      return edges.map((edge) => ({
-        ...edge,
-        type: "default" as const,
-        data: {
-          ...edge.data,
-          sourceObstacle: undefined,
-          targetObstacle: undefined,
-          obstacles: EMPTY_OBSTACLES,
-          linked:
-            selectedNodeIds.has(edge.source) ||
-            selectedNodeIds.has(edge.target),
-          skipRouting: true,
-        },
-      }));
-    }
-
-    const obstacles = nodes
-      .filter((node) => node.data.kind !== "annotation")
-      .map(getNodeObstacle);
 
     return edges.map((edge) => ({
       ...edge,
       type: "default" as const,
       data: {
         ...edge.data,
-        sourceObstacle: obstacles.find(
-          (obstacle) => obstacle.id === edge.source,
-        ),
-        targetObstacle: obstacles.find(
-          (obstacle) => obstacle.id === edge.target,
-        ),
-        obstacles: obstacles.filter(
-          (obstacle) =>
-            obstacle.id !== edge.source && obstacle.id !== edge.target,
-        ),
         linked:
           selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target),
-        skipRouting: false,
       },
     }));
   }, [edges, nodes]);

@@ -2086,8 +2086,7 @@ h3 {
   transition: stroke var(--dur-fast) var(--ease),
     stroke-width var(--dur-fast) var(--ease),
     opacity var(--dur-fast) var(--ease),
-    filter var(--dur-fast) var(--ease),
-    d var(--dur-base) var(--ease);
+    filter var(--dur-fast) var(--ease);
 }
 
 .essa-edge__hit {
@@ -2095,7 +2094,6 @@ h3 {
   stroke: transparent;
   stroke-width: 18;
   cursor: pointer;
-  transition: d var(--dur-base) var(--ease);
 }
 
 .essa-edge--read .essa-edge__path { stroke: var(--read); }
@@ -2110,14 +2108,7 @@ h3 {
   stroke-dasharray: 6 9;
   opacity: 0;
   animation: none;
-  transition: opacity var(--dur-base) var(--ease),
-    d var(--dur-base) var(--ease);
-}
-
-.essa-edge--dragging .essa-edge__path,
-.essa-edge--dragging .essa-edge__hit,
-.essa-edge--dragging .essa-edge__flow {
-  transition-property: stroke, stroke-width, opacity, filter;
+  transition: opacity var(--dur-base) var(--ease);
 }
 
 .essa-edge--linked .essa-edge__flow,
