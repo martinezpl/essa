@@ -1,4 +1,4 @@
-# Essa ![](public/logo.png)
+# Essa ![](public/logo-mini.png)
 
 Essa is a web tool for designing application diagrams from a model-first perspective that connects REST resources to PSQL tables.
 
