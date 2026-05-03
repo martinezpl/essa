@@ -1,4 +1,10 @@
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import {
   Background,
   BackgroundVariant,
@@ -16,24 +22,35 @@ import {
 import { blockList } from "../domain/model";
 import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
+import { AnnotationNode } from "./nodes/AnnotationNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
 import type { EdgeRouteObstacle } from "./edges/edgeRouting";
 import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
 
+export type CanvasMode = "grip" | "select" | "annotate";
+
 type DiagramCanvasProps = {
   edges: DiagramEdge[];
+  mode: CanvasMode;
   nodes: DiagramNode[];
-  onAddNode: (kind: BlockKind, position?: { x: number; y: number }) => string;
+  onAddNode: (
+    kind: BlockKind,
+    position?: { x: number; y: number },
+    dataPatch?: Partial<DiagramNode["data"]>,
+  ) => string;
   onConnect: (sourceId?: string | null, targetId?: string | null) => void;
   onEdgesChange: (changes: EdgeChange<DiagramEdge>[]) => void;
   onNodesChange: (changes: NodeChange<DiagramNode>[]) => void;
+  onDeleteNode: (nodeId: string) => void;
   onSelectEdge: (edgeId: string | null) => void;
   onSelectNode: (nodeId: string | null) => void;
+  onUpdateNodeData: (nodeId: string, data: Partial<DiagramNode["data"]>) => void;
 };
 
 const nodeTypes = {
   restResource: RestResourceNode,
   psqlTable: PsqlTableNode,
+  annotation: AnnotationNode,
 } satisfies NodeTypes;
 
 const edgeTypes = {
@@ -58,13 +75,36 @@ type LayoutDiagramNode = DiagramNode & {
   height?: number;
 };
 
+type AnnotationDiagramNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "annotation" }>;
+};
+
+type AnnotationResizeDraft = {
+  height: number;
+  id: string;
+  startHeight: number;
+  startWidth: number;
+  startX: number;
+  startY: number;
+  width: number;
+};
+
 const DEFAULT_NODE_WIDTH = 360;
 const DEFAULT_NODE_HEIGHT = 420;
+const MIN_ANNOTATION_SIZE = 24;
 
 const getNodeObstacle = (node: DiagramNode): EdgeRouteObstacle => {
   const layoutNode = node as LayoutDiagramNode;
-  const width = layoutNode.measured?.width ?? layoutNode.width ?? DEFAULT_NODE_WIDTH;
-  const height = layoutNode.measured?.height ?? layoutNode.height ?? DEFAULT_NODE_HEIGHT;
+  const width = layoutNode.measured?.width ??
+    layoutNode.width ??
+    (node.data.kind === "annotation"
+      ? node.data.width
+      : DEFAULT_NODE_WIDTH);
+  const height = layoutNode.measured?.height ??
+    layoutNode.height ??
+    (node.data.kind === "annotation"
+      ? node.data.height
+      : DEFAULT_NODE_HEIGHT);
 
   return {
     id: node.id,
@@ -233,13 +273,16 @@ const CanvasMinimap = ({
 
 export const DiagramCanvas = ({
   edges,
+  mode,
   nodes,
   onAddNode,
   onConnect,
+  onDeleteNode,
   onEdgesChange,
   onNodesChange,
   onSelectEdge,
   onSelectNode,
+  onUpdateNodeData,
 }: DiagramCanvasProps) => {
   const { screenToFlowPosition, setCenter } = useReactFlow();
   const viewport = useViewport();
@@ -250,12 +293,23 @@ export const DiagramCanvas = ({
     top: number;
     position: { x: number; y: number };
   } | null>(null);
+  const [annotationDraft, setAnnotationDraft] = useState<{
+    start: { x: number; y: number };
+    current: { x: number; y: number };
+  } | null>(null);
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
+  const [annotationResizeDraft, setAnnotationResizeDraft] =
+    useState<AnnotationResizeDraft | null>(null);
+  const annotationNameInputRef = useRef<HTMLInputElement | null>(null);
+  const ignoreNextPaneClickRef = useRef(false);
 
   const renderedEdges = useMemo(() => {
     const selectedNodeIds = new Set(
       nodes.filter((node) => node.selected).map((node) => node.id),
     );
-    const obstacles = nodes.map(getNodeObstacle);
+    const obstacles = nodes
+      .filter((node) => node.data.kind !== "annotation")
+      .map(getNodeObstacle);
 
     return edges.map((edge) => ({
       ...edge,
@@ -272,16 +326,213 @@ export const DiagramCanvas = ({
       },
     }));
   }, [edges, nodes]);
+  const annotationPreview = annotationDraft
+    ? {
+        left: Math.min(annotationDraft.start.x, annotationDraft.current.x),
+        top: Math.min(annotationDraft.start.y, annotationDraft.current.y),
+        width: Math.abs(annotationDraft.current.x - annotationDraft.start.x),
+        height: Math.abs(annotationDraft.current.y - annotationDraft.start.y),
+      }
+    : null;
+  const editingAnnotation = nodes.find(
+    (node): node is AnnotationDiagramNode =>
+      node.id === editingAnnotationId && node.data.kind === "annotation",
+  );
+  const editingAnnotationBounds = editingAnnotation
+    ? getNodeObstacle(editingAnnotation)
+    : null;
+  const isResizingEditingAnnotation =
+    Boolean(annotationResizeDraft && editingAnnotation) &&
+    annotationResizeDraft?.id === editingAnnotation?.id;
+  const editingAnnotationWidth =
+    isResizingEditingAnnotation && annotationResizeDraft
+      ? annotationResizeDraft.width
+      : editingAnnotation?.data.width;
+  const editingAnnotationHeight =
+    isResizingEditingAnnotation && annotationResizeDraft
+      ? annotationResizeDraft.height
+      : editingAnnotation?.data.height;
+
+  useEffect(() => {
+    if (!editingAnnotation) {
+      return;
+    }
+
+    annotationNameInputRef.current?.focus();
+    annotationNameInputRef.current?.select();
+  }, [editingAnnotation?.id]);
+
+  useEffect(() => {
+    if (!annotationResizeDraft) {
+      return;
+    }
+
+    const resizeDraft = annotationResizeDraft;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      setAnnotationResizeDraft((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          width: Math.max(
+            MIN_ANNOTATION_SIZE,
+            current.startWidth + (event.clientX - current.startX) / viewport.zoom,
+          ),
+          height: Math.max(
+            MIN_ANNOTATION_SIZE,
+            current.startHeight + (event.clientY - current.startY) / viewport.zoom,
+          ),
+        };
+      });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const width = Math.max(
+        MIN_ANNOTATION_SIZE,
+        resizeDraft.startWidth +
+          (event.clientX - resizeDraft.startX) / viewport.zoom,
+      );
+      const height = Math.max(
+        MIN_ANNOTATION_SIZE,
+        resizeDraft.startHeight +
+          (event.clientY - resizeDraft.startY) / viewport.zoom,
+      );
+
+      onUpdateNodeData(resizeDraft.id, {
+        width,
+        height,
+      });
+      setAnnotationResizeDraft(null);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp, { once: true });
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [annotationResizeDraft, onUpdateNodeData, viewport.zoom]);
+  const createAnnotationFromDraft = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!annotationDraft) {
+      return;
+    }
+
+    const end = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const left = Math.min(annotationDraft.start.x, end.x);
+    const top = Math.min(annotationDraft.start.y, end.y);
+    const width = Math.abs(end.x - annotationDraft.start.x);
+    const height = Math.abs(end.y - annotationDraft.start.y);
+    setAnnotationDraft(null);
+
+    if (width < MIN_ANNOTATION_SIZE || height < MIN_ANNOTATION_SIZE) {
+      return;
+    }
+
+    const nodeId = onAddNode("annotation", { x: left, y: top }, { width, height });
+    ignoreNextPaneClickRef.current = true;
+    setEditingAnnotationId(nodeId);
+  };
+  const findAnnotationAtPoint = (point: { x: number; y: number }) =>
+    [...nodes]
+      .reverse()
+      .find((node) => {
+        if (node.data.kind !== "annotation") {
+          return false;
+        }
+
+        const bounds = getNodeObstacle(node);
+
+        return (
+          point.x >= bounds.left &&
+          point.x <= bounds.right &&
+          point.y >= bounds.top &&
+          point.y <= bounds.bottom
+        );
+      });
 
   return (
-    <div className="canvas-shell">
+    <div
+      className={`canvas-shell canvas-shell--${mode}`}
+      onDoubleClickCapture={(event) => {
+        if (mode !== "select") {
+          return;
+        }
+
+        const target = event.target;
+
+        if (
+          target instanceof HTMLElement &&
+          target.closest(
+            ".react-flow__node:not(.react-flow__node-annotation), .react-flow__controls, .canvas-minimap, .canvas-context-menu, .annotation-editor",
+          )
+        ) {
+          return;
+        }
+
+        const annotation = findAnnotationAtPoint(
+          screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        );
+
+        if (!annotation) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        setContextMenu(null);
+        onSelectEdge(null);
+        onSelectNode(null);
+        setEditingAnnotationId(annotation.id);
+      }}
+      onMouseMove={(event) => {
+        if (!annotationDraft) {
+          return;
+        }
+
+        setAnnotationDraft({
+          ...annotationDraft,
+          current: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        });
+      }}
+      onMouseDown={(event) => {
+        if (mode !== "annotate" || annotationDraft) {
+          return;
+        }
+
+        const target = event.target;
+
+        if (
+          target instanceof HTMLElement &&
+          target.closest(
+            ".react-flow__node, .react-flow__controls, .canvas-minimap, .canvas-context-menu, .annotation-edit-frame",
+          )
+        ) {
+          return;
+        }
+
+        const start = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        setAnnotationDraft({ start, current: start });
+      }}
+      onMouseUp={createAnnotationFromDraft}
+    >
       <ReactFlow
         fitView
         fitViewOptions={fitViewOptions}
         edges={renderedEdges}
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
+        multiSelectionKeyCode={["Meta", "Control", "Shift"]}
         nodes={nodes}
+        panOnDrag={mode === "grip"}
+        selectionOnDrag={mode === "select"}
+        zoomOnDoubleClick={mode !== "select"}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}
@@ -301,8 +552,15 @@ export const DiagramCanvas = ({
           onSelectNode(node.id);
         }}
         onPaneClick={() => {
+          if (ignoreNextPaneClickRef.current) {
+            ignoreNextPaneClickRef.current = false;
+            return;
+          }
+
           setContextMenu(null);
+          setEditingAnnotationId(null);
           onSelectEdge(null);
+
           onSelectNode(null);
         }}
         onPaneContextMenu={(event) => {
@@ -333,6 +591,83 @@ export const DiagramCanvas = ({
           })
         }
       />
+      {annotationPreview ? (
+        <div
+          className="annotation-preview"
+          style={{
+            transform: `translate(${annotationPreview.left * viewport.zoom + viewport.x}px, ${
+              annotationPreview.top * viewport.zoom + viewport.y
+            }px)`,
+            width: annotationPreview.width * viewport.zoom,
+            height: annotationPreview.height * viewport.zoom,
+          }}
+        />
+      ) : null}
+      {editingAnnotation && editingAnnotationBounds && editingAnnotationWidth && editingAnnotationHeight ? (
+        <div
+          className="annotation-edit-frame"
+          style={{
+            left: editingAnnotationBounds.left * viewport.zoom + viewport.x,
+            top: editingAnnotationBounds.top * viewport.zoom + viewport.y,
+            width: editingAnnotationWidth * viewport.zoom,
+            height: editingAnnotationHeight * viewport.zoom,
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Resize annotation"
+            className="annotation-edit-frame__resize"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setAnnotationResizeDraft({
+                id: editingAnnotation.id,
+                startX: event.clientX,
+                startY: event.clientY,
+                startWidth: editingAnnotationWidth,
+                startHeight: editingAnnotationHeight,
+                width: editingAnnotationWidth,
+                height: editingAnnotationHeight,
+              });
+            }}
+          />
+          <div className="annotation-editor">
+            <label className="annotation-editor__field">
+              <span>Name</span>
+              <input
+                ref={annotationNameInputRef}
+                aria-label="Annotation name"
+                type="text"
+                value={editingAnnotation.data.label}
+                onChange={(event) =>
+                  onUpdateNodeData(editingAnnotation.id, { label: event.target.value })
+                }
+              />
+            </label>
+            <label className="annotation-editor__field annotation-editor__field--color">
+              <span>Color</span>
+              <input
+                aria-label="Annotation color"
+                type="color"
+                value={editingAnnotation.data.color}
+                onChange={(event) =>
+                  onUpdateNodeData(editingAnnotation.id, { color: event.target.value })
+                }
+              />
+            </label>
+            <button
+              type="button"
+              className="annotation-editor__delete"
+              onClick={() => {
+                onDeleteNode(editingAnnotation.id);
+                setEditingAnnotationId(null);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ) : null}
       {contextMenu ? (
         <div
           className="canvas-context-menu"

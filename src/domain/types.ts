@@ -1,7 +1,11 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockKindSchema = z.enum(["restResource", "psqlTable"]);
+export const blockKindSchema = z.enum([
+  "restResource",
+  "psqlTable",
+  "annotation",
+]);
 export type BlockKind = z.infer<typeof blockKindSchema>;
 
 export const restMethodKindSchema = z.enum([
@@ -243,9 +247,19 @@ export const psqlTableDataSchema = z.object({
 });
 export type PsqlTableData = z.infer<typeof psqlTableDataSchema> & Record<string, unknown>;
 
+export const annotationDataSchema = z.object({
+  kind: z.literal("annotation"),
+  label: z.string(),
+  color: z.string().default("#818cf8"),
+  width: z.number().positive().default(520),
+  height: z.number().positive().default(320),
+});
+export type AnnotationData = z.infer<typeof annotationDataSchema> & Record<string, unknown>;
+
 export const blockDataSchema = z.union([
   restResourceDataSchema,
   psqlTableDataSchema,
+  annotationDataSchema,
 ]);
 export type BlockData = z.infer<typeof blockDataSchema> & Record<string, unknown>;
 

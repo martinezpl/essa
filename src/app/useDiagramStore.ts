@@ -7,6 +7,7 @@ import {
 } from "@xyflow/react";
 import {
   cloneDiagramNode,
+  createId,
   createDiagramNode,
   createRestResourceMethod,
   createStarterDiagram,
@@ -105,10 +106,17 @@ const resolveNodeCollisions = (
 
     while (guard < resolvedNodes.length) {
       const movingNode = resolvedNodes[nodeIndex];
+
+      if (movingNode.data.kind === "annotation") {
+        return;
+      }
+
       const movingBounds = getNodeBounds(movingNode);
       const blockingNode = resolvedNodes.find(
         (node) =>
-          node.id !== nodeId && boundsOverlap(movingBounds, getNodeBounds(node)),
+          node.id !== nodeId &&
+          node.data.kind !== "annotation" &&
+          boundsOverlap(movingBounds, getNodeBounds(node)),
       );
 
       if (!blockingNode) {
@@ -180,6 +188,87 @@ const hasCompletedNodeDrag = (changes: NodeChange<DiagramNode>[]) =>
 
 const shouldRecordEdgeChanges = (changes: EdgeChange<DiagramEdge>[]) =>
   changes.some((change) => change.type !== "select");
+
+export const duplicateDiagramSelection = (
+  nodesToDuplicate: DiagramNode[],
+  edges: DiagramEdge[],
+) => {
+  const selectedIds = new Set(nodesToDuplicate.map((node) => node.id));
+  const clonedNodes = nodesToDuplicate.map((node) => cloneDiagramNode(node));
+  const idMap = new Map(
+    nodesToDuplicate.map((node, index) => [node.id, clonedNodes[index].id]),
+  );
+  const columnIdMap = new Map<string, string>();
+
+  nodesToDuplicate.forEach((node, index) => {
+    const clonedNode = clonedNodes[index];
+
+    if (node.data.kind !== "psqlTable") {
+      return;
+    }
+
+    const clonedData = clonedNode.data;
+
+    if (clonedData.kind !== "psqlTable") {
+      return;
+    }
+
+    node.data.columns.forEach((column, columnIndex) => {
+      const clonedColumn = clonedData.columns[columnIndex];
+
+      if (clonedColumn) {
+        columnIdMap.set(column.id, clonedColumn.id);
+      }
+    });
+  });
+
+  const nodes = clonedNodes.map((node) => {
+    if (node.data.kind !== "psqlTable") {
+      return node;
+    }
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        foreignKeys: node.data.foreignKeys.flatMap((foreignKey) => {
+          const targetTableId = idMap.get(foreignKey.targetTableId);
+          const targetColumnId = columnIdMap.get(foreignKey.targetColumnId);
+
+          return targetTableId && targetColumnId
+            ? [{ ...foreignKey, targetTableId, targetColumnId }]
+            : [];
+        }),
+        indices: node.data.indices.map((index) => ({
+          ...index,
+          columns: index.columns.map((columnId) =>
+            columnIdMap.get(columnId) ?? columnId,
+          ),
+        })),
+      },
+    };
+  });
+
+  const internalEdges = edges.flatMap((edge) => {
+    const source = idMap.get(edge.source);
+    const target = idMap.get(edge.target);
+
+    if (!source || !target || !selectedIds.has(edge.source) || !selectedIds.has(edge.target)) {
+      return [];
+    }
+
+    return [
+      {
+        ...edge,
+        id: createId("edge"),
+        source,
+        target,
+      },
+    ];
+  });
+
+  return { edges: internalEdges, nodes };
+};
 
 export const useDiagramStore = () => {
   const [history, setHistory] = useState(() =>
@@ -294,14 +383,27 @@ export const useDiagramStore = () => {
   }, []);
 
   const addNode = useCallback(
-    (kind: BlockKind, position?: { x: number; y: number }) => {
-      const node = createDiagramNode(
+    (
+      kind: BlockKind,
+      position?: { x: number; y: number },
+      dataPatch?: NodeDataPatch,
+    ) => {
+      const createdNode = createDiagramNode(
         kind,
         position ?? {
           x: 120 + activeDiagram.nodes.length * 48,
           y: 140 + activeDiagram.nodes.length * 28,
         },
       );
+      const node = dataPatch
+        ? {
+            ...createdNode,
+            data: {
+              ...createdNode.data,
+              ...dataPatch,
+            } as BlockData,
+          }
+        : createdNode;
 
       updateActiveDiagram((diagram) => ({
         ...diagram,
@@ -340,6 +442,35 @@ export const useDiagramStore = () => {
       return clonedNode.id;
     },
     [updateActiveDiagram],
+  );
+
+  const duplicateNodes = useCallback(
+    (nodesToDuplicate: DiagramNode[]) => {
+      const duplicated = duplicateDiagramSelection(nodesToDuplicate, activeDiagram.edges);
+
+      updateActiveDiagram((diagram) => {
+        return {
+          ...diagram,
+          nodes: resolveNodeCollisions(
+            [
+              ...diagram.nodes.map((item) => ({
+                ...item,
+                selected: false,
+              })),
+              ...duplicated.nodes.map((node) => ({
+                ...node,
+                selected: true,
+              })),
+            ],
+            new Set(duplicated.nodes.map((node) => node.id)),
+          ),
+          edges: [...diagram.edges, ...duplicated.edges],
+        };
+      });
+
+      return duplicated.nodes;
+    },
+    [activeDiagram.edges, updateActiveDiagram],
   );
 
   const deleteNode = useCallback(
@@ -737,6 +868,7 @@ export const useDiagramStore = () => {
     deleteEdge,
     deleteNode,
     duplicateNode,
+    duplicateNodes,
     importDiagram,
     onEdgesChange,
     onNodesChange,

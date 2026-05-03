@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-const SPLASH_DURATION = 1500;
+const SPLASH_DURATION = 1400;
 
 export const LoadingSplash = () => {
   const [mounted, setMounted] = useState(true);
@@ -23,7 +23,7 @@ export const LoadingSplash = () => {
           <span>s</span>
           <span>s</span>
           <span>a</span>
-          <span className="splash__caret" />
+          <img alt="" className="splash__logo" src="/logo.png" />
         </div>
         <div className="splash__bar" />
       </div>

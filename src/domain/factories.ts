@@ -6,6 +6,7 @@ import type {
   RestResourceData,
   RestResourceMethod,
   PsqlTableData,
+  AnnotationData,
 } from "./types";
 import {
   createBlock,
@@ -23,7 +24,7 @@ export const createRestResourceMethod = (
 
 export const blankBlockData = (
   kind: BlockKind,
-): RestResourceData | PsqlTableData => {
+): RestResourceData | PsqlTableData | AnnotationData => {
   const block = createBlock(kind, { x: 0, y: 0 });
 
   return block.data;
@@ -31,7 +32,7 @@ export const blankBlockData = (
 
 export const seededBlockData = (
   kind: BlockKind,
-): RestResourceData | PsqlTableData => {
+): RestResourceData | PsqlTableData | AnnotationData => {
   const block = createBlock(kind, { x: 0, y: 0 }, { seed: true });
 
   return block.data;

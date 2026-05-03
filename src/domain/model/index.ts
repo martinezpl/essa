@@ -12,6 +12,7 @@ import type {
   RestResourceMethod,
   ResourceSchemaField,
   PsqlColumn,
+  AnnotationData,
   PsqlEnum,
   PsqlForeignKey,
   PsqlIndex,
@@ -430,7 +431,56 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 }
 
-export type AnyBlock = RestResourceBlock | PsqlTableBlock;
+export class AnnotationBlock extends Block<AnnotationData> {
+  readonly kind = "annotation";
+  readonly label = "Annotation";
+  readonly ports = [];
+
+  static blankData(): AnnotationData {
+    return {
+      kind: "annotation",
+      label: "Group",
+      color: "#818cf8",
+      width: 520,
+      height: 320,
+    };
+  }
+
+  static create(position: Position) {
+    return new AnnotationBlock({
+      id: createId("node"),
+      position,
+      data: AnnotationBlock.blankData(),
+    });
+  }
+
+  static hydrate(node: DiagramNode) {
+    if (node.data.kind !== "annotation") {
+      throw new Error(`Cannot hydrate ${node.data.kind} as annotation`);
+    }
+
+    return new AnnotationBlock({
+      id: node.id,
+      position: node.position,
+      selected: node.selected,
+      data: node.data,
+    });
+  }
+
+  clone() {
+    return new AnnotationBlock({
+      id: createId("node"),
+      position: clonePosition(this.position),
+      data: { ...this.data },
+    });
+  }
+
+  title() {
+    return this.data.label || "annotation";
+  }
+}
+
+export type AnyBlock = RestResourceBlock | PsqlTableBlock | AnnotationBlock;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
   kind: B["kind"];
@@ -461,6 +511,14 @@ export const blockDefinitions = {
     create: PsqlTableBlock.create,
     hydrate: PsqlTableBlock.hydrate,
     title: (data: PsqlTableData) => data.tableName || "PSQL table",
+  },
+  annotation: {
+    kind: "annotation",
+    label: "Annotation",
+    ports: [],
+    create: AnnotationBlock.create,
+    hydrate: AnnotationBlock.hydrate,
+    title: (data: AnnotationData) => data.label || "annotation",
   },
 } satisfies {
   [K in BlockKind]: BlockDefinition<Extract<AnyBlock, { kind: K }>>;

@@ -330,7 +330,7 @@ h3 {
   background: var(--bg);
   z-index: 1000;
   animation: splash-out var(--dur-slow) var(--ease) forwards;
-  animation-delay: 1100ms;
+  animation-delay: 1500ms;
 }
 
 .splash--keep {
@@ -341,6 +341,15 @@ h3 {
   display: grid;
   gap: 1.25rem;
   justify-items: center;
+}
+
+.splash__logo {
+  width: min(26vw, 8rem);
+  height: auto;
+  filter: drop-shadow(0 18px 28px rgb(24 24 27 / 12%));
+  transform-origin: 42% 58%;
+  animation: splash-logo-in 220ms var(--ease) 420ms both,
+    splash-logo-shaka 750ms var(--ease-spring) 640ms 2;
 }
 
 .splash__word {
@@ -393,6 +402,25 @@ h3 {
   width: 40%;
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   animation: splash-bar 1100ms var(--ease) infinite;
+}
+
+@keyframes splash-logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) rotate(55deg) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(60deg) scale(1);
+  }
+}
+
+@keyframes splash-logo-shaka {
+  0%, 100% { transform: translateY(0) rotate(60deg); }
+  18% { transform: translateY(-10px) rotate(52deg); }
+  36% { transform: translateY(8px) rotate(68deg); }
+  54% { transform: translateY(-7px) rotate(54deg); }
+  72% { transform: translateY(5px) rotate(66deg); }
 }
 
 @keyframes splash-letter {
@@ -817,6 +845,168 @@ h3 {
 
 .floating-dock__dot--restResource { background: var(--resource); }
 .floating-dock__dot--psqlTable { background: var(--table); }
+.floating-dock__dot--annotation { background: var(--read-write); }
+
+.canvas-mode-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 20;
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+}
+
+.canvas-mode-dock__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 4.7rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.canvas-mode-dock__button kbd {
+  min-width: 1.1rem;
+  padding: 0.08rem 0.28rem;
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, currentcolor 10%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.canvas-mode-dock__button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.canvas-mode-dock__button--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.canvas-shell--grip .react-flow__pane {
+  cursor: grab;
+}
+
+.canvas-shell--grip .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.canvas-shell--select .react-flow__pane {
+  cursor: default;
+}
+
+.canvas-shell--annotate .react-flow__pane {
+  cursor: crosshair;
+}
+
+.annotation-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  pointer-events: none;
+}
+
+.annotation-edit-frame {
+  position: absolute;
+  z-index: 12;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  pointer-events: none;
+}
+
+.annotation-edit-frame__resize {
+  position: absolute;
+  right: -0.45rem;
+  bottom: -0.45rem;
+  z-index: 2;
+  width: 0.9rem;
+  height: 0.9rem;
+  padding: 0;
+  border: 2px solid var(--bg-elevated);
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  cursor: nwse-resize;
+  pointer-events: auto;
+}
+
+.annotation-editor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-100%) translateY(-0.5rem);
+  pointer-events: auto;
+}
+
+.annotation-editor__field {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.annotation-editor__field--color {
+  gap: 0.25rem;
+}
+
+.annotation-editor input[type="text"],
+.annotation-editor input:not([type]) {
+  width: 9rem;
+}
+
+.annotation-editor input[type="color"] {
+  width: 2rem;
+  height: 2rem;
+  padding: 0.15rem;
+}
+
+.annotation-editor__delete {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.annotation-editor__delete:hover {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+  color: var(--danger);
+}
 
 .floating-dock__divider {
   width: 1px;
@@ -951,6 +1141,21 @@ h3 {
 .block-node--view .block-node__badge { color: var(--view); }
 .block-node--resource .block-node__badge { color: var(--resource); }
 .block-node--table .block-node__badge { color: var(--table); }
+
+.annotation-node {
+  position: relative;
+  min-width: 180px;
+  min-height: 120px;
+  background: color-mix(in srgb, var(--annotation-color) 12%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--annotation-color) 65%, transparent);
+  border-radius: var(--radius-xl);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--annotation-color) 18%, transparent);
+  pointer-events: none;
+}
+
+.react-flow__node-annotation {
+  pointer-events: none;
+}
 
 .block-node__title {
   font-size: 1rem;
@@ -1741,6 +1946,12 @@ h3 {
 
 .canvas-minimap__node--psqlTable {
   fill: color-mix(in srgb, var(--table) 72%, transparent);
+}
+
+.canvas-minimap__node--annotation {
+  fill: color-mix(in srgb, var(--read-write) 24%, transparent);
+  stroke: var(--read-write);
+  stroke-dasharray: 3 2;
 }
 
 .canvas-minimap__node--selected {

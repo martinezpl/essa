@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   diagramSchema,
   edgeDataSchema,
+  blockDataSchema,
   psqlColumnTypeSchema,
   psqlColumnOptionsSchema,
   psqlEnumSchema,
@@ -28,6 +29,19 @@ describe("domain schemas", () => {
     expect(edgeDataSchema.parse({ kind: "read/write" })).toEqual({
       kind: "read/write",
       dataPath: "all",
+    });
+  });
+
+  it("parses annotation block data", () => {
+    expect(blockDataSchema.parse({
+      kind: "annotation",
+      label: "Admin area",
+    })).toEqual({
+      kind: "annotation",
+      label: "Admin area",
+      color: "#818cf8",
+      width: 520,
+      height: 320,
     });
   });
 

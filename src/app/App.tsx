@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { DiagramCanvas } from "../components/DiagramCanvas";
+import { DiagramCanvas, type CanvasMode } from "../components/DiagramCanvas";
 import {
   DiagramSidebar,
   type DiagramExportFormat,
@@ -56,12 +56,13 @@ const setHelpCookie = () => {
 };
 
 export const App = () => {
+  const [canvasMode, setCanvasMode] = useState<CanvasMode>("grip");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(() => !hasHelpCookie());
-  const [copiedNode, setCopiedNode] = useState<DiagramNode | null>(null);
+  const [copiedNodes, setCopiedNodes] = useState<DiagramNode[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const copiedNodeRef = useRef<DiagramNode | null>(null);
-  const selectedNodeRef = useRef<DiagramNode | undefined>(undefined);
+  const copiedNodesRef = useRef<DiagramNode[]>([]);
+  const selectedNodesRef = useRef<DiagramNode[]>([]);
   const { theme, toggleTheme } = useTheme();
   const {
     activeDiagram,
@@ -82,6 +83,7 @@ export const App = () => {
     deleteEdge,
     deleteNode,
     duplicateNode,
+    duplicateNodes,
     importDiagram,
     onEdgesChange,
     onNodesChange,
@@ -109,9 +111,9 @@ export const App = () => {
 
   const canvasNodes = useMemo(
     () =>
-      activeDiagram.nodes.map((node) =>
-        node.data.kind === "restResource"
-          ? {
+      activeDiagram.nodes.map((node) => {
+        if (node.data.kind === "restResource") {
+          return {
               ...node,
               data: {
                 ...node.data,
@@ -120,9 +122,20 @@ export const App = () => {
                     ? node.data.schema
                     : (resourceSchemas.get(node.id) ?? []),
               },
-            }
-          : node,
-      ),
+            };
+        }
+
+        if (node.data.kind === "annotation") {
+          return {
+            ...node,
+            draggable: false,
+            selectable: false,
+            zIndex: -1,
+          };
+        }
+
+        return node;
+      }),
     [activeDiagram.nodes, resourceSchemas],
   );
 
@@ -169,29 +182,43 @@ export const App = () => {
     return [...activeDiagram.edges, ...foreignKeyEdges];
   }, [activeDiagram.edges, activeDiagram.nodes]);
 
-  const selectedNode = useMemo(
-    () => canvasNodes.find((node) => node.id === selectedNodeId),
-    [canvasNodes, selectedNodeId],
+  const selectedNodes = useMemo(
+    () => {
+      const selected = activeDiagram.nodes.filter((node) => node.selected);
+      const fallback = selectedNodeId
+        ? activeDiagram.nodes.find((node) => node.id === selectedNodeId)
+        : null;
+
+      return selected.length > 0 ? selected : fallback ? [fallback] : [];
+    },
+    [activeDiagram.nodes, selectedNodeId],
   );
 
   useEffect(() => {
-    selectedNodeRef.current = selectedNode;
-  }, [selectedNode]);
+    selectedNodesRef.current = selectedNodes;
+  }, [selectedNodes]);
 
   useEffect(() => {
-    if (selectedNodeId && !selectedNode) {
+    if (
+      selectedNodeId &&
+      !activeDiagram.nodes.some((node) => node.id === selectedNodeId)
+    ) {
       setSelectedNodeId(null);
     }
-  }, [selectedNode, selectedNodeId]);
+  }, [activeDiagram.nodes, selectedNodeId]);
 
   useEffect(() => {
-    copiedNodeRef.current = copiedNode;
-  }, [copiedNode]);
+    copiedNodesRef.current = copiedNodes;
+  }, [copiedNodes]);
 
   const addAndSelectNode = useCallback(
-    (kind: Parameters<typeof addNode>[0], position?: { x: number; y: number }) => {
-      const nodeId = addNode(kind, position);
-      setSelectedNodeId(nodeId);
+    (
+      kind: Parameters<typeof addNode>[0],
+      position?: { x: number; y: number },
+      dataPatch?: Parameters<typeof addNode>[2],
+    ) => {
+      const nodeId = addNode(kind, position, dataPatch);
+      setSelectedNodeId(kind === "annotation" ? null : nodeId);
 
       return nodeId;
     },
@@ -252,14 +279,30 @@ export const App = () => {
 
     const handleKeyboard = (event: KeyboardEvent) => {
       const isModifierPressed = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
+
+      if (!isModifierPressed && !event.altKey && !isEditableTarget(event.target)) {
+        const modeByKey: Partial<Record<string, CanvasMode>> = {
+          q: "grip",
+          w: "select",
+          e: "annotate",
+        };
+        const nextMode = modeByKey[key];
+
+        if (nextMode) {
+          event.preventDefault();
+          event.stopPropagation();
+          setCanvasMode(nextMode);
+          return;
+        }
+      }
 
       if (!isModifierPressed || event.altKey || isEditableTarget(event.target)) {
         return;
       }
 
-      const key = event.key.toLowerCase();
-      const currentSelectedNode = selectedNodeRef.current;
-      const currentCopiedNode = copiedNodeRef.current;
+      const currentSelectedNodes = selectedNodesRef.current;
+      const currentCopiedNodes = copiedNodesRef.current;
 
       if (key === "z") {
         event.preventDefault();
@@ -275,27 +318,33 @@ export const App = () => {
         return;
       }
 
-      if (key === "c" && currentSelectedNode) {
+      if (key === "c" && currentSelectedNodes.length > 0) {
         event.preventDefault();
         event.stopPropagation();
-        setCopiedNode(currentSelectedNode);
+        setCopiedNodes(currentSelectedNodes);
       }
 
-      if (key === "v" && currentCopiedNode) {
+      if (key === "v" && currentCopiedNodes.length > 0) {
         event.preventDefault();
         event.stopPropagation();
-        const nodeId = duplicateNode(currentCopiedNode);
-        setSelectedNodeId(nodeId);
-        const nextCopiedNode = {
-          ...currentCopiedNode,
-          id: nodeId,
-          position: {
-            x: currentCopiedNode.position.x + 48,
-            y: currentCopiedNode.position.y + 48,
-          },
-        };
-        copiedNodeRef.current = nextCopiedNode;
-        setCopiedNode(nextCopiedNode);
+        const nextCopiedNodes = currentCopiedNodes.length === 1
+          ? [duplicateNode(currentCopiedNodes[0])]
+              .map((nodeId) => ({
+                ...currentCopiedNodes[0],
+                id: nodeId,
+                position: {
+                  x: currentCopiedNodes[0].position.x + 48,
+                  y: currentCopiedNodes[0].position.y + 48,
+                },
+              }))
+          : duplicateNodes(currentCopiedNodes);
+
+        if (nextCopiedNodes[0]) {
+          setSelectedNodeId(nextCopiedNodes[0].id);
+        }
+
+        copiedNodesRef.current = nextCopiedNodes;
+        setCopiedNodes(nextCopiedNodes);
       }
     };
 
@@ -303,7 +352,7 @@ export const App = () => {
 
     return () =>
       window.removeEventListener("keydown", handleKeyboard, { capture: true });
-  }, [canRedo, canUndo, duplicateNode, redo, undo]);
+  }, [canRedo, canUndo, duplicateNode, duplicateNodes, redo, undo]);
 
   const contextValue = useMemo(
     () => ({
@@ -370,15 +419,39 @@ export const App = () => {
           <main className="workspace">
             <DiagramCanvas
               edges={canvasEdges}
+              mode={canvasMode}
               nodes={canvasNodes}
               onAddNode={addAndSelectNode}
               onConnect={connectNodes}
+              onDeleteNode={deleteNode}
               onEdgesChange={onEdgesChange}
               onNodesChange={onNodesChange}
               onSelectEdge={() => {}}
               onSelectNode={setSelectedNodeId}
+              onUpdateNodeData={updateNodeData}
             />
           </main>
+
+          <div className="canvas-mode-dock" aria-label="Canvas mode">
+            {([
+              ["grip", "Grip", "Q"],
+              ["select", "Select", "W"],
+              ["annotate", "Annotate", "E"],
+            ] as const).map(([mode, label, shortcut]) => (
+              <button
+                key={mode}
+                type="button"
+                title={`${label} (${shortcut})`}
+                className={`canvas-mode-dock__button${
+                  canvasMode === mode ? " canvas-mode-dock__button--active" : ""
+                }`}
+                onClick={() => setCanvasMode(mode)}
+              >
+                <span>{label}</span>
+                <kbd>{shortcut}</kbd>
+              </button>
+            ))}
+          </div>
 
           <div className="app-topbar">
             <div className="app-topbar__left">

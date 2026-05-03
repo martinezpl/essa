@@ -133,14 +133,22 @@ const cloneNodesFirstPass = (
       };
     }
 
+    if (node.data.kind === "psqlTable") {
+      return {
+        ...node,
+        id,
+        selected: false,
+        data: {
+          ...node.data,
+          columns: node.data.columns.map((column) => clonePsqlColumn(column, idMap)),
+        },
+      };
+    }
+
     return {
       ...node,
       id,
       selected: false,
-      data: {
-        ...node.data,
-        columns: node.data.columns.map((column) => clonePsqlColumn(column, idMap)),
-      },
     };
   });
 
@@ -159,43 +167,49 @@ const cloneNodesSecondPass = (
       };
     }
 
+    if (node.data.kind === "psqlTable") {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          columns: node.data.columns.map((column) => ({
+            ...column,
+            options: column.options
+              ? {
+                  ...column.options,
+                  enumId: column.options.enumId
+                    ? remapValue(column.options.enumId, idMap)
+                    : column.options.enumId,
+                }
+              : undefined,
+          })),
+          foreignKeys: node.data.foreignKeys.map((foreignKey) => {
+            const id = createId("foreign-key");
+            idMap.set(foreignKey.id, id);
+
+            return {
+              ...foreignKey,
+              id,
+              targetTableId: remapValue(foreignKey.targetTableId, idMap),
+              targetColumnId: remapValue(foreignKey.targetColumnId, idMap),
+            };
+          }),
+          indices: node.data.indices.map((index) => {
+            const id = createId("index");
+            idMap.set(index.id, id);
+
+            return {
+              ...index,
+              id,
+              columns: index.columns.map((columnId) => remapValue(columnId, idMap)),
+            };
+          }),
+        },
+      };
+    }
+
     return {
       ...node,
-      data: {
-        ...node.data,
-        columns: node.data.columns.map((column) => ({
-          ...column,
-          options: column.options
-            ? {
-                ...column.options,
-                enumId: column.options.enumId
-                  ? remapValue(column.options.enumId, idMap)
-                  : column.options.enumId,
-              }
-            : undefined,
-        })),
-        foreignKeys: node.data.foreignKeys.map((foreignKey) => {
-          const id = createId("foreign-key");
-          idMap.set(foreignKey.id, id);
-
-          return {
-            ...foreignKey,
-            id,
-            targetTableId: remapValue(foreignKey.targetTableId, idMap),
-            targetColumnId: remapValue(foreignKey.targetColumnId, idMap),
-          };
-        }),
-        indices: node.data.indices.map((index) => {
-          const id = createId("index");
-          idMap.set(index.id, id);
-
-          return {
-            ...index,
-            id,
-            columns: index.columns.map((columnId) => remapValue(columnId, idMap)),
-          };
-        }),
-      },
     };
   });
 
@@ -238,7 +252,11 @@ const getBlockMermaidName = (node: DiagramNode) => {
     return node.data.resourceName || "resource";
   }
 
-  return node.data.tableName || "psql_table";
+  if (node.data.kind === "psqlTable") {
+    return node.data.tableName || "psql_table";
+  }
+
+  return node.data.label || "annotation";
 };
 
 const sanitizeMermaidId = (value: string) => {
@@ -539,7 +557,7 @@ const serializeErDiagram = (diagram: Diagram) => {
           ])}`,
         );
       });
-    } else {
+    } else if (node.data.kind === "psqlTable") {
       node.data.columns.forEach((column) => {
         lines.push(
           `    ${erFieldType(formatPsqlColumnType(column, diagram.psqlEnums))} ${erFieldName(
@@ -550,6 +568,8 @@ const serializeErDiagram = (diagram: Diagram) => {
           ])}`,
         );
       });
+    } else {
+      lines.push(`    string note ${quoteErComment(getBlockMermaidName(node))}`);
     }
 
     lines.push("  }");
