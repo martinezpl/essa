@@ -106,7 +106,7 @@ export const RestResourceNode = ({
 
       <input
         aria-label="Resource name"
-        className={`block-node__title-input nodrag${
+        className={`block-node__title-input nodrag nowheel${
           data.resourceName ? "" : " block-node__title-input--placeholder"
         }`}
         placeholder="resource"
@@ -118,7 +118,7 @@ export const RestResourceNode = ({
 
       <textarea
         aria-label="Resource description"
-        className="block-node__description-input nodrag"
+        className="block-node__description-input nodrag nowheel"
         placeholder="Context"
         rows={2}
         value={data.description ?? ""}

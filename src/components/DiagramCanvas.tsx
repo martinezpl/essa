@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
+  type WheelEvent as ReactWheelEvent,
 } from "react";
 import {
   Background,
@@ -28,9 +29,11 @@ import type { EdgeRouteObstacle } from "./edges/edgeRouting";
 import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
 
 export type CanvasMode = "grip" | "select" | "annotate";
+export type CanvasInputMode = "touchpad" | "mouse";
 
 type DiagramCanvasProps = {
   edges: DiagramEdge[];
+  inputMode: CanvasInputMode;
   mode: CanvasMode;
   nodes: DiagramNode[];
   onAddNode: (
@@ -92,6 +95,30 @@ type AnnotationResizeDraft = {
 const DEFAULT_NODE_WIDTH = 360;
 const DEFAULT_NODE_HEIGHT = 420;
 const MIN_ANNOTATION_SIZE = 24;
+const WHEEL_LINE_HEIGHT = 16;
+
+const getWheelDeltaScale = (
+  event: ReactWheelEvent<HTMLDivElement>,
+  viewportHeight: number,
+) => {
+  if (event.deltaMode === globalThis.WheelEvent.DOM_DELTA_LINE) {
+    return WHEEL_LINE_HEIGHT;
+  }
+
+  if (event.deltaMode === globalThis.WheelEvent.DOM_DELTA_PAGE) {
+    return viewportHeight;
+  }
+
+  return 1;
+};
+
+const shouldIgnoreCanvasWheel = (target: EventTarget | null) =>
+  target instanceof HTMLElement &&
+  Boolean(
+    target.closest(
+      ".nowheel, input, textarea, select, [contenteditable='true'], [contenteditable='']",
+    ),
+  );
 
 const getNodeObstacle = (node: DiagramNode): EdgeRouteObstacle => {
   const layoutNode = node as LayoutDiagramNode;
@@ -273,6 +300,7 @@ const CanvasMinimap = ({
 
 export const DiagramCanvas = ({
   edges,
+  inputMode,
   mode,
   nodes,
   onAddNode,
@@ -284,7 +312,7 @@ export const DiagramCanvas = ({
   onSelectNode,
   onUpdateNodeData,
 }: DiagramCanvasProps) => {
-  const { screenToFlowPosition, setCenter } = useReactFlow();
+  const { screenToFlowPosition, setCenter, setViewport } = useReactFlow();
   const viewport = useViewport();
   const width = useStore((state) => state.width);
   const height = useStore((state) => state.height);
@@ -453,10 +481,31 @@ export const DiagramCanvas = ({
           point.y <= bounds.bottom
         );
       });
+  const handleCanvasWheelCapture = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (
+      inputMode !== "touchpad" ||
+      event.ctrlKey ||
+      event.metaKey ||
+      shouldIgnoreCanvasWheel(event.target)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const deltaScale = getWheelDeltaScale(event, height);
+    setViewport({
+      x: viewport.x - event.deltaX * deltaScale,
+      y: viewport.y - event.deltaY * deltaScale,
+      zoom: viewport.zoom,
+    });
+  };
 
   return (
     <div
       className={`canvas-shell canvas-shell--${mode}`}
+      onWheelCapture={handleCanvasWheelCapture}
       onDoubleClickCapture={(event) => {
         if (mode !== "select") {
           return;
@@ -533,6 +582,8 @@ export const DiagramCanvas = ({
         panOnDrag={mode === "grip"}
         selectionOnDrag={mode === "select"}
         zoomOnDoubleClick={mode !== "select"}
+        zoomOnPinch
+        zoomOnScroll
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}
@@ -631,7 +682,7 @@ export const DiagramCanvas = ({
               });
             }}
           />
-          <div className="annotation-editor">
+          <div className="annotation-editor nodrag nowheel">
             <label className="annotation-editor__field">
               <span>Name</span>
               <input

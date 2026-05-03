@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { DiagramCanvas, type CanvasMode } from "../components/DiagramCanvas";
+import {
+  DiagramCanvas,
+  type CanvasInputMode,
+  type CanvasMode,
+} from "../components/DiagramCanvas";
 import {
   DiagramSidebar,
   type DiagramExportFormat,
 } from "../components/DiagramSidebar";
 import { HelpModal } from "../components/HelpModal";
+import { PerfOverlay, isPerfOverlayEnabled } from "../components/PerfOverlay";
 import { ThemeToggle } from "../components/ThemeToggle";
 import {
   parseEssaDiagram,
@@ -55,8 +60,12 @@ const setHelpCookie = () => {
   document.cookie = `${HELP_COOKIE_NAME}=1; Max-Age=${HELP_COOKIE_MAX_AGE}; Path=/; SameSite=Lax`;
 };
 
+const perfOverlayEnabled = isPerfOverlayEnabled();
+
 export const App = () => {
   const [canvasMode, setCanvasMode] = useState<CanvasMode>("grip");
+  const [canvasInputMode, setCanvasInputMode] =
+    useState<CanvasInputMode>("touchpad");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(() => !hasHelpCookie());
   const [copiedNodes, setCopiedNodes] = useState<DiagramNode[]>([]);
@@ -419,6 +428,7 @@ export const App = () => {
           <main className="workspace">
             <DiagramCanvas
               edges={canvasEdges}
+              inputMode={canvasInputMode}
               mode={canvasMode}
               nodes={canvasNodes}
               onAddNode={addAndSelectNode}
@@ -433,24 +443,43 @@ export const App = () => {
           </main>
 
           <div className="canvas-mode-dock" aria-label="Canvas mode">
-            {([
-              ["grip", "Grip", "Q"],
-              ["select", "Select", "W"],
-              ["annotate", "Annotate", "E"],
-            ] as const).map(([mode, label, shortcut]) => (
+            <div className="canvas-mode-dock__section">
+              {([
+                ["grip", "Grip", "Q"],
+                ["select", "Select", "W"],
+                ["annotate", "Annotate", "E"],
+              ] as const).map(([mode, label, shortcut]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  title={`${label} (${shortcut})`}
+                  className={`canvas-mode-dock__button${
+                    canvasMode === mode ? " canvas-mode-dock__button--active" : ""
+                  }`}
+                  onClick={() => setCanvasMode(mode)}
+                >
+                  <span>{label}</span>
+                  <kbd>{shortcut}</kbd>
+                </button>
+              ))}
+            </div>
+            <div
+              className="canvas-mode-dock__section canvas-mode-dock__section--input"
+              aria-label="Input mode"
+            >
               <button
-                key={mode}
                 type="button"
-                title={`${label} (${shortcut})`}
-                className={`canvas-mode-dock__button${
-                  canvasMode === mode ? " canvas-mode-dock__button--active" : ""
-                }`}
-                onClick={() => setCanvasMode(mode)}
+                title={`Input mode: ${canvasInputMode}`}
+                className="canvas-mode-dock__button canvas-mode-dock__button--active"
+                onClick={() =>
+                  setCanvasInputMode((current) =>
+                    current === "touchpad" ? "mouse" : "touchpad",
+                  )
+                }
               >
-                <span>{label}</span>
-                <kbd>{shortcut}</kbd>
+                <span>{canvasInputMode === "touchpad" ? "Touchpad" : "Mouse"}</span>
               </button>
-            ))}
+            </div>
           </div>
 
           <div className="app-topbar">
@@ -487,6 +516,17 @@ export const App = () => {
                   <path strokeLinecap="round" d="M12 17h.01" />
                 </svg>
               </button>
+              <a
+                aria-label="Open GitHub repository"
+                className="icon-button"
+                href="https://github.com/martinezpl/essa"
+                rel="noreferrer"
+                target="_blank"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C6.48 2 2 6.59 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.09.68-.22.68-.49 0-.24-.01-.88-.01-1.73-2.78.62-3.37-1.38-3.37-1.38-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.55-1.14-4.55-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05A9.27 9.27 0 0 1 12 6.98c.85 0 1.7.12 2.5.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.07.36.32.68.95.68 1.92 0 1.38-.01 2.49-.01 2.83 0 .27.18.59.69.49A10.24 10.24 0 0 0 22 12.25C22 6.59 17.52 2 12 2Z" />
+                </svg>
+              </a>
               <div className="diagram-title">
                 <span className="eyebrow">Diagram</span>
                 <h2>{activeDiagram.name}</h2>
@@ -519,6 +559,12 @@ export const App = () => {
             }}
           />
           <HelpModal open={helpOpen} onClose={closeHelp} />
+          {perfOverlayEnabled ? (
+            <PerfOverlay
+              nodeCount={canvasNodes.length}
+              edgeCount={canvasEdges.length}
+            />
+          ) : null}
         </div>
       </DiagramProvider>
     </ReactFlowProvider>

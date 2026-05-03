@@ -145,7 +145,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
 
       <input
         aria-label="Table name"
-        className={`block-node__title-input nodrag${
+        className={`block-node__title-input nodrag nowheel${
           data.tableName ? "" : " block-node__title-input--placeholder"
         }`}
         placeholder="table_name"
