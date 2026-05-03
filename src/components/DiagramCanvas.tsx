@@ -16,6 +16,7 @@ import { blockList } from "../domain/model";
 import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
+import type { EdgeRouteObstacle } from "./edges/edgeRouting";
 import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
 
 type DiagramCanvasProps = {
@@ -44,6 +45,29 @@ const fitViewOptions = {
   maxZoom: 0.82,
 };
 
+type LayoutDiagramNode = DiagramNode & {
+  measured?: { width?: number; height?: number };
+  width?: number;
+  height?: number;
+};
+
+const DEFAULT_NODE_WIDTH = 360;
+const DEFAULT_NODE_HEIGHT = 420;
+
+const getNodeObstacle = (node: DiagramNode): EdgeRouteObstacle => {
+  const layoutNode = node as LayoutDiagramNode;
+  const width = layoutNode.measured?.width ?? layoutNode.width ?? DEFAULT_NODE_WIDTH;
+  const height = layoutNode.measured?.height ?? layoutNode.height ?? DEFAULT_NODE_HEIGHT;
+
+  return {
+    id: node.id,
+    left: node.position.x,
+    top: node.position.y,
+    right: node.position.x + width,
+    bottom: node.position.y + height,
+  };
+};
+
 export const DiagramCanvas = ({
   edges,
   nodes,
@@ -65,12 +89,18 @@ export const DiagramCanvas = ({
     const selectedNodeIds = new Set(
       nodes.filter((node) => node.selected).map((node) => node.id),
     );
+    const obstacles = nodes.map(getNodeObstacle);
 
     return edges.map((edge) => ({
       ...edge,
       type: "default" as const,
       data: {
         ...edge.data,
+        sourceObstacle: obstacles.find((obstacle) => obstacle.id === edge.source),
+        targetObstacle: obstacles.find((obstacle) => obstacle.id === edge.target),
+        obstacles: obstacles.filter(
+          (obstacle) => obstacle.id !== edge.source && obstacle.id !== edge.target,
+        ),
         linked:
           selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target),
       },
@@ -138,9 +168,7 @@ export const DiagramCanvas = ({
                 setContextMenu(null);
               }}
             >
-              <span
-                className={`floating-dock__dot floating-dock__dot--${kind}`}
-              />
+              <span className={`floating-dock__dot floating-dock__dot--${kind}`} />
               {label}
             </button>
           ))}

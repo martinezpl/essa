@@ -617,9 +617,9 @@ export const useDiagramStore = () => {
           pendingNodeDragCollectionRef.current = current.present;
         }
 
-        const movingNodeIds = new Set(
+        const settledMovingNodeIds = new Set(
           changes.flatMap((change) =>
-            change.type === "position" ? [change.id] : [],
+            change.type === "position" && change.dragging === false ? [change.id] : [],
           ),
         );
         const nextCollection = patchDiagram(current.present, activeDiagram.id, (diagram) => {
@@ -628,8 +628,8 @@ export const useDiagramStore = () => {
           return {
             ...diagram,
             nodes:
-              movingNodeIds.size > 0
-                ? resolveNodeCollisions(nodes, movingNodeIds)
+              settledMovingNodeIds.size > 0
+                ? resolveNodeCollisions(nodes, settledMovingNodeIds)
                 : nodes,
             edges: diagram.edges.filter(
               (edge) =>

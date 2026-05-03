@@ -9,8 +9,32 @@ import type {
   EssaEdge,
 } from "../../domain/types";
 import { ConnectionEditor } from "../blockEditors/ConnectionEditor";
+import {
+  routeEdgeAroundObstacles,
+  type EdgeRouteObstacle,
+} from "./edgeRouting";
 
 type AnimatedEdgeProps = EdgeProps<EssaEdge>;
+
+const isObstacle = (value: unknown): value is EdgeRouteObstacle => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const obstacle = value as Record<string, unknown>;
+
+  return typeof obstacle.id === "string" &&
+    typeof obstacle.left === "number" &&
+    typeof obstacle.top === "number" &&
+    typeof obstacle.right === "number" &&
+    typeof obstacle.bottom === "number";
+};
+
+const getObstacles = (value: unknown): EdgeRouteObstacle[] =>
+  Array.isArray(value) ? value.filter(isObstacle) : [];
+
+const getObstacle = (value: unknown): EdgeRouteObstacle | undefined =>
+  isObstacle(value) ? value : undefined;
 
 export const AnimatedEdge = ({
   id,
@@ -26,7 +50,7 @@ export const AnimatedEdge = ({
   data,
   selected,
 }: AnimatedEdgeProps) => {
-  const [path, labelX, labelY] = getBezierPath({
+  const [fallbackPath, fallbackLabelX, fallbackLabelY] = getBezierPath({
     sourceX,
     sourceY,
     targetX,
@@ -39,6 +63,18 @@ export const AnimatedEdge = ({
   const dataPath = (data?.dataPath as string | undefined) ?? "all";
   const linked = Boolean(data?.linked);
   const readonly = Boolean(data?.readonly);
+  const routedEdge = routeEdgeAroundObstacles({
+    source: { x: sourceX, y: sourceY },
+    sourcePosition,
+    target: { x: targetX, y: targetY },
+    targetPosition,
+    obstacles: getObstacles(data?.obstacles),
+    sourceObstacle: getObstacle(data?.sourceObstacle),
+    targetObstacle: getObstacle(data?.targetObstacle),
+  });
+  const path = routedEdge?.path ?? fallbackPath;
+  const labelX = routedEdge?.labelX ?? fallbackLabelX;
+  const labelY = routedEdge?.labelY ?? fallbackLabelY;
   const kindClass = `essa-edge--${kind.replace("/", "-")}`;
   const stateClass = selected ? " essa-edge--selected" : "";
   const linkedClass = linked ? " essa-edge--linked" : "";
