@@ -1188,9 +1188,9 @@ h3 {
 }
 
 .field-row--linked {
-  border-color: var(--read);
-  background: color-mix(in srgb, var(--read) 14%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--read) 34%, transparent);
+  border-color: var(--fk);
+  background: color-mix(in srgb, var(--fk) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fk) 34%, transparent);
 }
 
 .field-row--linked .field-row__name,
