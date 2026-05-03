@@ -308,7 +308,7 @@ export const App = () => {
   const contextValue = useMemo(
     () => ({
       nodes: canvasNodes,
-      edges: activeDiagram.edges,
+      edges: canvasEdges,
       psqlEnums: activeDiagram.psqlEnums,
       resourceSchemas,
       onAddResourceSchemaField: addResourceSchemaField,
@@ -336,7 +336,6 @@ export const App = () => {
       onUpdateRestMethod: updateRestMethod,
     }),
     [
-      activeDiagram.edges,
       activeDiagram.psqlEnums,
       addResourceSchemaField,
       addRestMethod,
@@ -345,6 +344,7 @@ export const App = () => {
       addPsqlEnum,
       addPsqlForeignKey,
       addPsqlIndex,
+      canvasEdges,
       canvasNodes,
       deleteEdge,
       deleteNode,

@@ -1,5 +1,17 @@
 # Contributing
 
+## Glossary
+
+- **Diagram**: A single saved canvas containing blocks, edges, PostgreSQL enums, and metadata such as name and timestamps.
+- **Block**: Blocks define behavior for a node kind, such as cloning, exports, compatible ports, and default data.
+- **Node**: The React Flow canvas item that positions and renders a block. Nodes persist `id`, `type`, `position`, and block-specific `data`.
+- **Edge**: A persisted user-created connection between two nodes. Edges have a connection kind, optional handles, and optional data path metadata.
+- **Connection**: The domain model wrapper around an edge. It describes how blocks relate and how that relationship exports to Mermaid or other formats.
+- **Port**: A block-level connection capability. Ports define which block kinds can connect and the default connection kind.
+- **Handle**: A React Flow attachment point rendered on a node or row. PostgreSQL foreign keys and primary key columns use row-level handles.
+- **Resource**: A REST API resource block. It models endpoint methods, service context, query or payload inputs, outputs, and OpenAPI-compatible schema fields.
+- **PSQL table**: A PostgreSQL table block. It models columns, foreign keys, indices, and SQL-oriented table metadata.
+
 ## Persisted Diagram Migrations
 
 Essa stores user diagrams in browser `localStorage`. Because that data belongs to users and may have been saved by older app versions, changes to the persisted diagram schema must be handled through the migration layer.

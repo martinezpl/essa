@@ -3,6 +3,8 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import { psqlColumnTypes, psqlIndexMethods } from "../../domain/options";
 import {
+  parsePsqlColumnTargetHandleId,
+  parsePsqlForeignKeySourceHandleId,
   psqlColumnTargetHandleId,
   psqlForeignKeySourceHandleId,
 } from "../../domain/psqlForeignKeys";
@@ -94,6 +96,33 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       .filter((column) => column.primaryKey)
       .map((primaryKey) => ({ table, primaryKey }));
   });
+  const selectedNodeIds = new Set(
+    ctx.nodes.filter((node) => node.selected).map((node) => node.id),
+  );
+  const linkedForeignKeyIds = new Set<string>();
+  const linkedColumnIds = new Set<string>();
+
+  ctx.edges.forEach((edge) => {
+    if (!selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target)) {
+      return;
+    }
+
+    if (edge.source === id) {
+      const foreignKeyId = parsePsqlForeignKeySourceHandleId(edge.sourceHandle);
+
+      if (foreignKeyId) {
+        linkedForeignKeyIds.add(foreignKeyId);
+      }
+    }
+
+    if (edge.target === id) {
+      const columnId = parsePsqlColumnTargetHandleId(edge.targetHandle);
+
+      if (columnId) {
+        linkedColumnIds.add(columnId);
+      }
+    }
+  });
 
   return (
     <article
@@ -132,11 +161,14 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         {data.columns.map((column) => {
           const isEditing =
             editing?.kind === "column" && editing.id === column.id;
+          const isLinked = linkedColumnIds.has(column.id);
 
           return (
             <div
               key={column.id}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}`}
+              className={`field-row nodrag${isEditing ? " field-row--active" : ""}${
+                isLinked ? " field-row--linked" : ""
+              }`}
               role="button"
               tabIndex={0}
               onClick={() => setEditing({ kind: "column", id: column.id })}
@@ -219,12 +251,15 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         {data.foreignKeys.map((foreignKey) => {
           const isEditing =
             editing?.kind === "foreignKey" && editing.id === foreignKey.id;
+          const isLinked = linkedForeignKeyIds.has(foreignKey.id);
           const reference = formatForeignKeyReference(foreignKey, psqlTables);
 
           return (
             <div
               key={foreignKey.id}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}`}
+              className={`field-row nodrag${isEditing ? " field-row--active" : ""}${
+                isLinked ? " field-row--linked" : ""
+              }`}
               role="button"
               tabIndex={0}
               onClick={() =>

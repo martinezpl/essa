@@ -45,9 +45,10 @@
   --verb-delete: #ef4444;
   --verb-delete-soft: rgb(239 68 68 / 14%);
 
-  --read: #ef4444;
+  --read: #15803d;
   --write: #b91c1c;
-  --read-write: #7c3aed;
+  --read-write: #c2410c;
+  --fk: #0e7490;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -97,9 +98,10 @@
   --shadow-md: 0 8px 24px rgb(0 0 0 / 50%);
   --shadow-lg: 0 24px 60px rgb(0 0 0 / 70%);
 
-  --read: #22d3ee;
-  --write: #f97316;
-  --read-write: #c084fc;
+  --read: #22c55e;
+  --write: #ef4444;
+  --read-write: #f97316;
+  --fk: #22d3ee;
   --edge-flow-duration: 0.9s;
 
   color-scheme: dark;
@@ -1185,6 +1187,17 @@ h3 {
   background: var(--accent-soft);
 }
 
+.field-row--linked {
+  border-color: var(--read);
+  background: color-mix(in srgb, var(--read) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--read) 34%, transparent);
+}
+
+.field-row--linked .field-row__name,
+.field-row--linked .field-row__type {
+  color: var(--text);
+}
+
 .field-row__name {
   font-family: var(--font-mono);
   font-weight: 600;
@@ -1712,6 +1725,7 @@ h3 {
 .essa-edge--read .essa-edge__path { stroke: var(--read); }
 .essa-edge--write .essa-edge__path { stroke: var(--write); }
 .essa-edge--read-write .essa-edge__path { stroke: var(--read-write); }
+.essa-edge--fk .essa-edge__path { stroke: var(--fk); }
 
 .essa-edge__flow {
   fill: none;
@@ -1732,6 +1746,7 @@ h3 {
 .essa-edge--read .essa-edge__flow { stroke: var(--read); }
 .essa-edge--write .essa-edge__flow { stroke: var(--write); }
 .essa-edge--read-write .essa-edge__flow { stroke: var(--read-write); }
+.essa-edge--fk .essa-edge__flow { stroke: var(--fk); }
 
 .essa-edge--linked .essa-edge__path,
 .essa-edge:hover .essa-edge__path,

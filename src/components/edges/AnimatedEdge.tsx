@@ -63,6 +63,7 @@ export const AnimatedEdge = ({
   const dataPath = (data?.dataPath as string | undefined) ?? "all";
   const linked = Boolean(data?.linked);
   const readonly = Boolean(data?.readonly);
+  const isForeignKeyEdge = readonly && dataPath === "FK";
   const routedEdge = routeEdgeAroundObstacles({
     source: { x: sourceX, y: sourceY },
     sourcePosition,
@@ -75,7 +76,9 @@ export const AnimatedEdge = ({
   const path = routedEdge?.path ?? fallbackPath;
   const labelX = routedEdge?.labelX ?? fallbackLabelX;
   const labelY = routedEdge?.labelY ?? fallbackLabelY;
-  const kindClass = `essa-edge--${kind.replace("/", "-")}`;
+  const kindClass = isForeignKeyEdge
+    ? "essa-edge--fk"
+    : `essa-edge--${kind.replace("/", "-")}`;
   const stateClass = selected ? " essa-edge--selected" : "";
   const linkedClass = linked ? " essa-edge--linked" : "";
 
@@ -114,8 +117,14 @@ export const AnimatedEdge = ({
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             }}
           >
-            <span className="essa-edge__label-kind">{kind}</span>
-            <span className="essa-edge__label-data">{dataPath}</span>
+            {isForeignKeyEdge ? (
+              <span className="essa-edge__label-kind">FK</span>
+            ) : (
+              <>
+                <span className="essa-edge__label-kind">{kind}</span>
+                <span className="essa-edge__label-data">{dataPath}</span>
+              </>
+            )}
           </div>
         )}
       </EdgeLabelRenderer>
