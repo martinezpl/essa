@@ -39,7 +39,7 @@ export const AnimatedEdge = ({
   const dataPath = (data?.dataPath as string | undefined) ?? "all";
   const linked = Boolean(data?.linked);
   const readonly = Boolean(data?.readonly);
-  const kindClass = `essa-edge--${kind}`;
+  const kindClass = `essa-edge--${kind.replace("/", "-")}`;
   const stateClass = selected ? " essa-edge--selected" : "";
   const linkedClass = linked ? " essa-edge--linked" : "";
 

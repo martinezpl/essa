@@ -138,7 +138,9 @@ export const DiagramCanvas = ({
                 setContextMenu(null);
               }}
             >
-              <span className={`floating-dock__dot floating-dock__dot--${kind}`} />
+              <span
+                className={`floating-dock__dot floating-dock__dot--${kind}`}
+              />
               {label}
             </button>
           ))}

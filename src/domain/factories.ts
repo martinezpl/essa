@@ -21,13 +21,17 @@ export const createRestResourceMethod = (
   kind: RestMethodKind,
 ): RestResourceMethod => createRestResourceMethodContract(kind);
 
-export const blankBlockData = (kind: BlockKind): RestResourceData | PsqlTableData => {
+export const blankBlockData = (
+  kind: BlockKind,
+): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 });
 
   return block.data;
 };
 
-export const seededBlockData = (kind: BlockKind): RestResourceData | PsqlTableData => {
+export const seededBlockData = (
+  kind: BlockKind,
+): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 }, { seed: true });
 
   return block.data;
@@ -45,21 +49,285 @@ export const cloneDiagramNode = (node: DiagramNode): DiagramNode => {
 
 export const createStarterDiagram = (): Diagram => {
   const createdAt = nowIso();
-  const restNode = createDiagramNode("restResource", { x: 240, y: 120 }, { seed: true });
-  const psqlNode = createDiagramNode("psqlTable", { x: 600, y: 120 }, { seed: true });
+  const statusEnumId = createId("psql-enum");
+  const postsResourceId = createId("node");
+  const usersResourceId = createId("node");
+  const postsTableId = createId("node");
+  const usersTableId = createId("node");
+  const postIdColumnId = createId("column");
+  const postTitleColumnId = createId("column");
+  const postStatusColumnId = createId("column");
+  const postAuthorColumnId = createId("column");
+  const postCreatedAtColumnId = createId("column");
+  const userIdColumnId = createId("column");
+  const userEmailColumnId = createId("column");
 
   return {
     id: createId("diagram"),
     name: "Starter Diagram",
     createdAt,
     updatedAt: createdAt,
-    psqlEnums: [],
-    nodes: [restNode, psqlNode],
+    psqlEnums: [
+      {
+        id: statusEnumId,
+        name: "post_status",
+        values: ["draft", "published", "archived"],
+      },
+    ],
+    nodes: [
+      {
+        id: postsResourceId,
+        type: "restResource",
+        position: { x: 80, y: 80 },
+        data: {
+          kind: "restResource",
+          resourceName: "posts",
+          description:
+            "Public article collection. Readers browse published posts while editors create drafts and publish updates.",
+          methods: [
+            {
+              ...createRestResourceMethodContract("GET /"),
+              input: [
+                {
+                  id: createId("input"),
+                  name: "status",
+                  type: "string",
+                  mode: "query",
+                  description: "Filter the collection by publication status.",
+                },
+              ],
+            },
+            createRestResourceMethodContract("GET /{id}"),
+            {
+              ...createRestResourceMethodContract("POST /"),
+              input: [
+                {
+                  id: createId("input"),
+                  name: "title",
+                  type: "string",
+                  mode: "payload",
+                  description: "Headline shown in post listings.",
+                },
+                {
+                  id: createId("input"),
+                  name: "author_id",
+                  type: "string",
+                  mode: "payload",
+                  description: "User that owns the post.",
+                },
+              ],
+            },
+          ],
+          schema: [
+            {
+              id: createId("schema-field"),
+              name: "id",
+              type: "string",
+              nullable: false,
+              sourceTableId: postsTableId,
+              sourceColumnId: postIdColumnId,
+              description: "Stable post identifier.",
+            },
+            {
+              id: createId("schema-field"),
+              name: "title",
+              type: "string",
+              nullable: false,
+              sourceTableId: postsTableId,
+              sourceColumnId: postTitleColumnId,
+              description: "Reader-facing headline.",
+            },
+            {
+              id: createId("schema-field"),
+              name: "status",
+              type: "string",
+              enum: ["draft", "published", "archived"],
+              nullable: false,
+              sourceTableId: postsTableId,
+              sourceColumnId: postStatusColumnId,
+              description: "Draft, published, or archived lifecycle state.",
+            },
+            {
+              id: createId("schema-field"),
+              name: "author_id",
+              type: "string",
+              nullable: false,
+              sourceTableId: postsTableId,
+              sourceColumnId: postAuthorColumnId,
+              description: "Foreign key pointing at the author user.",
+            },
+            {
+              id: createId("schema-field"),
+              name: "created_at",
+              type: "string",
+              nullable: false,
+              sourceTableId: postsTableId,
+              sourceColumnId: postCreatedAtColumnId,
+              description: "Timestamp used for sorting feeds.",
+            },
+          ],
+        },
+      },
+      {
+        id: usersResourceId,
+        type: "restResource",
+        position: { x: 80, y: 760 },
+        data: {
+          kind: "restResource",
+          resourceName: "users",
+          description:
+            "Author accounts that own posts. This resource shows a read-only API backed by a separate table.",
+          methods: [
+            {
+              ...createRestResourceMethodContract("GET /"),
+              input: [
+                {
+                  id: createId("input"),
+                  name: "email",
+                  type: "string",
+                  mode: "query",
+                  description: "Find users by email address.",
+                },
+              ],
+            },
+            createRestResourceMethodContract("GET /{id}"),
+          ],
+          schema: [
+            {
+              id: createId("schema-field"),
+              name: "id",
+              type: "string",
+              nullable: false,
+              sourceTableId: usersTableId,
+              sourceColumnId: userIdColumnId,
+              description: "Stable user identifier.",
+            },
+            {
+              id: createId("schema-field"),
+              name: "email",
+              type: "string",
+              nullable: false,
+              sourceTableId: usersTableId,
+              sourceColumnId: userEmailColumnId,
+              description: "Unique login and contact address.",
+            },
+          ],
+        },
+      },
+      {
+        id: postsTableId,
+        type: "psqlTable",
+        position: { x: 600, y: 80 },
+        data: {
+          kind: "psqlTable",
+          tableName: "post",
+          columns: [
+            {
+              id: postIdColumnId,
+              name: "id",
+              type: "uuid",
+              nullable: false,
+              primaryKey: true,
+            },
+            {
+              id: postTitleColumnId,
+              name: "title",
+              type: "text",
+              nullable: false,
+              primaryKey: false,
+            },
+            {
+              id: postStatusColumnId,
+              name: "status",
+              type: "enum",
+              options: { enumId: statusEnumId },
+              nullable: false,
+              primaryKey: false,
+            },
+            {
+              id: postAuthorColumnId,
+              name: "author_id",
+              type: "uuid",
+              nullable: false,
+              primaryKey: false,
+            },
+            {
+              id: postCreatedAtColumnId,
+              name: "created_at",
+              type: "timestamptz",
+              nullable: false,
+              primaryKey: false,
+            },
+          ],
+          foreignKeys: [
+            {
+              id: createId("foreign-key"),
+              name: "author_id",
+              type: "uuid",
+              nullable: false,
+              targetTableId: usersTableId,
+              targetColumnId: userIdColumnId,
+            },
+          ],
+          indices: [
+            {
+              id: createId("index"),
+              name: "idx_posts_status",
+              columns: [postStatusColumnId],
+              method: "btree",
+              unique: false,
+            },
+          ],
+        },
+      },
+      {
+        id: usersTableId,
+        type: "psqlTable",
+        position: { x: 600, y: 760 },
+        data: {
+          kind: "psqlTable",
+          tableName: "user",
+          columns: [
+            {
+              id: userIdColumnId,
+              name: "id",
+              type: "uuid",
+              nullable: false,
+              primaryKey: true,
+            },
+            {
+              id: userEmailColumnId,
+              name: "email",
+              type: "text",
+              nullable: false,
+              primaryKey: false,
+            },
+          ],
+          foreignKeys: [],
+          indices: [
+            {
+              id: createId("index"),
+              name: "idx_users_email",
+              columns: [userEmailColumnId],
+              method: "btree",
+              unique: true,
+            },
+          ],
+        },
+      },
+    ],
     edges: [
       {
         id: createId("edge"),
-        source: restNode.id,
-        target: psqlNode.id,
+        source: postsResourceId,
+        target: postsTableId,
+        type: "smoothstep",
+        data: { kind: "read/write", dataPath: "all" },
+      },
+      {
+        id: createId("edge"),
+        source: usersResourceId,
+        target: usersTableId,
         type: "smoothstep",
         data: { kind: "read", dataPath: "all" },
       },

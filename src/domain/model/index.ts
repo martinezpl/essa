@@ -18,6 +18,7 @@ import type {
   PsqlTableData,
 } from "../types";
 import {
+  connectionKindSchema,
   jsonFieldTypeSchema,
   psqlIndexMethodSchema,
   psqlColumnTypeSchema,
@@ -229,7 +230,7 @@ export class RestResourceBlock extends Block<RestResourceData> {
       id: createId("schema-field"),
       name: "",
       type: "string",
-      nullable: true,
+      nullable: false,
       sourceTableId: "",
       sourceColumnId: "",
     };
@@ -466,6 +467,7 @@ export const blockDefinitions = {
 };
 
 export const blockList = Object.values(blockDefinitions);
+export const connectionKinds = connectionKindSchema.options;
 export const restMethodKinds = restMethodKindSchema.options;
 export const psqlColumnTypes = psqlColumnTypeSchema.options;
 export const psqlIndexMethods = psqlIndexMethodSchema.options;
@@ -600,17 +602,12 @@ export const getCompatibleConnectionKinds = (
     return [];
   }
 
-  return [
-    ...new Set(
-      source.ports
-        .filter(
-          (port) =>
-            port.direction === "output" &&
-            port.connectsTo.includes(target.kind),
-        )
-        .map((port) => port.defaultKind),
-    ),
-  ];
+  const hasCompatibleSourcePort = source.ports.some(
+    (port) =>
+      port.direction === "output" && port.connectsTo.includes(target.kind),
+  );
+
+  return hasCompatibleSourcePort ? Array.from(connectionKinds) : [];
 };
 
 export class DiagramModel {

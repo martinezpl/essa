@@ -23,13 +23,35 @@ export const jsonFieldTypeSchema = z.enum([
 ]);
 export type JsonFieldType = z.infer<typeof jsonFieldTypeSchema>;
 
-export const restMethodInputFieldSchema = z.object({
+const restMethodInputBaseSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
-  type: jsonFieldTypeSchema,
-  mode: z.enum(["payload", "query"]),
   description: z.string().optional(),
 });
+
+export const restMethodInputFieldSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object") return value;
+
+  const input = value as Record<string, unknown>;
+
+  if (input.mode !== "query") {
+    return value;
+  }
+
+  return {
+    ...input,
+    type: "string",
+  };
+}, z.discriminatedUnion("mode", [
+  restMethodInputBaseSchema.extend({
+    mode: z.literal("payload"),
+    type: jsonFieldTypeSchema,
+  }),
+  restMethodInputBaseSchema.extend({
+    mode: z.literal("query"),
+    type: z.literal("string"),
+  }),
+]));
 export type RestMethodInputField = z.infer<typeof restMethodInputFieldSchema>;
 
 const restMethodInputArraySchema = z.preprocess((value) => {
@@ -143,6 +165,7 @@ export const resourceSchemaFieldSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
   type: jsonFieldTypeSchema,
+  enum: z.array(z.string()).optional(),
   nullable: z.boolean(),
   sourceTableId: z.string(),
   sourceColumnId: z.string(),
@@ -241,7 +264,7 @@ export const diagramNodeSchema = z.object({
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
 export type EssaNode = Node<BlockData, BlockKind>;
 
-export const connectionKindSchema = z.enum(["read", "write"]);
+export const connectionKindSchema = z.enum(["read", "write", "read/write"]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 const legacyConnectionKindSchema = z.enum([
@@ -258,7 +281,7 @@ export const edgeDataSchema = z.object({
         return "write";
       }
 
-      if (kind === "read" || kind === "write") {
+      if (kind === "read" || kind === "write" || kind === "read/write") {
         return kind;
       }
 

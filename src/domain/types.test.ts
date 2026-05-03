@@ -25,6 +25,10 @@ describe("domain schemas", () => {
       kind: "read",
       dataPath: "all",
     });
+    expect(edgeDataSchema.parse({ kind: "read/write" })).toEqual({
+      kind: "read/write",
+      dataPath: "all",
+    });
   });
 
   it("expands shorthand REST methods into full method contracts", () => {
@@ -78,6 +82,31 @@ describe("domain schemas", () => {
       },
     ]);
     expect(parsed.output).toEqual({ returnsArray: true });
+  });
+
+  it("forces query method inputs to use string types", () => {
+    const parsed = restResourceMethodSchema.parse({
+      id: "method-1",
+      kind: "GET /",
+      input: [
+        {
+          id: "input-1",
+          name: "page",
+          type: "integer",
+          mode: "query",
+        },
+      ],
+      output: { returnsArray: true },
+    });
+
+    expect(parsed.input).toEqual([
+      {
+        id: "input-1",
+        name: "page",
+        type: "string",
+        mode: "query",
+      },
+    ]);
   });
 
   it("parses PSQL columns without foreign keys", () => {

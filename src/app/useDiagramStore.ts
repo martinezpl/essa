@@ -54,6 +54,81 @@ import {
 } from "./history";
 
 type NodeDataPatch = Partial<BlockData>;
+type LayoutNode = DiagramNode & {
+  measured?: { width?: number; height?: number };
+  width?: number;
+  height?: number;
+};
+
+const NODE_COLLISION_GAP = 32;
+const DEFAULT_NODE_WIDTH = 360;
+const DEFAULT_NODE_HEIGHT = 420;
+
+const getNodeBounds = (node: DiagramNode) => {
+  const layoutNode = node as LayoutNode;
+  const width = layoutNode.measured?.width ?? layoutNode.width ?? DEFAULT_NODE_WIDTH;
+  const height = layoutNode.measured?.height ?? layoutNode.height ?? DEFAULT_NODE_HEIGHT;
+
+  return {
+    left: node.position.x,
+    top: node.position.y,
+    right: node.position.x + width,
+    bottom: node.position.y + height,
+    width,
+    height,
+  };
+};
+
+const boundsOverlap = (
+  a: ReturnType<typeof getNodeBounds>,
+  b: ReturnType<typeof getNodeBounds>,
+) =>
+  a.left < b.right + NODE_COLLISION_GAP &&
+  a.right + NODE_COLLISION_GAP > b.left &&
+  a.top < b.bottom + NODE_COLLISION_GAP &&
+  a.bottom + NODE_COLLISION_GAP > b.top;
+
+const resolveNodeCollisions = (
+  nodes: DiagramNode[],
+  movingNodeIds: ReadonlySet<string>,
+): DiagramNode[] => {
+  const resolvedNodes = [...nodes];
+
+  movingNodeIds.forEach((nodeId) => {
+    const nodeIndex = resolvedNodes.findIndex((node) => node.id === nodeId);
+
+    if (nodeIndex === -1) {
+      return;
+    }
+
+    let guard = 0;
+
+    while (guard < resolvedNodes.length) {
+      const movingNode = resolvedNodes[nodeIndex];
+      const movingBounds = getNodeBounds(movingNode);
+      const blockingNode = resolvedNodes.find(
+        (node) =>
+          node.id !== nodeId && boundsOverlap(movingBounds, getNodeBounds(node)),
+      );
+
+      if (!blockingNode) {
+        return;
+      }
+
+      const blockingBounds = getNodeBounds(blockingNode);
+      resolvedNodes[nodeIndex] = {
+        ...movingNode,
+        position: {
+          x: movingNode.position.x,
+          y: blockingBounds.bottom + NODE_COLLISION_GAP,
+        },
+      };
+      guard += 1;
+    }
+  });
+
+  return resolvedNodes;
+};
 
 const patchDiagram = (
   collection: DiagramCollection,
@@ -230,7 +305,10 @@ export const useDiagramStore = () => {
 
       updateActiveDiagram((diagram) => ({
         ...diagram,
-        nodes: [...diagram.nodes, node],
+        nodes: resolveNodeCollisions(
+          [...diagram.nodes, node],
+          new Set([node.id]),
+        ),
       }));
 
       return node.id;
@@ -244,16 +322,19 @@ export const useDiagramStore = () => {
 
       updateActiveDiagram((diagram) => ({
         ...diagram,
-        nodes: [
-          ...diagram.nodes.map((item) => ({
-            ...item,
-            selected: false,
-          })),
-          {
-            ...clonedNode,
-            selected: true,
-          },
-        ],
+        nodes: resolveNodeCollisions(
+          [
+            ...diagram.nodes.map((item) => ({
+              ...item,
+              selected: false,
+            })),
+            {
+              ...clonedNode,
+              selected: true,
+            },
+          ],
+          new Set([clonedNode.id]),
+        ),
       }));
 
       return clonedNode.id;
@@ -536,18 +617,30 @@ export const useDiagramStore = () => {
           pendingNodeDragCollectionRef.current = current.present;
         }
 
-        const nextCollection = patchDiagram(current.present, activeDiagram.id, (diagram) => ({
-          ...diagram,
-          nodes: applyNodeChanges(changes, diagram.nodes) as DiagramNode[],
-          edges: diagram.edges.filter(
-            (edge) =>
-              !changes.some(
-                (change) =>
-                  change.type === "remove" &&
-                  (edge.source === change.id || edge.target === change.id),
-              ),
+        const movingNodeIds = new Set(
+          changes.flatMap((change) =>
+            change.type === "position" ? [change.id] : [],
           ),
-        }));
+        );
+        const nextCollection = patchDiagram(current.present, activeDiagram.id, (diagram) => {
+          const nodes = applyNodeChanges(changes, diagram.nodes) as DiagramNode[];
+
+          return {
+            ...diagram,
+            nodes:
+              movingNodeIds.size > 0
+                ? resolveNodeCollisions(nodes, movingNodeIds)
+                : nodes,
+            edges: diagram.edges.filter(
+              (edge) =>
+                !changes.some(
+                  (change) =>
+                    change.type === "remove" &&
+                    (edge.source === change.id || edge.target === change.id),
+                ),
+            ),
+          };
+        });
 
         if (!shouldRecordNodeChanges(changes)) {
           return replaceHistoryPresent(current, nextCollection);

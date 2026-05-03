@@ -1,6 +1,8 @@
 import type {
   Diagram,
   JsonFieldType,
+  PsqlColumn,
+  PsqlEnum,
   PsqlColumnType,
   ResourceSchemaField,
 } from "./types";
@@ -67,6 +69,14 @@ const isResourceTableEdge = (
   (edge.source === resourceId && edge.target === tableId) ||
   (edge.source === tableId && edge.target === resourceId);
 
+const getColumnEnumValues = (
+  column: PsqlColumn,
+  psqlEnums: PsqlEnum[],
+) =>
+  column.type === "enum"
+    ? psqlEnums.find((psqlEnum) => psqlEnum.id === column.options?.enumId)?.values
+    : undefined;
+
 export const deriveResourceSchema = (
   diagram: Diagram,
   resourceId: string,
@@ -88,6 +98,9 @@ export const deriveResourceSchema = (
         id: `${tableNode.id}-${column.id}`,
         name: column.name,
         type: psqlToJsonType[column.type],
+        ...(getColumnEnumValues(column, diagram.psqlEnums)
+          ? { enum: getColumnEnumValues(column, diagram.psqlEnums) }
+          : {}),
         nullable: column.nullable,
         sourceTableId: tableNode.id,
         sourceColumnId: column.id,

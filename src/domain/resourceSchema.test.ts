@@ -124,6 +124,7 @@ describe("resource schema derivation", () => {
         id: "table-1-column-status",
         name: "status",
         type: "string",
+        enum: ["draft"],
         nullable: false,
         sourceTableId: "table-1",
         sourceColumnId: "column-status",

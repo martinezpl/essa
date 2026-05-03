@@ -8,6 +8,7 @@ import {
 } from "../../domain/options";
 import type {
   EssaNode,
+  PsqlEnum,
   ResourceSchemaField,
   RestMethodInputField,
   RestMethodKind,
@@ -34,8 +35,41 @@ const updateInputField = (
   patch: Partial<RestMethodInputField>,
 ) =>
   inputs.map((input) =>
-    input.id === inputId ? { ...input, ...patch } : input,
+    input.id === inputId
+      ? ({
+          ...input,
+          ...patch,
+          type: patch.mode === "query" ? "string" : (patch.type ?? input.type),
+        } as RestMethodInputField)
+      : input,
   );
+
+const formatResourceFieldType = (
+  field: ResourceSchemaField,
+  psqlEnums: PsqlEnum[],
+) => {
+  const enumName = field.enum
+    ? psqlEnums.find(
+        (item) =>
+          item.values.length === field.enum?.length &&
+          item.values.every((value, index) => value === field.enum?.[index]),
+      )?.name
+    : undefined;
+
+  return enumName || field.type;
+};
+
+const getSelectedEnumId = (
+  field: ResourceSchemaField,
+  psqlEnums: PsqlEnum[],
+) =>
+  field.enum
+    ? (psqlEnums.find(
+        (item) =>
+          item.values.length === field.enum?.length &&
+          item.values.every((value, index) => value === field.enum?.[index]),
+      )?.id ?? "")
+    : "";
 
 export const RestResourceNode = ({
   id,
@@ -122,7 +156,7 @@ export const RestResourceNode = ({
             >
               <span className="field-row__name">{field.name || "—"}</span>
               <span className="field-row__type">
-                {field.type}
+                {formatResourceFieldType(field, ctx.psqlEnums)}
                 {field.nullable ? "?" : ""}
               </span>
 
@@ -130,6 +164,7 @@ export const RestResourceNode = ({
                 <RowEditPopover onClose={closeEditing}>
                   <SchemaFieldPopover
                     field={field}
+                    psqlEnums={ctx.psqlEnums}
                     onChange={(patch) =>
                       ctx.onReplaceResourceSchema(
                         id,
@@ -284,6 +319,7 @@ export const RestResourceNode = ({
 
 type SchemaFieldPopoverProps = {
   field: ResourceSchemaField;
+  psqlEnums: PsqlEnum[];
   onChange: (patch: Partial<ResourceSchemaField>) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -291,6 +327,7 @@ type SchemaFieldPopoverProps = {
 
 const SchemaFieldPopover = ({
   field,
+  psqlEnums,
   onChange,
   onDelete,
   onClose,
@@ -321,7 +358,10 @@ const SchemaFieldPopover = ({
       <select
         value={field.type}
         onChange={(event) =>
-          onChange({ type: event.target.value as ResourceSchemaField["type"] })
+          onChange({
+            type: event.target.value as ResourceSchemaField["type"],
+            enum: undefined,
+          })
         }
       >
         {jsonFieldTypes.map((type) => (
@@ -331,6 +371,30 @@ const SchemaFieldPopover = ({
         ))}
       </select>
     </label>
+
+    {psqlEnums.length > 0 ? (
+      <label>
+        Enum
+        <select
+          value={getSelectedEnumId(field, psqlEnums)}
+          onChange={(event) =>
+            onChange({
+              type: "string",
+              enum: event.target.value
+                ? psqlEnums.find((item) => item.id === event.target.value)?.values
+                : undefined,
+            })
+          }
+        >
+          <option value="">None</option>
+          {psqlEnums.map((psqlEnum) => (
+            <option key={psqlEnum.id} value={psqlEnum.id}>
+              {psqlEnum.name || "unnamed_enum"}
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : null}
 
     <label className="checkbox-field">
       <input
@@ -502,13 +566,14 @@ const InputPopover = ({
         Type
         <select
           value={input.type}
+          disabled={input.mode === "query"}
           onChange={(event) =>
             onChange({
               type: event.target.value as RestMethodInputField["type"],
             })
           }
         >
-          {jsonFieldTypes.map((type) => (
+          {(input.mode === "query" ? ["string"] : jsonFieldTypes).map((type) => (
             <option key={type} value={type}>
               {type}
             </option>
@@ -520,11 +585,14 @@ const InputPopover = ({
         Mode
         <select
           value={input.mode}
-          onChange={(event) =>
-            onChange({
-              mode: event.target.value as RestMethodInputField["mode"],
-            })
-          }
+          onChange={(event) => {
+            if (event.target.value === "query") {
+              onChange({ mode: "query", type: "string" });
+              return;
+            }
+
+            onChange({ mode: "payload", type: input.type });
+          }}
         >
           {restMethodInputModes.map((mode) => (
             <option key={mode} value={mode}>

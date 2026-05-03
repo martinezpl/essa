@@ -285,6 +285,7 @@ const formatDescription = (description?: string) =>
 const formatRestResourceLabel = (
   node: DiagramNode,
   schema: ResourceSchemaField[],
+  psqlEnums: PsqlEnum[],
 ) => {
   if (node.data.kind !== "restResource") {
     return [];
@@ -312,7 +313,10 @@ const formatRestResourceLabel = (
     schema
       .map(
         (field) =>
-          `${field.name}: ${field.type}${formatDescription(field.description)}`,
+          `${field.name}: ${formatResourceSchemaFieldType(
+            field,
+            psqlEnums,
+          )}${formatDescription(field.description)}`,
       )
       .join(", ") || "none";
 
@@ -353,13 +357,27 @@ const formatPsqlTableLabel = (node: DiagramNode, psqlEnums: PsqlEnum[]) => {
   ];
 };
 
+const sameValues = (left: readonly string[], right: readonly string[]) =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
+const formatResourceSchemaFieldType = (
+  field: ResourceSchemaField,
+  psqlEnums: PsqlEnum[],
+) => {
+  const enumName = field.enum
+    ? psqlEnums.find((item) => sameValues(item.values, field.enum ?? []))?.name
+    : undefined;
+
+  return enumName || field.type;
+};
+
 const formatNodeLabel = (
   node: DiagramNode,
   schema: ResourceSchemaField[],
   psqlEnums: PsqlEnum[],
 ) =>
   node.data.kind === "restResource"
-    ? formatRestResourceLabel(node, schema)
+    ? formatRestResourceLabel(node, schema, psqlEnums)
     : formatPsqlTableLabel(node, psqlEnums);
 
 const formatEdgeLabel = (edge: DiagramEdge) =>
@@ -512,10 +530,11 @@ const serializeErDiagram = (diagram: Diagram) => {
 
       schema.forEach((field) => {
         lines.push(
-          `    ${erFieldType(field.type)} ${erFieldName(
+          `    ${erFieldType(formatResourceSchemaFieldType(field, diagram.psqlEnums))} ${erFieldName(
             field.name || "field",
           )}${formatErComment([
             field.nullable ? "nullable" : "required",
+            field.enum?.length ? `enum: ${field.enum.join(", ")}` : "",
             field.description ?? "",
           ])}`,
         );

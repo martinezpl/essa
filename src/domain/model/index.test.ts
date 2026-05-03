@@ -159,7 +159,7 @@ describe("block model", () => {
     expect(createResourceSchemaField()).toMatchObject({
       name: "",
       type: "string",
-      nullable: true,
+      nullable: false,
       sourceTableId: "",
       sourceColumnId: "",
     });
@@ -200,6 +200,11 @@ describe("connection model", () => {
     const table = PsqlTableBlock.create({ x: 200, y: 0 });
 
     expect(getCompatibleConnectionKind(resource, table)).toBe("read");
+    expect(getCompatibleConnectionKinds(resource, table)).toEqual([
+      "read",
+      "write",
+      "read/write",
+    ]);
     expect(getCompatibleConnectionKind(table, resource)).toBeNull();
     expect(getCompatibleConnectionKinds(table, resource)).toEqual([]);
   });
@@ -246,9 +251,9 @@ describe("diagram model", () => {
   it("collects intermediate export specs", () => {
     const model = hydrateDiagram(createStarterDiagram());
 
-    expect(model.toMermaidSpecs().blocks).toHaveLength(2);
-    expect(model.toMermaidSpecs().connections).toHaveLength(1);
-    expect(model.toOpenApiSpecs()).toHaveLength(1);
-    expect(model.toPsqlSpecs()).toHaveLength(1);
+    expect(model.toMermaidSpecs().blocks).toHaveLength(4);
+    expect(model.toMermaidSpecs().connections).toHaveLength(2);
+    expect(model.toOpenApiSpecs()).toHaveLength(2);
+    expect(model.toPsqlSpecs()).toHaveLength(2);
   });
 });
