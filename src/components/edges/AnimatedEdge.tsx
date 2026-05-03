@@ -3,11 +3,7 @@ import {
   getBezierPath,
   type EdgeProps,
 } from "@xyflow/react";
-import type {
-  ConnectionKind,
-  DiagramEdge,
-  EssaEdge,
-} from "../../domain/types";
+import type { ConnectionKind, DiagramEdge, EssaEdge } from "../../domain/types";
 import { ConnectionEditor } from "../blockEditors/ConnectionEditor";
 import {
   routeEdgeAroundObstacles,
@@ -23,11 +19,13 @@ const isObstacle = (value: unknown): value is EdgeRouteObstacle => {
 
   const obstacle = value as Record<string, unknown>;
 
-  return typeof obstacle.id === "string" &&
+  return (
+    typeof obstacle.id === "string" &&
     typeof obstacle.left === "number" &&
     typeof obstacle.top === "number" &&
     typeof obstacle.right === "number" &&
-    typeof obstacle.bottom === "number";
+    typeof obstacle.bottom === "number"
+  );
 };
 
 const getObstacles = (value: unknown): EdgeRouteObstacle[] =>
@@ -63,16 +61,21 @@ export const AnimatedEdge = ({
   const dataPath = (data?.dataPath as string | undefined) ?? "all";
   const linked = Boolean(data?.linked);
   const readonly = Boolean(data?.readonly);
+  const skipRouting = Boolean(
+    (data as { skipRouting?: boolean } | undefined)?.skipRouting,
+  );
   const isForeignKeyEdge = readonly && dataPath === "FK";
-  const routedEdge = routeEdgeAroundObstacles({
-    source: { x: sourceX, y: sourceY },
-    sourcePosition,
-    target: { x: targetX, y: targetY },
-    targetPosition,
-    obstacles: getObstacles(data?.obstacles),
-    sourceObstacle: getObstacle(data?.sourceObstacle),
-    targetObstacle: getObstacle(data?.targetObstacle),
-  });
+  const routedEdge = skipRouting
+    ? null
+    : routeEdgeAroundObstacles({
+        source: { x: sourceX, y: sourceY },
+        sourcePosition,
+        target: { x: targetX, y: targetY },
+        targetPosition,
+        obstacles: getObstacles(data?.obstacles),
+        sourceObstacle: getObstacle(data?.sourceObstacle),
+        targetObstacle: getObstacle(data?.targetObstacle),
+      });
   const path = routedEdge?.path ?? fallbackPath;
   const labelX = routedEdge?.labelX ?? fallbackLabelX;
   const labelY = routedEdge?.labelY ?? fallbackLabelY;
@@ -81,6 +84,7 @@ export const AnimatedEdge = ({
     : `essa-edge--${kind.replace("/", "-")}`;
   const stateClass = selected ? " essa-edge--selected" : "";
   const linkedClass = linked ? " essa-edge--linked" : "";
+  const draggingClass = skipRouting ? " essa-edge--dragging" : "";
 
   const fullEdge: DiagramEdge = {
     id,
@@ -91,7 +95,9 @@ export const AnimatedEdge = ({
   };
 
   return (
-    <g className={`essa-edge ${kindClass}${stateClass}${linkedClass}`}>
+    <g
+      className={`essa-edge ${kindClass}${stateClass}${linkedClass}${draggingClass}`}
+    >
       <path className="essa-edge__hit" d={path} />
       <path className="essa-edge__path" d={path} />
       <path className="essa-edge__flow" d={path} />

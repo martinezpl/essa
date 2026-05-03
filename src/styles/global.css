@@ -1903,11 +1903,95 @@ h3 {
   overflow: hidden;
 }
 
-.canvas-minimap {
+.minimap-shell {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+}
+
+.minimap-button {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 5;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  overflow: hidden;
+  transition: width var(--dur-base) var(--ease),
+    height var(--dur-base) var(--ease),
+    border-radius var(--dur-base) var(--ease),
+    background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.minimap-shell--expanded .minimap-button {
+  width: 320px;
+  height: 190px;
+  z-index: 30;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-glass) 88%, transparent);
+  cursor: crosshair;
+}
+
+.minimap-button:hover {
+  background: var(--hover);
+}
+
+.minimap-shell--expanded .minimap-button:hover {
+  background: color-mix(in srgb, var(--bg-glass) 96%, transparent);
+  border-color: var(--border-strong);
+}
+
+.minimap-button:active {
+  transform: none;
+}
+
+.minimap-button__icon {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 18px;
+  height: 18px;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.minimap-shell--expanded .minimap-button__icon {
+  opacity: 0;
+}
+
+.minimap-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  animation: minimap-fade-in var(--dur-base) var(--ease);
+}
+
+@keyframes minimap-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.canvas-minimap {
+  display: block;
   width: 320px;
   height: 190px;
   padding: 0;
@@ -2002,7 +2086,8 @@ h3 {
   transition: stroke var(--dur-fast) var(--ease),
     stroke-width var(--dur-fast) var(--ease),
     opacity var(--dur-fast) var(--ease),
-    filter var(--dur-fast) var(--ease);
+    filter var(--dur-fast) var(--ease),
+    d var(--dur-base) var(--ease);
 }
 
 .essa-edge__hit {
@@ -2010,6 +2095,7 @@ h3 {
   stroke: transparent;
   stroke-width: 18;
   cursor: pointer;
+  transition: d var(--dur-base) var(--ease);
 }
 
 .essa-edge--read .essa-edge__path { stroke: var(--read); }
@@ -2024,7 +2110,14 @@ h3 {
   stroke-dasharray: 6 9;
   opacity: 0;
   animation: none;
-  transition: opacity var(--dur-base) var(--ease);
+  transition: opacity var(--dur-base) var(--ease),
+    d var(--dur-base) var(--ease);
+}
+
+.essa-edge--dragging .essa-edge__path,
+.essa-edge--dragging .essa-edge__hit,
+.essa-edge--dragging .essa-edge__flow {
+  transition-property: stroke, stroke-width, opacity, filter;
 }
 
 .essa-edge--linked .essa-edge__flow,
