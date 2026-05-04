@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
-import { psqlColumnTypes, psqlIndexMethods } from "../../domain/options";
+import { psqlColumnTypes, psqlForeignKeyActions, psqlIndexMethods } from "../../domain/options";
 import {
   parsePsqlColumnTargetHandleId,
   parsePsqlForeignKeySourceHandleId,
@@ -16,6 +16,7 @@ import type {
   PsqlColumnType,
   PsqlEnum,
   PsqlForeignKey,
+  PsqlForeignKeyAction,
   PsqlIndex,
   PsqlTableData,
 } from "../../domain/types";
@@ -80,6 +81,9 @@ const formatForeignKeyReference = (
   return `${targetTable.data.tableName || "table"}.${targetColumn.name || "column"}`;
 };
 
+const nameMinWidth = (name: string) =>
+  Math.max(260, name.length * 17 + 43);
+
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
@@ -129,6 +133,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       className={`block-node block-node--table block-node--editable${
         selected ? " block-node--editing" : ""
       }`}
+      style={{ minWidth: nameMinWidth(data.tableName) }}
     >
       <BlockHandles kind="psqlTable" />
 
@@ -288,6 +293,12 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               </span>
               <span className="field-row__flags">
                 <span className="flag-chip flag-chip--fk">FK</span>
+                {foreignKey.onDelete ? (
+                  <span className="flag-chip flag-chip--cascade" title={`ON DELETE ${foreignKey.onDelete}`}>↓</span>
+                ) : null}
+                {foreignKey.onUpdate ? (
+                  <span className="flag-chip flag-chip--cascade" title={`ON UPDATE ${foreignKey.onUpdate}`}>↑</span>
+                ) : null}
                 {foreignKey.nullable ? (
                   <span className="flag-chip flag-chip--null">?</span>
                 ) : null}
@@ -816,6 +827,45 @@ const ForeignKeyPopover = ({
             onChange={(event) => onChange({ nullable: event.target.checked })}
           />
           nullable
+        </label>
+      </div>
+
+      <div className="row">
+        <label>
+          On Delete
+          <select
+            value={foreignKey.onDelete ?? ""}
+            onChange={(event) =>
+              onChange({
+                onDelete: (event.target.value as PsqlForeignKeyAction) || undefined,
+              })
+            }
+          >
+            <option value="">—</option>
+            {psqlForeignKeyActions.map((action) => (
+              <option key={action} value={action}>
+                {action}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          On Update
+          <select
+            value={foreignKey.onUpdate ?? ""}
+            onChange={(event) =>
+              onChange({
+                onUpdate: (event.target.value as PsqlForeignKeyAction) || undefined,
+              })
+            }
+          >
+            <option value="">—</option>
+            {psqlForeignKeyActions.map((action) => (
+              <option key={action} value={action}>
+                {action}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
     </div>

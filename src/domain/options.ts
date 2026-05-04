@@ -2,6 +2,7 @@ import type {
   BlockKind,
   JsonFieldType,
   PsqlColumnType,
+  PsqlForeignKeyAction,
   PsqlIndexMethod,
   RestMethodKind,
 } from "./types";
@@ -31,3 +32,11 @@ export const jsonFieldTypes: JsonFieldType[] = Array.from(jsonFieldTypeOptions);
 export const restMethodInputModes: Array<"payload" | "query"> = Array.from(
   restMethodInputModeOptions,
 );
+
+export const psqlForeignKeyActions: PsqlForeignKeyAction[] = [
+  "NO ACTION",
+  "RESTRICT",
+  "CASCADE",
+  "SET NULL",
+  "SET DEFAULT",
+];

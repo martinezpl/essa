@@ -205,6 +205,15 @@ export const psqlColumnSchema = z.object({
 });
 export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 
+export const psqlForeignKeyActionSchema = z.enum([
+  "NO ACTION",
+  "RESTRICT",
+  "CASCADE",
+  "SET NULL",
+  "SET DEFAULT",
+]);
+export type PsqlForeignKeyAction = z.infer<typeof psqlForeignKeyActionSchema>;
+
 export const psqlForeignKeySchema = z.preprocess(
   (value) => {
     if (!value || typeof value !== "object") return value;
@@ -219,6 +228,8 @@ export const psqlForeignKeySchema = z.preprocess(
       targetTableId: typeof v.targetTableId === "string" ? v.targetTableId : "",
       targetColumnId:
         typeof v.targetColumnId === "string" ? v.targetColumnId : "",
+      onDelete: typeof v.onDelete === "string" ? v.onDelete : undefined,
+      onUpdate: typeof v.onUpdate === "string" ? v.onUpdate : undefined,
     };
   },
   z.object({
@@ -228,6 +239,8 @@ export const psqlForeignKeySchema = z.preprocess(
     nullable: z.boolean(),
     targetTableId: z.string(),
     targetColumnId: z.string(),
+    onDelete: psqlForeignKeyActionSchema.optional(),
+    onUpdate: psqlForeignKeyActionSchema.optional(),
   }),
 );
 export type PsqlForeignKey = z.infer<typeof psqlForeignKeySchema>;

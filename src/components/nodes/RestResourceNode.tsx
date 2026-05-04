@@ -71,6 +71,9 @@ const getSelectedEnumId = (
       )?.id ?? "")
     : "";
 
+const nameMinWidth = (name: string) =>
+  Math.max(260, name.length * 17 + 43);
+
 export const RestResourceNode = ({
   id,
   data,
@@ -90,6 +93,7 @@ export const RestResourceNode = ({
       className={`block-node block-node--resource block-node--editable${
         selected ? " block-node--editing" : ""
       }`}
+      style={{ minWidth: nameMinWidth(data.resourceName) }}
     >
       <BlockHandles kind="restResource" />
 

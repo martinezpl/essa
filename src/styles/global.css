@@ -1057,7 +1057,6 @@ h3 {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   min-width: 260px;
-  max-width: 320px;
   padding: 0.85rem 0.95rem 0.95rem;
   color: var(--text);
   transition: border-color var(--dur-fast) var(--ease),
@@ -1678,6 +1677,11 @@ h3 {
 .flag-chip--payload {
   background: var(--verb-post-soft);
   color: var(--verb-post);
+}
+
+.flag-chip--cascade {
+  background: color-mix(in srgb, var(--fk) 14%, transparent);
+  color: var(--fk);
 }
 
 /* React Flow handles */

@@ -989,6 +989,9 @@ const serializePsqlTableDdl = (
       return [];
     }
 
+    const onDelete = foreignKey.onDelete ? ` ON DELETE ${foreignKey.onDelete}` : "";
+    const onUpdate = foreignKey.onUpdate ? ` ON UPDATE ${foreignKey.onUpdate}` : "";
+
     return [
       `  FOREIGN KEY (${quoteSqlIdentifier(
         foreignKey.name,
@@ -996,7 +999,7 @@ const serializePsqlTableDdl = (
       )}) REFERENCES ${quoteSqlIdentifier(
         targetTable.data.tableName,
         "table",
-      )} (${quoteSqlIdentifier(targetColumn.name, "column")})`,
+      )} (${quoteSqlIdentifier(targetColumn.name, "column")})${onDelete}${onUpdate}`,
     ];
   });
   const definitionLines = [
