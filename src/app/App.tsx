@@ -20,8 +20,8 @@ import {
 } from "../domain/diagramExport";
 import { deriveResourceSchemas } from "../domain/resourceSchema";
 import {
-  psqlColumnTargetHandleId,
-  psqlForeignKeySourceHandleId,
+  psqlColumnSourceHandleId,
+  psqlForeignKeyTargetHandleId,
 } from "../domain/psqlForeignKeys";
 import type { Diagram, DiagramEdge, DiagramNode } from "../domain/types";
 import { DiagramProvider } from "./diagramContext";
@@ -179,10 +179,10 @@ export const App = () => {
         return [
           {
             id: `fk-edge-${node.id}-${foreignKey.id}`,
-            source: node.id,
-            sourceHandle: psqlForeignKeySourceHandleId(foreignKey.id),
-            target: foreignKey.targetTableId,
-            targetHandle: psqlColumnTargetHandleId(foreignKey.targetColumnId),
+            source: foreignKey.targetTableId,
+            sourceHandle: psqlColumnSourceHandleId(foreignKey.targetColumnId),
+            target: node.id,
+            targetHandle: psqlForeignKeyTargetHandleId(foreignKey.id),
             type: "smoothstep",
             data: {
               kind: "read",

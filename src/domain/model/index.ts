@@ -208,6 +208,7 @@ export const createPsqlForeignKey = (): PsqlForeignKey => ({
   name: "",
   type: "uuid",
   nullable: false,
+  primaryKey: false,
   targetTableId: "",
   targetColumnId: "",
 });

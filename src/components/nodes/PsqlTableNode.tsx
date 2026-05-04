@@ -3,10 +3,10 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import { psqlColumnTypes, psqlForeignKeyActions, psqlIndexMethods } from "../../domain/options";
 import {
-  parsePsqlColumnTargetHandleId,
-  parsePsqlForeignKeySourceHandleId,
-  psqlColumnTargetHandleId,
-  psqlForeignKeySourceHandleId,
+  parsePsqlColumnSourceHandleId,
+  parsePsqlForeignKeyTargetHandleId,
+  psqlColumnSourceHandleId,
+  psqlForeignKeyTargetHandleId,
 } from "../../domain/psqlForeignKeys";
 import { formatPsqlColumnType } from "../../domain/psqlTypes";
 import type {
@@ -112,18 +112,18 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
     }
 
     if (edge.source === id) {
-      const foreignKeyId = parsePsqlForeignKeySourceHandleId(edge.sourceHandle);
+      const columnId = parsePsqlColumnSourceHandleId(edge.sourceHandle);
 
-      if (foreignKeyId) {
-        linkedForeignKeyIds.add(foreignKeyId);
+      if (columnId) {
+        linkedColumnIds.add(columnId);
       }
     }
 
     if (edge.target === id) {
-      const columnId = parsePsqlColumnTargetHandleId(edge.targetHandle);
+      const foreignKeyId = parsePsqlForeignKeyTargetHandleId(edge.targetHandle);
 
-      if (columnId) {
-        linkedColumnIds.add(columnId);
+      if (foreignKeyId) {
+        linkedForeignKeyIds.add(foreignKeyId);
       }
     }
   });
@@ -186,10 +186,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
             >
               {column.primaryKey ? (
                 <Handle
-                  className="field-row__handle field-row__handle--target"
-                  id={psqlColumnTargetHandleId(column.id)}
-                  position={Position.Left}
-                  type="target"
+                  className="field-row__handle field-row__handle--source"
+                  id={psqlColumnSourceHandleId(column.id)}
+                  position={Position.Right}
+                  type="source"
                   isConnectable={false}
                 />
               ) : null}
@@ -278,10 +278,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               }}
             >
               <Handle
-                className="field-row__handle field-row__handle--source"
-                id={psqlForeignKeySourceHandleId(foreignKey.id)}
-                position={Position.Right}
-                type="source"
+                className="field-row__handle field-row__handle--target"
+                id={psqlForeignKeyTargetHandleId(foreignKey.id)}
+                position={Position.Left}
+                type="target"
                 isConnectable={false}
               />
               <span className="field-row__name">
@@ -293,6 +293,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               </span>
               <span className="field-row__flags">
                 <span className="flag-chip flag-chip--fk">FK</span>
+                {foreignKey.primaryKey ? (
+                  <span className="flag-chip">PK</span>
+                ) : null}
                 {foreignKey.onDelete ? (
                   <span className="flag-chip flag-chip--cascade" title={`ON DELETE ${foreignKey.onDelete}`}>↓</span>
                 ) : null}
@@ -817,11 +820,12 @@ const ForeignKeyPopover = ({
         />
       </label>
 
+      <label>
+        Type
+        <input readOnly value={foreignKey.type} aria-label="Foreign key type" />
+      </label>
+
       <div className="row">
-        <label>
-          Type
-          <input readOnly value={foreignKey.type} aria-label="Foreign key type" />
-        </label>
         <label className="checkbox-field">
           <input
             type="checkbox"
@@ -829,6 +833,14 @@ const ForeignKeyPopover = ({
             onChange={(event) => onChange({ nullable: event.target.checked })}
           />
           nullable
+        </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={foreignKey.primaryKey}
+            onChange={(event) => onChange({ primaryKey: event.target.checked })}
+          />
+          primary
         </label>
       </div>
 

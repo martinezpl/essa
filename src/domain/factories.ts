@@ -266,6 +266,7 @@ export const createStarterDiagram = (): Diagram => {
               name: "author_id",
               type: "uuid",
               nullable: false,
+              primaryKey: false,
               targetTableId: usersTableId,
               targetColumnId: userIdColumnId,
             },

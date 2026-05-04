@@ -1,20 +1,20 @@
-const PSQL_FOREIGN_KEY_SOURCE_HANDLE_PREFIX = "psql-fk-source-";
-const PSQL_COLUMN_TARGET_HANDLE_PREFIX = "psql-column-target-";
+const PSQL_FOREIGN_KEY_TARGET_HANDLE_PREFIX = "psql-fk-target-";
+const PSQL_COLUMN_SOURCE_HANDLE_PREFIX = "psql-column-source-";
 
-export const psqlForeignKeySourceHandleId = (foreignKeyId: string) =>
-  `${PSQL_FOREIGN_KEY_SOURCE_HANDLE_PREFIX}${foreignKeyId}`;
+export const psqlForeignKeyTargetHandleId = (foreignKeyId: string) =>
+  `${PSQL_FOREIGN_KEY_TARGET_HANDLE_PREFIX}${foreignKeyId}`;
 
-export const psqlColumnTargetHandleId = (columnId: string) =>
-  `${PSQL_COLUMN_TARGET_HANDLE_PREFIX}${columnId}`;
+export const psqlColumnSourceHandleId = (columnId: string) =>
+  `${PSQL_COLUMN_SOURCE_HANDLE_PREFIX}${columnId}`;
 
-export const parsePsqlForeignKeySourceHandleId = (
+export const parsePsqlForeignKeyTargetHandleId = (
   handleId?: string | null,
 ) =>
-  handleId?.startsWith(PSQL_FOREIGN_KEY_SOURCE_HANDLE_PREFIX)
-    ? handleId.slice(PSQL_FOREIGN_KEY_SOURCE_HANDLE_PREFIX.length)
+  handleId?.startsWith(PSQL_FOREIGN_KEY_TARGET_HANDLE_PREFIX)
+    ? handleId.slice(PSQL_FOREIGN_KEY_TARGET_HANDLE_PREFIX.length)
     : null;
 
-export const parsePsqlColumnTargetHandleId = (handleId?: string | null) =>
-  handleId?.startsWith(PSQL_COLUMN_TARGET_HANDLE_PREFIX)
-    ? handleId.slice(PSQL_COLUMN_TARGET_HANDLE_PREFIX.length)
+export const parsePsqlColumnSourceHandleId = (handleId?: string | null) =>
+  handleId?.startsWith(PSQL_COLUMN_SOURCE_HANDLE_PREFIX)
+    ? handleId.slice(PSQL_COLUMN_SOURCE_HANDLE_PREFIX.length)
     : null;

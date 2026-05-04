@@ -23,4 +23,5 @@ describe("diagram migrations", () => {
 
     expect(migrateDiagramCollection(collection)).toEqual(collection);
   });
+
 });

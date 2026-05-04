@@ -52,6 +52,7 @@ const postsTable: DiagramNode = {
         name: "author_id",
         type: "uuid",
         nullable: false,
+        primaryKey: false,
         targetTableId: "users",
         targetColumnId: "users-id",
       },

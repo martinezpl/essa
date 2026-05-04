@@ -230,6 +230,7 @@ export const psqlForeignKeySchema = z.preprocess(
         typeof v.targetColumnId === "string" ? v.targetColumnId : "",
       onDelete: typeof v.onDelete === "string" ? v.onDelete : undefined,
       onUpdate: typeof v.onUpdate === "string" ? v.onUpdate : undefined,
+      primaryKey: typeof v.primaryKey === "boolean" ? v.primaryKey : false,
     };
   },
   z.object({
@@ -237,6 +238,7 @@ export const psqlForeignKeySchema = z.preprocess(
     name: z.string(),
     type: psqlColumnTypeSchema,
     nullable: z.boolean(),
+    primaryKey: z.boolean(),
     targetTableId: z.string(),
     targetColumnId: z.string(),
     onDelete: psqlForeignKeyActionSchema.optional(),

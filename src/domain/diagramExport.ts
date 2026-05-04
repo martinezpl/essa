@@ -964,12 +964,15 @@ const serializePsqlTableDdl = (
   const primaryKeyColumns = table.data.columns.filter(
     (column) => column.primaryKey && column.name.trim(),
   );
-  const primaryKeyLine = primaryKeyColumns.length
-    ? [
-        `  PRIMARY KEY (${primaryKeyColumns
-          .map((column) => quoteSqlIdentifier(column.name, "column"))
-          .join(", ")})`,
-      ]
+  const primaryKeyForeignKeys = table.data.foreignKeys.filter(
+    (fk) => fk.primaryKey && fk.name.trim(),
+  );
+  const primaryKeyParts = [
+    ...primaryKeyColumns.map((column) => quoteSqlIdentifier(column.name, "column")),
+    ...primaryKeyForeignKeys.map((fk) => quoteSqlIdentifier(fk.name, "foreign_key")),
+  ];
+  const primaryKeyLine = primaryKeyParts.length
+    ? [`  PRIMARY KEY (${primaryKeyParts.join(", ")})`]
     : [];
   const foreignKeyConstraintLines = table.data.foreignKeys.flatMap((foreignKey) => {
     if (

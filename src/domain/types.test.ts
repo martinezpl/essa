@@ -214,8 +214,11 @@ describe("domain schemas", () => {
         name: "user_id",
         type: "uuid",
         nullable: false,
+        primaryKey: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
+        onDelete: undefined,
+        onUpdate: undefined,
       },
     ]);
   });
@@ -242,8 +245,11 @@ describe("domain schemas", () => {
         name: "",
         type: "uuid",
         nullable: false,
+        primaryKey: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
+        onDelete: undefined,
+        onUpdate: undefined,
       },
     ]);
   });
