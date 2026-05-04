@@ -22,8 +22,8 @@ import type {
 } from "../../domain/types";
 import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { ComboInput } from "../blockEditors/ComboInput";
+import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { updateColumn } from "../blockEditors/helpers";
-import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
 import { BlockHandles } from "./BlockHandles";
 
@@ -175,20 +175,34 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
           const isLinked = linkedColumnIds.has(column.id);
 
           return (
-            <div
+            <EditableFieldRow
               key={column.id}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}${
-                isLinked ? " field-row--linked" : ""
-              }`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setEditing({ kind: "column", id: column.id })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setEditing({ kind: "column", id: column.id });
-                }
-              }}
+              isEditing={isEditing}
+              isLinked={isLinked}
+              onOpen={() => setEditing({ kind: "column", id: column.id })}
+              onClose={closeEditing}
+              popover={
+                <ColumnPopover
+                  column={column}
+                  psqlEnums={ctx.psqlEnums}
+                  onAddPsqlEnum={ctx.onAddPsqlEnum}
+                  onReplacePsqlEnums={ctx.onReplacePsqlEnums}
+                  onChange={(patch) =>
+                    ctx.onReplacePsqlColumns(
+                      id,
+                      updateColumn(data.columns, column.id, patch),
+                    )
+                  }
+                  onDelete={() => {
+                    ctx.onReplacePsqlColumns(
+                      id,
+                      data.columns.filter((item) => item.id !== column.id),
+                    );
+                    closeEditing();
+                  }}
+                  onClose={closeEditing}
+                />
+              }
             >
               {data.primaryKey.includes(column.id) ? (
                 <Handle
@@ -211,32 +225,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   <span className="flag-chip flag-chip--null">?</span>
                 ) : null}
               </span>
-
-              {isEditing ? (
-                <RowEditPopover onClose={closeEditing}>
-                  <ColumnPopover
-                    column={column}
-                    psqlEnums={ctx.psqlEnums}
-                    onAddPsqlEnum={ctx.onAddPsqlEnum}
-                    onReplacePsqlEnums={ctx.onReplacePsqlEnums}
-                    onChange={(patch) =>
-                      ctx.onReplacePsqlColumns(
-                        id,
-                        updateColumn(data.columns, column.id, patch),
-                      )
-                    }
-                    onDelete={() => {
-                      ctx.onReplacePsqlColumns(
-                        id,
-                        data.columns.filter((item) => item.id !== column.id),
-                      );
-                      closeEditing();
-                    }}
-                    onClose={closeEditing}
-                  />
-                </RowEditPopover>
-              ) : null}
-            </div>
+            </EditableFieldRow>
           );
         })}
 
@@ -268,22 +257,36 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
           const reference = formatForeignKeyReference(foreignKey, psqlTables);
 
           return (
-            <div
+            <EditableFieldRow
               key={foreignKey.id}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}${
-                isLinked ? " field-row--linked" : ""
-              }`}
-              role="button"
-              tabIndex={0}
-              onClick={() =>
+              isEditing={isEditing}
+              isLinked={isLinked}
+              onOpen={() =>
                 setEditing({ kind: "foreignKey", id: foreignKey.id })
               }
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setEditing({ kind: "foreignKey", id: foreignKey.id });
-                }
-              }}
+              onClose={closeEditing}
+              popover={
+                <ForeignKeyPopover
+                  foreignKey={foreignKey}
+                  foreignKeyTargets={foreignKeyTargets}
+                  onChange={(patch) =>
+                    ctx.onReplacePsqlForeignKeys(
+                      id,
+                      updateForeignKey(data.foreignKeys, foreignKey.id, patch),
+                    )
+                  }
+                  onDelete={() => {
+                    ctx.onReplacePsqlForeignKeys(
+                      id,
+                      data.foreignKeys.filter(
+                        (item) => item.id !== foreignKey.id,
+                      ),
+                    );
+                    closeEditing();
+                  }}
+                  onClose={closeEditing}
+                />
+              }
             >
               <Handle
                 className="field-row__handle field-row__handle--target"
@@ -314,32 +317,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   <span className="flag-chip flag-chip--null">?</span>
                 ) : null}
               </span>
-
-              {isEditing ? (
-                <RowEditPopover onClose={closeEditing}>
-                  <ForeignKeyPopover
-                    foreignKey={foreignKey}
-                    foreignKeyTargets={foreignKeyTargets}
-                    onChange={(patch) =>
-                      ctx.onReplacePsqlForeignKeys(
-                        id,
-                        updateForeignKey(data.foreignKeys, foreignKey.id, patch),
-                      )
-                    }
-                    onDelete={() => {
-                      ctx.onReplacePsqlForeignKeys(
-                        id,
-                        data.foreignKeys.filter(
-                          (item) => item.id !== foreignKey.id,
-                        ),
-                      );
-                      closeEditing();
-                    }}
-                    onClose={closeEditing}
-                  />
-                </RowEditPopover>
-              ) : null}
-            </div>
+            </EditableFieldRow>
           );
         })}
 
@@ -360,17 +338,24 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       <section className="block-node__section">
         <h4 className="block-node__section-title">Primary key</h4>
 
-        <div
-          className={`field-row nodrag${editing?.kind === "primaryKey" ? " field-row--active" : ""}`}
-          role="button"
-          tabIndex={0}
-          onClick={() => setEditing({ kind: "primaryKey" })}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              setEditing({ kind: "primaryKey" });
-            }
-          }}
+        <EditableFieldRow
+          isEditing={editing?.kind === "primaryKey"}
+          onOpen={() => setEditing({ kind: "primaryKey" })}
+          onClose={closeEditing}
+          popover={
+            <PrimaryKeyPopover
+              primaryKey={data.primaryKey}
+              columns={data.columns}
+              foreignKeys={data.foreignKeys}
+              onChange={(primaryKey) =>
+                ctx.onUpdateNodeData(id, { primaryKey })
+              }
+              onClear={() => {
+                ctx.onUpdateNodeData(id, { primaryKey: [] });
+                closeEditing();
+              }}
+            />
+          }
         >
           <span className="field-row__name">
             {data.primaryKey.length > 0
@@ -389,24 +374,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               <span className="flag-chip">PK</span>
             </span>
           ) : null}
-
-          {editing?.kind === "primaryKey" ? (
-            <RowEditPopover onClose={closeEditing}>
-              <PrimaryKeyPopover
-                primaryKey={data.primaryKey}
-                columns={data.columns}
-                foreignKeys={data.foreignKeys}
-                onChange={(primaryKey) =>
-                  ctx.onUpdateNodeData(id, { primaryKey })
-                }
-                onClear={() => {
-                  ctx.onUpdateNodeData(id, { primaryKey: [] });
-                  closeEditing();
-                }}
-              />
-            </RowEditPopover>
-          ) : null}
-        </div>
+        </EditableFieldRow>
       </section>
 
       <section className="block-node__section">
@@ -420,18 +388,32 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
           const isEditing = editing?.kind === "index" && editing.id === index.id;
 
           return (
-            <div
+            <EditableFieldRow
               key={index.id}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setEditing({ kind: "index", id: index.id })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setEditing({ kind: "index", id: index.id });
-                }
-              }}
+              isEditing={isEditing}
+              onOpen={() => setEditing({ kind: "index", id: index.id })}
+              onClose={closeEditing}
+              popover={
+                <IndexPopover
+                  index={index}
+                  columns={data.columns}
+                  foreignKeys={data.foreignKeys}
+                  onChange={(patch) =>
+                    ctx.onReplacePsqlIndices(
+                      id,
+                      updateIndex(data.indices, index.id, patch),
+                    )
+                  }
+                  onDelete={() => {
+                    ctx.onReplacePsqlIndices(
+                      id,
+                      data.indices.filter((item) => item.id !== index.id),
+                    );
+                    closeEditing();
+                  }}
+                  onClose={closeEditing}
+                />
+              }
             >
               <span className="field-row__name">{index.name || "—"}</span>
               <span className="field-row__type">
@@ -454,31 +436,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   <span className="flag-chip">UNIQUE</span>
                 ) : null}
               </span>
-
-              {isEditing ? (
-                <RowEditPopover onClose={closeEditing}>
-                  <IndexPopover
-                    index={index}
-                    columns={data.columns}
-                    foreignKeys={data.foreignKeys}
-                    onChange={(patch) =>
-                      ctx.onReplacePsqlIndices(
-                        id,
-                        updateIndex(data.indices, index.id, patch),
-                      )
-                    }
-                    onDelete={() => {
-                      ctx.onReplacePsqlIndices(
-                        id,
-                        data.indices.filter((item) => item.id !== index.id),
-                      );
-                      closeEditing();
-                    }}
-                    onClose={closeEditing}
-                  />
-                </RowEditPopover>
-              ) : null}
-            </div>
+            </EditableFieldRow>
           );
         })}
 
@@ -592,7 +550,6 @@ const ColumnPopover = ({
     <label>
       Name
       <input
-        autoFocus
         placeholder="column_name"
         value={column.name}
         onChange={(event) => onChange({ name: event.target.value })}
@@ -941,7 +898,6 @@ const IndexPopover = ({
     <label>
       Name
       <input
-        autoFocus
         placeholder="idx_name"
         value={index.name}
         onChange={(event) => onChange({ name: event.target.value })}

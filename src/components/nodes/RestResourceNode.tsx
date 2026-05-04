@@ -16,6 +16,7 @@ import type {
   RestResourceMethod,
 } from "../../domain/types";
 import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
+import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
@@ -149,48 +150,38 @@ export const RestResourceNode = ({
             editing?.kind === "schema" && editing.id === field.id;
 
           return (
-            <div
+            <EditableFieldRow
               key={`${field.id}-${field.sourceTableId}-${field.sourceColumnId}`}
-              className={`field-row nodrag${isEditing ? " field-row--active" : ""}`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setEditing({ kind: "schema", id: field.id })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setEditing({ kind: "schema", id: field.id });
-                }
-              }}
+              isEditing={isEditing}
+              onOpen={() => setEditing({ kind: "schema", id: field.id })}
+              onClose={closeEditing}
+              popover={
+                <SchemaFieldPopover
+                  field={field}
+                  psqlEnums={ctx.psqlEnums}
+                  onChange={(patch) =>
+                    ctx.onReplaceResourceSchema(
+                      id,
+                      updateSchemaField(data.schema, field.id, patch),
+                    )
+                  }
+                  onDelete={() => {
+                    ctx.onReplaceResourceSchema(
+                      id,
+                      data.schema.filter((item) => item.id !== field.id),
+                    );
+                    closeEditing();
+                  }}
+                  onClose={closeEditing}
+                />
+              }
             >
               <span className="field-row__name">{field.name || "—"}</span>
               <span className="field-row__type">
                 {formatResourceFieldType(field, ctx.psqlEnums)}
                 {field.nullable ? "?" : ""}
               </span>
-
-              {isEditing ? (
-                <RowEditPopover onClose={closeEditing}>
-                  <SchemaFieldPopover
-                    field={field}
-                    psqlEnums={ctx.psqlEnums}
-                    onChange={(patch) =>
-                      ctx.onReplaceResourceSchema(
-                        id,
-                        updateSchemaField(data.schema, field.id, patch),
-                      )
-                    }
-                    onDelete={() => {
-                      ctx.onReplaceResourceSchema(
-                        id,
-                        data.schema.filter((item) => item.id !== field.id),
-                      );
-                      closeEditing();
-                    }}
-                    onClose={closeEditing}
-                  />
-                </RowEditPopover>
-              ) : null}
-            </div>
+            </EditableFieldRow>
           );
         })}
 
@@ -349,7 +340,6 @@ const SchemaFieldPopover = ({
     <label>
       Name
       <input
-        autoFocus
         placeholder="field"
         value={field.name}
         onChange={(event) => onChange({ name: event.target.value })}
@@ -461,22 +451,21 @@ const MethodPanel = ({
         const isEditing = editingInputId === input.id;
 
         return (
-          <div
+          <EditableFieldRow
             key={input.id}
-            className={`field-row field-row--sub nodrag${isEditing ? " field-row--active" : ""}`}
-            role="button"
-            tabIndex={0}
-            onClick={(event) => {
-              event.stopPropagation();
-              setEditingInput(input.id);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                event.stopPropagation();
-                setEditingInput(input.id);
-              }
-            }}
+            variant="sub"
+            stopPointerPropagation
+            isEditing={isEditing}
+            onOpen={() => setEditingInput(input.id)}
+            onClose={() => setEditingInput(null)}
+            popover={
+              <InputPopover
+                input={input}
+                onChange={(patch) => onUpdateInput(input.id, patch)}
+                onDelete={() => onDeleteInput(input.id)}
+                onClose={() => setEditingInput(null)}
+              />
+            }
           >
             <span className="field-row__name">{input.name || "—"}</span>
             <span className="field-row__type">{input.type}</span>
@@ -489,18 +478,7 @@ const MethodPanel = ({
                 {input.mode}
               </span>
             </span>
-
-            {isEditing ? (
-              <RowEditPopover onClose={() => setEditingInput(null)}>
-                <InputPopover
-                  input={input}
-                  onChange={(patch) => onUpdateInput(input.id, patch)}
-                  onDelete={() => onDeleteInput(input.id)}
-                  onClose={() => setEditingInput(null)}
-                />
-              </RowEditPopover>
-            ) : null}
-          </div>
+          </EditableFieldRow>
         );
       })}
 
@@ -557,7 +535,6 @@ const InputPopover = ({
     <label>
       Name
       <input
-        autoFocus
         placeholder="param"
         value={input.name}
         onChange={(event) => onChange({ name: event.target.value })}

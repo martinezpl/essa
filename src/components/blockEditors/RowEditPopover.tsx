@@ -1,12 +1,39 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 
 type RowEditPopoverProps = {
   onClose: () => void;
   children: ReactNode;
 };
 
+const focusFirstFormField = (root: HTMLElement) => {
+  const fields = root.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+    "input, select, textarea",
+  );
+
+  for (const el of fields) {
+    if (el.disabled) continue;
+    if (el.type === "hidden") continue;
+    if (el.hasAttribute("hidden")) continue;
+    el.focus();
+    return;
+  }
+};
+
 export const RowEditPopover = ({ onClose, children }: RowEditPopoverProps) => {
   const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+
+    const run = () => {
+      focusFirstFormField(root);
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(run);
+    });
+  }, []);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
