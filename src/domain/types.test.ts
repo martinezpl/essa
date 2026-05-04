@@ -142,7 +142,6 @@ describe("domain schemas", () => {
         name: "id",
         type: "uuid",
         nullable: false,
-        primaryKey: true,
       }),
     ).not.toHaveProperty("foreignKey");
   });
@@ -214,7 +213,6 @@ describe("domain schemas", () => {
         name: "user_id",
         type: "uuid",
         nullable: false,
-        primaryKey: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
         onDelete: undefined,
@@ -245,7 +243,6 @@ describe("domain schemas", () => {
         name: "",
         type: "uuid",
         nullable: false,
-        primaryKey: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
         onDelete: undefined,

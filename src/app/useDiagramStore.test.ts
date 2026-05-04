@@ -9,13 +9,13 @@ const usersTable: DiagramNode = {
   data: {
     kind: "psqlTable",
     tableName: "users",
+    primaryKey: ["users-id"],
     columns: [
       {
         id: "users-id",
         name: "id",
         type: "uuid",
         nullable: false,
-        primaryKey: true,
       },
     ],
     foreignKeys: [],
@@ -30,20 +30,19 @@ const postsTable: DiagramNode = {
   data: {
     kind: "psqlTable",
     tableName: "posts",
+    primaryKey: ["posts-id"],
     columns: [
       {
         id: "posts-id",
         name: "id",
         type: "uuid",
         nullable: false,
-        primaryKey: true,
       },
       {
         id: "posts-author",
         name: "author_id",
         type: "uuid",
         nullable: false,
-        primaryKey: false,
       },
     ],
     foreignKeys: [
@@ -52,7 +51,6 @@ const postsTable: DiagramNode = {
         name: "author_id",
         type: "uuid",
         nullable: false,
-        primaryKey: false,
         targetTableId: "users",
         targetColumnId: "users-id",
       },

@@ -25,20 +25,19 @@ const psqlTableNode: DiagramNode = {
   data: {
     kind: "psqlTable",
     tableName: "items",
+    primaryKey: ["column-id"],
     columns: [
       {
         id: "column-id",
         name: "id",
         type: "uuid",
         nullable: false,
-        primaryKey: true,
       },
       {
         id: "column-price",
         name: "price",
         type: "numeric",
         nullable: true,
-        primaryKey: false,
       },
       {
         id: "column-status",
@@ -46,14 +45,12 @@ const psqlTableNode: DiagramNode = {
         type: "enum",
         options: { enumId: "enum-status" },
         nullable: false,
-        primaryKey: false,
       },
       {
         id: "column-empty",
         name: " ",
         type: "text",
         nullable: true,
-        primaryKey: false,
       },
     ],
     foreignKeys: [],
@@ -68,13 +65,13 @@ const disconnectedTableNode: DiagramNode = {
   data: {
     kind: "psqlTable",
     tableName: "audit_log",
+    primaryKey: [],
     columns: [
       {
         id: "column-event",
         name: "event",
         type: "text",
         nullable: false,
-        primaryKey: false,
       },
     ],
     foreignKeys: [],

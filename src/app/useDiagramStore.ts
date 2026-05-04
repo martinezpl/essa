@@ -199,6 +199,7 @@ export const duplicateDiagramSelection = (
     nodesToDuplicate.map((node, index) => [node.id, clonedNodes[index].id]),
   );
   const columnIdMap = new Map<string, string>();
+  const fkIdMap = new Map<string, string>();
 
   nodesToDuplicate.forEach((node, index) => {
     const clonedNode = clonedNodes[index];
@@ -220,25 +221,51 @@ export const duplicateDiagramSelection = (
         columnIdMap.set(column.id, clonedColumn.id);
       }
     });
+
+    node.data.foreignKeys.forEach((fk, fkIndex) => {
+      const clonedFk = clonedData.foreignKeys[fkIndex];
+
+      if (clonedFk) {
+        fkIdMap.set(fk.id, clonedFk.id);
+      }
+    });
   });
 
-  const nodes = clonedNodes.map((node) => {
+  const nodes = clonedNodes.map((node, nodeIndex) => {
     if (node.data.kind !== "psqlTable") {
       return node;
     }
+
+    const remappedForeignKeys = node.data.foreignKeys.flatMap((foreignKey) => {
+      const targetTableId = idMap.get(foreignKey.targetTableId);
+      const targetColumnId = columnIdMap.get(foreignKey.targetColumnId);
+
+      return targetTableId && targetColumnId
+        ? [{ ...foreignKey, targetTableId, targetColumnId }]
+        : [];
+    });
+
+    const survivingFkIds = new Set(remappedForeignKeys.map((fk) => fk.id));
+    const originalNode = nodesToDuplicate[nodeIndex];
+    const originalPrimaryKey =
+      originalNode?.data.kind === "psqlTable" ? originalNode.data.primaryKey : [];
+
+    const primaryKey = originalPrimaryKey.flatMap((id) => {
+      const clonedColId = columnIdMap.get(id);
+      if (clonedColId) return [clonedColId];
+
+      const clonedFkId = fkIdMap.get(id);
+      if (clonedFkId && survivingFkIds.has(clonedFkId)) return [clonedFkId];
+
+      return [];
+    });
 
     return {
       ...node,
       data: {
         ...node.data,
-        foreignKeys: node.data.foreignKeys.flatMap((foreignKey) => {
-          const targetTableId = idMap.get(foreignKey.targetTableId);
-          const targetColumnId = columnIdMap.get(foreignKey.targetColumnId);
-
-          return targetTableId && targetColumnId
-            ? [{ ...foreignKey, targetTableId, targetColumnId }]
-            : [];
-        }),
+        primaryKey,
+        foreignKeys: remappedForeignKeys,
         indices: node.data.indices.map((index) => ({
           ...index,
           columns: index.columns.map((columnId) =>

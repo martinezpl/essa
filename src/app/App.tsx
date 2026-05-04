@@ -167,10 +167,13 @@ export const App = () => {
         }
 
         const targetTable = psqlTableById.get(foreignKey.targetTableId);
-        const targetColumn = targetTable?.data.columns.find(
-          (column) =>
-            column.id === foreignKey.targetColumnId && column.primaryKey,
-        );
+        const targetColumn =
+          targetTable?.data.kind === "psqlTable" &&
+          targetTable.data.primaryKey.includes(foreignKey.targetColumnId)
+            ? targetTable.data.columns.find(
+                (column) => column.id === foreignKey.targetColumnId,
+              )
+            : undefined;
 
         if (!targetTable || !targetColumn) {
           return [];

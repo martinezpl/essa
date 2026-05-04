@@ -222,20 +222,19 @@ export const createStarterDiagram = (): Diagram => {
         data: {
           kind: "psqlTable",
           tableName: "post",
+          primaryKey: [postIdColumnId],
           columns: [
             {
               id: postIdColumnId,
               name: "id",
               type: "uuid",
               nullable: false,
-              primaryKey: true,
             },
             {
               id: postTitleColumnId,
               name: "title",
               type: "text",
               nullable: false,
-              primaryKey: false,
             },
             {
               id: postStatusColumnId,
@@ -243,21 +242,18 @@ export const createStarterDiagram = (): Diagram => {
               type: "enum",
               options: { enumId: statusEnumId },
               nullable: false,
-              primaryKey: false,
             },
             {
               id: postAuthorColumnId,
               name: "author_id",
               type: "uuid",
               nullable: false,
-              primaryKey: false,
             },
             {
               id: postCreatedAtColumnId,
               name: "created_at",
               type: "timestamptz",
               nullable: false,
-              primaryKey: false,
             },
           ],
           foreignKeys: [
@@ -266,7 +262,6 @@ export const createStarterDiagram = (): Diagram => {
               name: "author_id",
               type: "uuid",
               nullable: false,
-              primaryKey: false,
               targetTableId: usersTableId,
               targetColumnId: userIdColumnId,
             },
@@ -289,20 +284,19 @@ export const createStarterDiagram = (): Diagram => {
         data: {
           kind: "psqlTable",
           tableName: "user",
+          primaryKey: [userIdColumnId],
           columns: [
             {
               id: userIdColumnId,
               name: "id",
               type: "uuid",
               nullable: false,
-              primaryKey: true,
             },
             {
               id: userEmailColumnId,
               name: "email",
               type: "text",
               nullable: false,
-              primaryKey: false,
             },
           ],
           foreignKeys: [],

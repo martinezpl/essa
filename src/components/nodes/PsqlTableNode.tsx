@@ -34,6 +34,7 @@ type EditingTarget =
   | { kind: "column"; id: string }
   | { kind: "foreignKey"; id: string }
   | { kind: "index"; id: string }
+  | { kind: "primaryKey" }
   | null;
 
 type PsqlTableDiagramNode = DiagramNode & {
@@ -42,7 +43,7 @@ type PsqlTableDiagramNode = DiagramNode & {
 
 type ForeignKeyTarget = {
   table: PsqlTableDiagramNode;
-  primaryKey: PsqlColumn;
+  column: PsqlColumn;
 };
 
 const updateIndex = (
@@ -96,9 +97,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       return [];
     }
 
+    const pkColumnIds = new Set(table.data.primaryKey);
     return table.data.columns
-      .filter((column) => column.primaryKey)
-      .map((primaryKey) => ({ table, primaryKey }));
+      .filter((column) => pkColumnIds.has(column.id))
+      .map((column) => ({ table, column }));
   });
   const selectedNodeIds = new Set(
     ctx.nodes.filter((node) => node.selected).map((node) => node.id),
@@ -184,7 +186,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                 }
               }}
             >
-              {column.primaryKey ? (
+              {data.primaryKey.includes(column.id) ? (
                 <Handle
                   className="field-row__handle field-row__handle--source"
                   id={psqlColumnSourceHandleId(column.id)}
@@ -198,7 +200,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                 {formatPsqlColumnType(column, ctx.psqlEnums)}
               </span>
               <span className="field-row__flags">
-                {column.primaryKey ? <span className="flag-chip">PK</span> : null}
+                {data.primaryKey.includes(column.id) ? (
+                  <span className="flag-chip">PK</span>
+                ) : null}
                 {column.nullable ? (
                   <span className="flag-chip flag-chip--null">?</span>
                 ) : null}
@@ -293,7 +297,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               </span>
               <span className="field-row__flags">
                 <span className="flag-chip flag-chip--fk">FK</span>
-                {foreignKey.primaryKey ? (
+                {data.primaryKey.includes(foreignKey.id) ? (
                   <span className="flag-chip">PK</span>
                 ) : null}
                 {foreignKey.onDelete ? (
@@ -347,6 +351,59 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         >
           + Add foreign key
         </button>
+      </section>
+
+      <section className="block-node__section">
+        <h4 className="block-node__section-title">Primary key</h4>
+
+        <div
+          className={`field-row nodrag${editing?.kind === "primaryKey" ? " field-row--active" : ""}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => setEditing({ kind: "primaryKey" })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setEditing({ kind: "primaryKey" });
+            }
+          }}
+        >
+          <span className="field-row__name">
+            {data.primaryKey.length > 0
+              ? data.primaryKey
+                  .map(
+                    (pkId) =>
+                      data.columns.find((c) => c.id === pkId)?.name ||
+                      data.foreignKeys.find((fk) => fk.id === pkId)?.name ||
+                      pkId,
+                  )
+                  .join(", ")
+              : "—"}
+          </span>
+          {data.primaryKey.length > 0 ? (
+            <span className="field-row__flags">
+              <span className="flag-chip">PK</span>
+            </span>
+          ) : null}
+
+          {editing?.kind === "primaryKey" ? (
+            <RowEditPopover onClose={closeEditing}>
+              <PrimaryKeyPopover
+                primaryKey={data.primaryKey}
+                columns={data.columns}
+                foreignKeys={data.foreignKeys}
+                onChange={(primaryKey) =>
+                  ctx.onUpdateNodeData(id, { primaryKey })
+                }
+                onClear={() => {
+                  ctx.onUpdateNodeData(id, { primaryKey: [] });
+                  closeEditing();
+                }}
+                onClose={closeEditing}
+              />
+            </RowEditPopover>
+          ) : null}
+        </div>
       </section>
 
       <section className="block-node__section">
@@ -713,24 +770,14 @@ const ColumnPopover = ({
       </label>
     ) : null}
 
-    <div className="row">
-      <label className="checkbox-field">
-        <input
-          checked={column.nullable}
-          type="checkbox"
-          onChange={(event) => onChange({ nullable: event.target.checked })}
-        />
-        nullable
-      </label>
-      <label className="checkbox-field">
-        <input
-          checked={column.primaryKey}
-          type="checkbox"
-          onChange={(event) => onChange({ primaryKey: event.target.checked })}
-        />
-        primary
-      </label>
-    </div>
+    <label className="checkbox-field">
+      <input
+        checked={column.nullable}
+        type="checkbox"
+        onChange={(event) => onChange({ nullable: event.target.checked })}
+      />
+      nullable
+    </label>
 
   </div>
   );
@@ -744,13 +791,10 @@ type ForeignKeyPopoverProps = {
   onClose: () => void;
 };
 
-const targetValue = (tableId: string, columnId: string) =>
-  `${tableId}:${columnId}`;
-
 const fkActionOptions = ["", ...psqlForeignKeyActions] as const;
 
-const formatReferenceOption = (table: PsqlTableDiagramNode, primaryKey: PsqlColumn) =>
-  `${table.data.tableName || "table"}.${primaryKey.name || "column"} (${primaryKey.type})`;
+const formatReferenceOption = (table: PsqlTableDiagramNode, column: PsqlColumn) =>
+  `${table.data.tableName || "table"}.${column.name || "column"} (${column.type})`;
 
 const ForeignKeyPopover = ({
   foreignKey,
@@ -759,21 +803,21 @@ const ForeignKeyPopover = ({
   onDelete,
   onClose,
 }: ForeignKeyPopoverProps) => {
-  const referenceOptions = foreignKeyTargets.map(({ table, primaryKey }) =>
-    formatReferenceOption(table, primaryKey),
+  const referenceOptions = foreignKeyTargets.map(({ table, column }) =>
+    formatReferenceOption(table, column),
   );
 
   const currentReference =
     foreignKey.targetTableId && foreignKey.targetColumnId
       ? (foreignKeyTargets.find(
-          ({ table, primaryKey }) =>
+          ({ table, column }) =>
             table.id === foreignKey.targetTableId &&
-            primaryKey.id === foreignKey.targetColumnId,
+            column.id === foreignKey.targetColumnId,
         ) ?? null)
       : null;
 
   const currentReferenceDisplay = currentReference
-    ? formatReferenceOption(currentReference.table, currentReference.primaryKey)
+    ? formatReferenceOption(currentReference.table, currentReference.column)
     : "";
 
   return (
@@ -792,14 +836,14 @@ const ForeignKeyPopover = ({
           placeholder="Select primary key"
           onChange={(display) => {
             const target = foreignKeyTargets.find(
-              ({ table, primaryKey }) =>
-                formatReferenceOption(table, primaryKey) === display,
+              ({ table, column }) =>
+                formatReferenceOption(table, column) === display,
             );
             if (target) {
               onChange({
                 targetTableId: target.table.id,
-                targetColumnId: target.primaryKey.id,
-                type: target.primaryKey.type as PsqlColumnType,
+                targetColumnId: target.column.id,
+                type: target.column.type as PsqlColumnType,
               });
             }
           }}
@@ -831,24 +875,14 @@ const ForeignKeyPopover = ({
         <input readOnly value={foreignKey.type} aria-label="Foreign key type" />
       </label>
 
-      <div className="row">
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={foreignKey.nullable}
-            onChange={(event) => onChange({ nullable: event.target.checked })}
-          />
-          nullable
-        </label>
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={foreignKey.primaryKey}
-            onChange={(event) => onChange({ primaryKey: event.target.checked })}
-          />
-          primary
-        </label>
-      </div>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={foreignKey.nullable}
+          onChange={(event) => onChange({ nullable: event.target.checked })}
+        />
+        nullable
+      </label>
 
       <div className="row">
         <label>
@@ -998,5 +1032,86 @@ const IndexPopover = ({
       />
       unique
     </label>
+  </div>
+);
+
+type PrimaryKeyPopoverProps = {
+  primaryKey: string[];
+  columns: PsqlColumn[];
+  foreignKeys: PsqlForeignKey[];
+  onChange: (primaryKey: string[]) => void;
+  onClear: () => void;
+  onClose: () => void;
+};
+
+const PrimaryKeyPopover = ({
+  primaryKey,
+  columns,
+  foreignKeys,
+  onChange,
+  onClear,
+  onClose: _onClose,
+}: PrimaryKeyPopoverProps) => (
+  <div className="row-popover__inner">
+    <div className="row-popover__header">
+      <span className="eyebrow">Primary key</span>
+      <TrashButton ariaLabel="Clear primary key" onClick={onClear} />
+    </div>
+
+    <div>
+      <span className="eyebrow">Columns</span>
+      <div className="chip-picker">
+        {columns.length === 0 && foreignKeys.length === 0 ? (
+          <span className="block-node__empty">Add columns first.</span>
+        ) : null}
+        {columns.map((column) => {
+          const checked = primaryKey.includes(column.id);
+          return (
+            <label
+              key={column.id}
+              className={`chip${checked ? " chip--active" : ""}`}
+            >
+              <input
+                hidden
+                type="checkbox"
+                checked={checked}
+                onChange={(event) =>
+                  onChange(
+                    event.target.checked
+                      ? [...primaryKey, column.id]
+                      : primaryKey.filter((id) => id !== column.id),
+                  )
+                }
+              />
+              {column.name || column.id}
+            </label>
+          );
+        })}
+        {foreignKeys.map((foreignKey) => {
+          const checked = primaryKey.includes(foreignKey.id);
+          return (
+            <label
+              key={foreignKey.id}
+              className={`chip${checked ? " chip--active" : ""}`}
+            >
+              <input
+                hidden
+                type="checkbox"
+                checked={checked}
+                onChange={(event) =>
+                  onChange(
+                    event.target.checked
+                      ? [...primaryKey, foreignKey.id]
+                      : primaryKey.filter((id) => id !== foreignKey.id),
+                  )
+                }
+              />
+              {foreignKey.name || foreignKey.id}
+              <span className="chip__badge">FK</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
   </div>
 );

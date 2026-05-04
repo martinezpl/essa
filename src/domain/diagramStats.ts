@@ -20,10 +20,7 @@ export const countPsqlForeignKeyConnections = (diagram: Diagram) => {
       const targetTable = psqlTableById.get(foreignKey.targetTableId);
       return Boolean(
         targetTable?.data.kind === "psqlTable" &&
-          targetTable.data.columns.some(
-            (column) =>
-              column.id === foreignKey.targetColumnId && column.primaryKey,
-          ),
+          targetTable.data.primaryKey.includes(foreignKey.targetColumnId),
       );
     });
 

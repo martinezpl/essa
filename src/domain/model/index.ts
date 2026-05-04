@@ -208,7 +208,6 @@ export const createPsqlForeignKey = (): PsqlForeignKey => ({
   name: "",
   type: "uuid",
   nullable: false,
-  primaryKey: false,
   targetTableId: "",
   targetColumnId: "",
 });
@@ -334,21 +333,21 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
       name: "",
       type: "text",
       nullable: false,
-      primaryKey: false,
     };
   }
 
   static blankData(): PsqlTableData {
+    const idColumnId = createId("column");
     return {
       kind: "psqlTable",
       tableName: "",
+      primaryKey: [idColumnId],
       columns: [
         {
-          id: createId("column"),
+          id: idColumnId,
           name: "id",
           type: "uuid",
           nullable: false,
-          primaryKey: true,
         },
       ],
       foreignKeys: [],
@@ -357,23 +356,23 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 
   static seededData(): PsqlTableData {
+    const idColumnId = createId("column");
     return {
       kind: "psqlTable",
       tableName: "items",
+      primaryKey: [idColumnId],
       columns: [
         {
-          id: createId("column"),
+          id: idColumnId,
           name: "id",
           type: "uuid",
           nullable: false,
-          primaryKey: true,
         },
         {
           id: createId("column"),
           name: "name",
           type: "text",
           nullable: false,
-          primaryKey: false,
         },
       ],
       foreignKeys: [],
@@ -403,15 +402,32 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 
   clone() {
-    const { columns } = cloneColumns(this.data.columns);
+    const { columns, columnIdMap } = cloneColumns(this.data.columns);
+    const foreignKeys = cloneForeignKeys(this.data.foreignKeys, this.id);
+
+    const fkIdMap = new Map<string, string>();
+    let fkCloneIndex = 0;
+    for (const originalFk of this.data.foreignKeys) {
+      if (originalFk.targetTableId !== this.id) {
+        const clonedFk = foreignKeys[fkCloneIndex];
+        if (clonedFk) fkIdMap.set(originalFk.id, clonedFk.id);
+        fkCloneIndex++;
+      }
+    }
+
+    const primaryKey = this.data.primaryKey.flatMap((id) => {
+      const newId = columnIdMap.get(id) ?? fkIdMap.get(id);
+      return newId ? [newId] : [];
+    });
 
     return new PsqlTableBlock({
       id: createId("node"),
       position: clonePosition(this.position),
       data: {
         ...this.data,
+        primaryKey,
         columns,
-        foreignKeys: cloneForeignKeys(this.data.foreignKeys, this.id),
+        foreignKeys,
         indices: cloneIndices(this.data.indices),
       },
     });
@@ -425,6 +441,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
     return {
       id: this.id,
       tableName: this.data.tableName,
+      primaryKey: this.data.primaryKey,
       columns: this.data.columns,
       foreignKeys: this.data.foreignKeys,
       indices: this.data.indices,

@@ -27,13 +27,13 @@ const createDiagram = (): Diagram => ({
       data: {
         kind: "psqlTable",
         tableName: "posts",
+        primaryKey: ["source-id"],
         columns: [
           {
             id: "source-id",
             name: "id",
             type: "uuid",
             nullable: false,
-            primaryKey: true,
           },
         ],
         foreignKeys: [
@@ -42,7 +42,6 @@ const createDiagram = (): Diagram => ({
             name: "user_id",
             type: "uuid",
             nullable: false,
-            primaryKey: false,
             targetTableId: "table-target",
             targetColumnId: "target-id",
           },
@@ -51,7 +50,6 @@ const createDiagram = (): Diagram => ({
             name: "missing_id",
             type: "uuid",
             nullable: false,
-            primaryKey: false,
             targetTableId: "table-target",
             targetColumnId: "missing-id",
           },
@@ -66,13 +64,13 @@ const createDiagram = (): Diagram => ({
       data: {
         kind: "psqlTable",
         tableName: "users",
+        primaryKey: ["target-id"],
         columns: [
           {
             id: "target-id",
             name: "id",
             type: "uuid",
             nullable: false,
-            primaryKey: true,
           },
         ],
         foreignKeys: [],

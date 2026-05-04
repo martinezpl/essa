@@ -66,13 +66,13 @@ const createDiagram = (): Diagram => ({
       data: {
         kind: "psqlTable",
         tableName: "posts",
+        primaryKey: ["column-id"],
         columns: [
           {
             id: "column-id",
             name: "id",
             type: "uuid",
             nullable: false,
-            primaryKey: true,
           },
           {
             id: "column-status",
@@ -80,7 +80,6 @@ const createDiagram = (): Diagram => ({
             type: "enum",
             options: { enumId: "enum-status" },
             nullable: false,
-            primaryKey: false,
           },
         ],
         foreignKeys: [
@@ -89,7 +88,6 @@ const createDiagram = (): Diagram => ({
             name: "author_id",
             type: "uuid",
             nullable: false,
-            primaryKey: false,
             targetTableId: "table-users",
             targetColumnId: "column-user-id",
           },
@@ -112,13 +110,13 @@ const createDiagram = (): Diagram => ({
       data: {
         kind: "psqlTable",
         tableName: "users",
+        primaryKey: ["column-user-id"],
         columns: [
           {
             id: "column-user-id",
             name: "id",
             type: "uuid",
             nullable: false,
-            primaryKey: true,
           },
         ],
         foreignKeys: [],

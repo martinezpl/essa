@@ -34,6 +34,7 @@ export type OpenApiResourceSpec = {
 export type PsqlTableSpec = {
   id: string;
   tableName: string;
+  primaryKey: string[];
   columns: PsqlColumn[];
   foreignKeys: PsqlForeignKey[];
   indices: PsqlIndex[];

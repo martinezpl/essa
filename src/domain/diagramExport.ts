@@ -409,9 +409,11 @@ const formatPsqlTableLabel = (node: DiagramNode, psqlEnums: PsqlEnum[]) => {
     return [];
   }
 
+  const tableData = node.data;
   const primaryKeys =
-    node.data.columns
-      .filter((column) => column.primaryKey)
+    tableData.primaryKey
+      .map((id) => tableData.columns.find((c) => c.id === id) ?? null)
+      .filter((col): col is PsqlColumn => col !== null)
       .map(
         (column) =>
           `${column.name || "column"}: ${formatPsqlColumnType(
@@ -478,7 +480,9 @@ const getPsqlForeignKeyEdges = (diagram: Diagram) => {
 
       const targetTable = psqlTableById.get(foreignKey.targetTableId);
       const targetColumn = targetTable?.data.columns.find(
-        (column) => column.id === foreignKey.targetColumnId && column.primaryKey,
+        (column) =>
+          column.id === foreignKey.targetColumnId &&
+          targetTable.data.primaryKey.includes(column.id),
       );
 
       if (!targetTable || !targetColumn) {
@@ -616,12 +620,13 @@ const serializeErDiagram = (diagram: Diagram) => {
         );
       });
     } else if (node.data.kind === "psqlTable") {
+      const pkColumnIds = new Set(node.data.primaryKey);
       node.data.columns.forEach((column) => {
         lines.push(
           `    ${erFieldType(formatPsqlColumnType(column, diagram.psqlEnums))} ${erFieldName(
             column.name || "column",
           )}${formatErComment([
-            column.primaryKey ? "PK" : "",
+            pkColumnIds.has(column.id) ? "PK" : "",
             column.nullable ? "nullable" : "required",
           ])}`,
         );
@@ -961,15 +966,21 @@ const serializePsqlTableDdl = (
           foreignKey.nullable ? "" : " NOT NULL"
         }`,
     );
+  const pkIds = new Set(table.data.primaryKey);
   const primaryKeyColumns = table.data.columns.filter(
-    (column) => column.primaryKey && column.name.trim(),
+    (column) => pkIds.has(column.id) && column.name.trim(),
   );
   const primaryKeyForeignKeys = table.data.foreignKeys.filter(
-    (fk) => fk.primaryKey && fk.name.trim(),
+    (fk) => pkIds.has(fk.id) && fk.name.trim(),
   );
   const primaryKeyParts = [
-    ...primaryKeyColumns.map((column) => quoteSqlIdentifier(column.name, "column")),
-    ...primaryKeyForeignKeys.map((fk) => quoteSqlIdentifier(fk.name, "foreign_key")),
+    ...table.data.primaryKey.flatMap((id) => {
+      const col = primaryKeyColumns.find((c) => c.id === id);
+      if (col) return [quoteSqlIdentifier(col.name, "column")];
+      const fk = primaryKeyForeignKeys.find((f) => f.id === id);
+      if (fk) return [quoteSqlIdentifier(fk.name, "foreign_key")];
+      return [];
+    }),
   ];
   const primaryKeyLine = primaryKeyParts.length
     ? [`  PRIMARY KEY (${primaryKeyParts.join(", ")})`]

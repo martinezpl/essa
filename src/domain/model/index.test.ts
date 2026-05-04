@@ -91,7 +91,6 @@ describe("block model", () => {
         name: "parent_id",
         type: "uuid",
         nullable: true,
-        primaryKey: false,
       },
     ];
     source.data.foreignKeys = [
@@ -100,7 +99,6 @@ describe("block model", () => {
         name: "ref_id",
         type: "uuid",
         nullable: false,
-        primaryKey: false,
         targetTableId: target.id,
         targetColumnId: targetPrimaryKey.id,
       },
@@ -109,7 +107,6 @@ describe("block model", () => {
         name: "self_ref",
         type: "uuid",
         nullable: true,
-        primaryKey: false,
         targetTableId: source.id,
         targetColumnId: source.data.columns[0].id,
       },
@@ -135,8 +132,8 @@ describe("block model", () => {
       name: "id",
       type: "uuid",
       nullable: false,
-      primaryKey: true,
     });
+    expect(table.data.primaryKey).toEqual([table.data.columns[0].id]);
   });
 
   it("creates REST method contracts from method kind defaults", () => {
@@ -169,7 +166,6 @@ describe("block model", () => {
       name: "",
       type: "text",
       nullable: false,
-      primaryKey: false,
     });
     expect(createRestMethodInput()).toMatchObject({
       name: "",

@@ -201,7 +201,6 @@ export const psqlColumnSchema = z.object({
   type: psqlColumnTypeSchema,
   options: psqlColumnOptionsSchema.optional(),
   nullable: z.boolean(),
-  primaryKey: z.boolean(),
 });
 export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 
@@ -230,7 +229,6 @@ export const psqlForeignKeySchema = z.preprocess(
         typeof v.targetColumnId === "string" ? v.targetColumnId : "",
       onDelete: typeof v.onDelete === "string" ? v.onDelete : undefined,
       onUpdate: typeof v.onUpdate === "string" ? v.onUpdate : undefined,
-      primaryKey: typeof v.primaryKey === "boolean" ? v.primaryKey : false,
     };
   },
   z.object({
@@ -238,7 +236,6 @@ export const psqlForeignKeySchema = z.preprocess(
     name: z.string(),
     type: psqlColumnTypeSchema,
     nullable: z.boolean(),
-    primaryKey: z.boolean(),
     targetTableId: z.string(),
     targetColumnId: z.string(),
     onDelete: psqlForeignKeyActionSchema.optional(),
@@ -269,6 +266,7 @@ export type PsqlIndex = z.infer<typeof psqlIndexSchema>;
 export const psqlTableDataSchema = z.object({
   kind: z.literal("psqlTable"),
   tableName: z.string(),
+  primaryKey: z.array(z.string()).default([]),
   columns: z.array(psqlColumnSchema),
   foreignKeys: z.array(psqlForeignKeySchema).default([]),
   indices: z.array(psqlIndexSchema).default([]),
@@ -360,7 +358,7 @@ export const diagramSchema = z.object({
 export type Diagram = z.infer<typeof diagramSchema>;
 
 export const diagramCollectionSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   activeDiagramId: z.string().min(1),
   diagrams: z.array(diagramSchema).min(1),
 });
