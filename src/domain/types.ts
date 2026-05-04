@@ -125,7 +125,6 @@ export const psqlColumnTypeSchema = z.enum([
   "timetz",
   "timestamp",
   "timestamptz",
-  "datetime",
   "interval",
   "json",
   "jsonb",

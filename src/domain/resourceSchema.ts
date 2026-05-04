@@ -30,7 +30,6 @@ const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
   timetz: "string",
   timestamp: "string",
   timestamptz: "string",
-  datetime: "string",
   interval: "string",
   json: "object",
   jsonb: "object",
@@ -69,12 +68,10 @@ const isResourceTableEdge = (
   (edge.source === resourceId && edge.target === tableId) ||
   (edge.source === tableId && edge.target === resourceId);
 
-const getColumnEnumValues = (
-  column: PsqlColumn,
-  psqlEnums: PsqlEnum[],
-) =>
+const getColumnEnumValues = (column: PsqlColumn, psqlEnums: PsqlEnum[]) =>
   column.type === "enum"
-    ? psqlEnums.find((psqlEnum) => psqlEnum.id === column.options?.enumId)?.values
+    ? psqlEnums.find((psqlEnum) => psqlEnum.id === column.options?.enumId)
+        ?.values
     : undefined;
 
 export const deriveResourceSchema = (
@@ -84,7 +81,9 @@ export const deriveResourceSchema = (
   const connectedTables = diagram.nodes.filter(
     (node) =>
       node.data.kind === "psqlTable" &&
-      diagram.edges.some((edge) => isResourceTableEdge(edge, resourceId, node.id)),
+      diagram.edges.some((edge) =>
+        isResourceTableEdge(edge, resourceId, node.id),
+      ),
   );
 
   return connectedTables.flatMap((tableNode) => {
