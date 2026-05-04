@@ -90,6 +90,8 @@ const createDiagram = (): Diagram => ({
             nullable: false,
             targetTableId: "table-users",
             targetColumnId: "column-user-id",
+            onDelete: "NO ACTION",
+            onUpdate: "NO ACTION",
           },
         ],
         indices: [

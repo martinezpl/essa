@@ -1003,8 +1003,14 @@ const serializePsqlTableDdl = (
       return [];
     }
 
-    const onDelete = foreignKey.onDelete ? ` ON DELETE ${foreignKey.onDelete}` : "";
-    const onUpdate = foreignKey.onUpdate ? ` ON UPDATE ${foreignKey.onUpdate}` : "";
+    const onDelete =
+      foreignKey.onDelete && foreignKey.onDelete !== "NO ACTION"
+        ? ` ON DELETE ${foreignKey.onDelete}`
+        : "";
+    const onUpdate =
+      foreignKey.onUpdate && foreignKey.onUpdate !== "NO ACTION"
+        ? ` ON UPDATE ${foreignKey.onUpdate}`
+        : "";
 
     return [
       `  FOREIGN KEY (${quoteSqlIdentifier(

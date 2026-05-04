@@ -44,6 +44,8 @@ const createDiagram = (): Diagram => ({
             nullable: false,
             targetTableId: "table-target",
             targetColumnId: "target-id",
+            onDelete: "NO ACTION",
+            onUpdate: "NO ACTION",
           },
           {
             id: "fk-invalid",
@@ -52,6 +54,8 @@ const createDiagram = (): Diagram => ({
             nullable: false,
             targetTableId: "table-target",
             targetColumnId: "missing-id",
+            onDelete: "NO ACTION",
+            onUpdate: "NO ACTION",
           },
         ],
         indices: [],

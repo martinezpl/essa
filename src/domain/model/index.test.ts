@@ -101,6 +101,8 @@ describe("block model", () => {
         nullable: false,
         targetTableId: target.id,
         targetColumnId: targetPrimaryKey.id,
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
       },
       {
         id: "self-fk",
@@ -109,6 +111,8 @@ describe("block model", () => {
         nullable: true,
         targetTableId: source.id,
         targetColumnId: source.data.columns[0].id,
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
       },
     ];
 
@@ -184,6 +188,8 @@ describe("block model", () => {
       nullable: false,
       targetTableId: "",
       targetColumnId: "",
+      onDelete: "NO ACTION",
+      onUpdate: "NO ACTION",
     });
     expect(createPsqlEnum()).toMatchObject({
       name: "",

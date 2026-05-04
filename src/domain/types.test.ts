@@ -215,8 +215,8 @@ describe("domain schemas", () => {
         nullable: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
-        onDelete: undefined,
-        onUpdate: undefined,
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
       },
     ]);
   });
@@ -245,8 +245,8 @@ describe("domain schemas", () => {
         nullable: false,
         targetTableId: "table-users",
         targetColumnId: "column-id",
-        onDelete: undefined,
-        onUpdate: undefined,
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
       },
     ]);
   });

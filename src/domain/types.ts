@@ -212,6 +212,13 @@ export const psqlForeignKeyActionSchema = z.enum([
 ]);
 export type PsqlForeignKeyAction = z.infer<typeof psqlForeignKeyActionSchema>;
 
+const normalizePsqlForeignKeyAction = (
+  value: unknown,
+): PsqlForeignKeyAction => {
+  const parsed = psqlForeignKeyActionSchema.safeParse(value);
+  return parsed.success ? parsed.data : "NO ACTION";
+};
+
 export const psqlForeignKeySchema = z.preprocess(
   (value) => {
     if (!value || typeof value !== "object") return value;
@@ -226,8 +233,8 @@ export const psqlForeignKeySchema = z.preprocess(
       targetTableId: typeof v.targetTableId === "string" ? v.targetTableId : "",
       targetColumnId:
         typeof v.targetColumnId === "string" ? v.targetColumnId : "",
-      onDelete: typeof v.onDelete === "string" ? v.onDelete : undefined,
-      onUpdate: typeof v.onUpdate === "string" ? v.onUpdate : undefined,
+      onDelete: normalizePsqlForeignKeyAction(v.onDelete),
+      onUpdate: normalizePsqlForeignKeyAction(v.onUpdate),
     };
   },
   z.object({
@@ -237,8 +244,8 @@ export const psqlForeignKeySchema = z.preprocess(
     nullable: z.boolean(),
     targetTableId: z.string(),
     targetColumnId: z.string(),
-    onDelete: psqlForeignKeyActionSchema.optional(),
-    onUpdate: psqlForeignKeyActionSchema.optional(),
+    onDelete: psqlForeignKeyActionSchema,
+    onUpdate: psqlForeignKeyActionSchema,
   }),
 );
 export type PsqlForeignKey = z.infer<typeof psqlForeignKeySchema>;

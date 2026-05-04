@@ -210,6 +210,8 @@ export const createPsqlForeignKey = (): PsqlForeignKey => ({
   nullable: false,
   targetTableId: "",
   targetColumnId: "",
+  onDelete: "NO ACTION",
+  onUpdate: "NO ACTION",
 });
 
 export const createPsqlEnum = (): PsqlEnum => ({

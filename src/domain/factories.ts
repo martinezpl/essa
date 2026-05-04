@@ -264,6 +264,8 @@ export const createStarterDiagram = (): Diagram => {
               nullable: false,
               targetTableId: usersTableId,
               targetColumnId: userIdColumnId,
+              onDelete: "NO ACTION",
+              onUpdate: "NO ACTION",
             },
           ],
           indices: [

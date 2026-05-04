@@ -300,10 +300,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                 {data.primaryKey.includes(foreignKey.id) ? (
                   <span className="flag-chip">PK</span>
                 ) : null}
-                {foreignKey.onDelete ? (
+                {foreignKey.onDelete !== "NO ACTION" ? (
                   <span className="flag-chip flag-chip--cascade" title={`ON DELETE ${foreignKey.onDelete}`}>↓</span>
                 ) : null}
-                {foreignKey.onUpdate ? (
+                {foreignKey.onUpdate !== "NO ACTION" ? (
                   <span className="flag-chip flag-chip--cascade" title={`ON UPDATE ${foreignKey.onUpdate}`}>↑</span>
                 ) : null}
                 {foreignKey.nullable ? (
@@ -790,7 +790,7 @@ type ForeignKeyPopoverProps = {
   onClose: () => void;
 };
 
-const fkActionOptions = ["", ...psqlForeignKeyActions] as const;
+const fkActionOptions = psqlForeignKeyActions;
 
 const formatReferenceOption = (table: PsqlTableDiagramNode, column: PsqlColumn) =>
   `${table.data.tableName || "table"}.${column.name || "column"} (${column.type})`;
@@ -889,10 +889,9 @@ const ForeignKeyPopover = ({
           <ComboInput
             ariaLabel="On Delete"
             options={fkActionOptions}
-            value={foreignKey.onDelete ?? ""}
-            placeholder="—"
+            value={foreignKey.onDelete}
             onChange={(value) =>
-              onChange({ onDelete: (value as PsqlForeignKeyAction) || undefined })
+              onChange({ onDelete: value as PsqlForeignKeyAction })
             }
           />
         </label>
@@ -901,10 +900,9 @@ const ForeignKeyPopover = ({
           <ComboInput
             ariaLabel="On Update"
             options={fkActionOptions}
-            value={foreignKey.onUpdate ?? ""}
-            placeholder="—"
+            value={foreignKey.onUpdate}
             onChange={(value) =>
-              onChange({ onUpdate: (value as PsqlForeignKeyAction) || undefined })
+              onChange({ onUpdate: value as PsqlForeignKeyAction })
             }
           />
         </label>

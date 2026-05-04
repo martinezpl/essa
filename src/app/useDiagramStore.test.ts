@@ -53,6 +53,8 @@ const postsTable: DiagramNode = {
         nullable: false,
         targetTableId: "users",
         targetColumnId: "users-id",
+        onDelete: "NO ACTION",
+        onUpdate: "NO ACTION",
       },
     ],
     indices: [],
