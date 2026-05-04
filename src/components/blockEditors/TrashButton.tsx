@@ -15,8 +15,8 @@ export const TrashButton = ({ ariaLabel, onClick }: TrashButtonProps) => (
       fill="none"
       stroke="currentColor"
       strokeWidth="1.8"
-      width="14"
-      height="14"
+      width="22"
+      height="22"
     >
       <path
         strokeLinecap="round"

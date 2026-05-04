@@ -29,7 +29,7 @@ export const AnimatedEdge = ({
     targetY,
     sourcePosition,
     targetPosition,
-    curvature: 0.7,
+    curvature: 0.9,
   });
 
   const kind: ConnectionKind = (data?.kind as ConnectionKind) ?? "read";

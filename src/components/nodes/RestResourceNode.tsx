@@ -72,7 +72,7 @@ const getSelectedEnumId = (
     : "";
 
 const nameMinWidth = (name: string) =>
-  Math.max(360, name.length * 17 + 43);
+  Math.max(440, name.length * 20 + 50);
 
 export const RestResourceNode = ({
   id,

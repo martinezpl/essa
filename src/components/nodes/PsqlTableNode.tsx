@@ -82,7 +82,7 @@ const formatForeignKeyReference = (
 };
 
 const nameMinWidth = (name: string) =>
-  Math.max(360, name.length * 17 + 43);
+  Math.max(440, name.length * 20 + 50);
 
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
@@ -747,6 +747,11 @@ type ForeignKeyPopoverProps = {
 const targetValue = (tableId: string, columnId: string) =>
   `${tableId}:${columnId}`;
 
+const fkActionOptions = ["", ...psqlForeignKeyActions] as const;
+
+const formatReferenceOption = (table: PsqlTableDiagramNode, primaryKey: PsqlColumn) =>
+  `${table.data.tableName || "table"}.${primaryKey.name || "column"} (${primaryKey.type})`;
+
 const ForeignKeyPopover = ({
   foreignKey,
   foreignKeyTargets,
@@ -754,10 +759,22 @@ const ForeignKeyPopover = ({
   onDelete,
   onClose,
 }: ForeignKeyPopoverProps) => {
-  const currentTargetValue =
+  const referenceOptions = foreignKeyTargets.map(({ table, primaryKey }) =>
+    formatReferenceOption(table, primaryKey),
+  );
+
+  const currentReference =
     foreignKey.targetTableId && foreignKey.targetColumnId
-      ? targetValue(foreignKey.targetTableId, foreignKey.targetColumnId)
-      : "";
+      ? (foreignKeyTargets.find(
+          ({ table, primaryKey }) =>
+            table.id === foreignKey.targetTableId &&
+            primaryKey.id === foreignKey.targetColumnId,
+        ) ?? null)
+      : null;
+
+  const currentReferenceDisplay = currentReference
+    ? formatReferenceOption(currentReference.table, currentReference.primaryKey)
+    : "";
 
   return (
     <div className="row-popover__inner">
@@ -768,36 +785,25 @@ const ForeignKeyPopover = ({
 
       <label>
         References
-        <select
-          autoFocus
-          value={currentTargetValue}
-          onChange={(event) => {
-            const [targetTableId = "", targetColumnId = ""] =
-              event.target.value.split(":");
+        <ComboInput
+          ariaLabel="References"
+          options={referenceOptions}
+          value={currentReferenceDisplay}
+          placeholder="Select primary key"
+          onChange={(display) => {
             const target = foreignKeyTargets.find(
               ({ table, primaryKey }) =>
-                table.id === targetTableId && primaryKey.id === targetColumnId,
+                formatReferenceOption(table, primaryKey) === display,
             );
-
-            onChange({
-              targetTableId,
-              targetColumnId,
-              type: (target?.primaryKey.type as PsqlColumnType | undefined) ??
-                foreignKey.type,
-            });
+            if (target) {
+              onChange({
+                targetTableId: target.table.id,
+                targetColumnId: target.primaryKey.id,
+                type: target.primaryKey.type as PsqlColumnType,
+              });
+            }
           }}
-        >
-          <option value="">Select primary key</option>
-          {foreignKeyTargets.map(({ table, primaryKey }) => (
-            <option
-              key={`${table.id}-${primaryKey.id}`}
-              value={targetValue(table.id, primaryKey.id)}
-            >
-              {(table.data.tableName || "table")}.
-              {primaryKey.name || "column"} ({primaryKey.type})
-            </option>
-          ))}
-        </select>
+        />
       </label>
 
       {foreignKeyTargets.length === 0 ? (
@@ -847,39 +853,27 @@ const ForeignKeyPopover = ({
       <div className="row">
         <label>
           On Delete
-          <select
+          <ComboInput
+            ariaLabel="On Delete"
+            options={fkActionOptions}
             value={foreignKey.onDelete ?? ""}
-            onChange={(event) =>
-              onChange({
-                onDelete: (event.target.value as PsqlForeignKeyAction) || undefined,
-              })
+            placeholder="—"
+            onChange={(value) =>
+              onChange({ onDelete: (value as PsqlForeignKeyAction) || undefined })
             }
-          >
-            <option value="">—</option>
-            {psqlForeignKeyActions.map((action) => (
-              <option key={action} value={action}>
-                {action}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <label>
           On Update
-          <select
+          <ComboInput
+            ariaLabel="On Update"
+            options={fkActionOptions}
             value={foreignKey.onUpdate ?? ""}
-            onChange={(event) =>
-              onChange({
-                onUpdate: (event.target.value as PsqlForeignKeyAction) || undefined,
-              })
+            placeholder="—"
+            onChange={(value) =>
+              onChange({ onUpdate: (value as PsqlForeignKeyAction) || undefined })
             }
-          >
-            <option value="">—</option>
-            {psqlForeignKeyActions.map((action) => (
-              <option key={action} value={action}>
-                {action}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </div>
     </div>
