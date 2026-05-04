@@ -105,14 +105,12 @@ const createDiagram = (): Diagram => ({
         indices: [
           {
             id: "index-status",
-            name: "idx_posts_status",
             columns: ["column-status"],
             method: "btree",
             unique: false,
           },
           {
             id: "index-fk-author",
-            name: "idx_posts_author_fk",
             columns: ["fk-author"],
             method: "btree",
             unique: false,
@@ -132,7 +130,7 @@ const createDiagram = (): Diagram => ({
           {
             id: "column-user-id",
             name: "id",
-            type: "uuid",
+            type: "serial",
             nullable: false,
             unique: false,
           },
@@ -268,12 +266,11 @@ describe("diagram export", () => {
     expect(markdown).toContain(
       '"status" "status_enum" NOT NULL UNIQUE CHECK (true)',
     );
-    expect(markdown).toContain('"author_id" uuid NOT NULL');
+    expect(markdown).toContain('"author_id" integer NOT NULL');
     expect(markdown).toContain('PRIMARY KEY ("id")');
     expect(markdown).toContain('FOREIGN KEY ("author_id") REFERENCES "users" ("id")');
-    expect(markdown).toContain('CREATE INDEX "idx_posts_status" ON "posts" ("status");');
-    expect(markdown).toContain(
-      'CREATE INDEX "idx_posts_author_fk" ON "posts" ("author_id");',
-    );
+    expect(markdown).toContain('CREATE INDEX ON "posts" ("status");');
+    expect(markdown).toContain('CREATE INDEX ON "posts" ("author_id");');
+    expect(markdown).not.toContain("idx_posts");
   });
 });

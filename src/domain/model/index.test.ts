@@ -180,7 +180,6 @@ describe("block model", () => {
       mode: "payload",
     });
     expect(createPsqlIndex()).toMatchObject({
-      name: "",
       columns: [],
       method: "btree",
       unique: false,

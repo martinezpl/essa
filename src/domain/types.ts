@@ -277,7 +277,6 @@ export type PsqlIndexMethod = z.infer<typeof psqlIndexMethodSchema>;
 
 export const psqlIndexSchema = z.object({
   id: z.string().min(1),
-  name: z.string(),
   columns: z.array(z.string()),
   method: psqlIndexMethodSchema.default("btree"),
   unique: z.boolean(),
@@ -379,7 +378,7 @@ export const diagramSchema = z.object({
 export type Diagram = z.infer<typeof diagramSchema>;
 
 export const diagramCollectionSchema = z.object({
-  version: z.literal(3),
+  version: z.literal(4),
   activeDiagramId: z.string().min(1),
   diagrams: z.array(diagramSchema).min(1),
 });

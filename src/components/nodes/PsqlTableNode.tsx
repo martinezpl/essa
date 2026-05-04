@@ -424,11 +424,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                     );
                     closeEditing();
                   }}
-                  onClose={closeEditing}
                 />
               }
             >
-              <span className="field-row__name">{index.name || "—"}</span>
               <span className="field-row__type">
                 {index.columns.length > 0
                   ? index.columns
@@ -937,7 +935,6 @@ type IndexPopoverProps = {
   foreignKeys: PsqlForeignKey[];
   onChange: (patch: Partial<PsqlIndex>) => void;
   onDelete: () => void;
-  onClose: () => void;
 };
 
 const IndexPopover = ({
@@ -946,27 +943,12 @@ const IndexPopover = ({
   foreignKeys,
   onChange,
   onDelete,
-  onClose,
 }: IndexPopoverProps) => (
   <div className="row-popover__inner">
     <div className="row-popover__header">
       <span className="eyebrow">Index</span>
       <TrashButton ariaLabel="Remove index" onClick={onDelete} />
     </div>
-
-    <label>
-      Name
-      <input
-        placeholder="idx_name"
-        value={index.name}
-        onChange={(event) => onChange({ name: event.target.value })}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            onClose();
-          }
-        }}
-      />
-    </label>
 
     <label>
       Method

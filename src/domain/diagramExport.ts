@@ -15,6 +15,7 @@ import {
   type DiagramNode,
   type PsqlColumn,
   type PsqlEnum,
+  type PsqlForeignKey,
   type ResourceSchemaField,
 } from "./types";
 
@@ -954,6 +955,17 @@ const formatPsqlColumnTypeForDdl = (column: PsqlColumn, diagram: Diagram) => {
   return formatPsqlColumnType(column, diagram.psqlEnums);
 };
 
+const psqlSerialBackingTypes = {
+  serial: "integer",
+  bigserial: "bigint",
+  smallserial: "smallint",
+} as const;
+
+const getPsqlSerialBackingType = (type: PsqlColumn["type"]) =>
+  type in psqlSerialBackingTypes
+    ? psqlSerialBackingTypes[type as keyof typeof psqlSerialBackingTypes]
+    : null;
+
 const createPsqlTableLookup = (diagram: Diagram) =>
   new Map(getPsqlTableNodes(diagram).map((node) => [node.id, node]));
 
@@ -1110,6 +1122,17 @@ const serializePsqlTableDdl = (
   tableLookup: Map<string, PsqlTableDiagramNode>,
 ) => {
   const tableName = quoteSqlIdentifier(table.data.tableName, "table");
+  const getForeignKeyDdlType = (foreignKey: PsqlForeignKey) => {
+    const targetTable = tableLookup.get(foreignKey.targetTableId);
+    const targetColumn = targetTable?.data.columns.find(
+      (column) => column.id === foreignKey.targetColumnId,
+    );
+    return (
+      (targetColumn ? getPsqlSerialBackingType(targetColumn.type) : null) ??
+      getPsqlSerialBackingType(foreignKey.type) ??
+      foreignKey.type
+    );
+  };
   const formatColumnConstraints = (column: PsqlColumn) => {
     const defaultExpr = column.defaultValue?.trim();
     const checkExpr = column.check?.trim();
@@ -1134,7 +1157,10 @@ const serializePsqlTableDdl = (
     .filter((foreignKey) => foreignKey.name.trim())
     .map(
       (foreignKey) =>
-        `  ${quoteSqlIdentifier(foreignKey.name, "foreign_key")} ${foreignKey.type}${
+        `  ${quoteSqlIdentifier(
+          foreignKey.name,
+          "foreign_key",
+        )} ${getForeignKeyDdlType(foreignKey)}${
           foreignKey.nullable ? "" : " NOT NULL"
         }`,
     );
@@ -1230,13 +1256,13 @@ const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
       return [];
     }
 
+    const tableName = quoteSqlIdentifier(table.data.tableName, "table");
+    const method = index.method === "btree" ? "" : ` USING ${index.method}`;
+
     return [
-      `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ${quoteSqlIdentifier(
-        index.name,
-        "index",
-      )} ON ${quoteSqlIdentifier(table.data.tableName, "table")}${
-        index.method === "btree" ? "" : ` USING ${index.method}`
-      } (${quoted.join(", ")});`,
+      `CREATE ${index.unique ? "UNIQUE " : ""}INDEX ON ${tableName}${method} (${quoted.join(
+        ", ",
+      )});`,
     ];
   });
 

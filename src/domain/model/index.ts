@@ -197,7 +197,6 @@ export const createRestMethodInput = (): RestMethodInputField => ({
 
 export const createPsqlIndex = (): PsqlIndex => ({
   id: createId("index"),
-  name: "",
   columns: [],
   method: "btree",
   unique: false,

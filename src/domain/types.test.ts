@@ -226,7 +226,6 @@ describe("domain schemas", () => {
     expect(
       psqlIndexSchema.parse({
         id: "index-1",
-        name: "idx_items_name",
         columns: ["column-name"],
         unique: false,
       }),

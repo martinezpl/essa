@@ -276,7 +276,6 @@ export const createStarterDiagram = (): Diagram => {
           indices: [
             {
               id: createId("index"),
-              name: "idx_posts_status",
               columns: [postStatusColumnId],
               method: "btree",
               unique: false,
@@ -312,7 +311,6 @@ export const createStarterDiagram = (): Diagram => {
           indices: [
             {
               id: createId("index"),
-              name: "idx_users_email",
               columns: [userEmailColumnId],
               method: "btree",
               unique: true,

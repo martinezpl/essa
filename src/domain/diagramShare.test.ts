@@ -50,7 +50,6 @@ const createDiagram = (): Diagram => ({
         indices: [
           {
             id: "index-status",
-            name: "idx_posts_status",
             columns: ["column-status"],
             method: "btree",
             unique: false,
