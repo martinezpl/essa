@@ -3,6 +3,12 @@ import { createId } from "./id";
 import { deriveResourceSchemas } from "./resourceSchema";
 import { formatPsqlColumnType } from "./psqlTypes";
 import {
+  parsePsqlColumnSourceHandleId,
+  parsePsqlForeignKeyTargetHandleId,
+  psqlColumnSourceHandleId,
+  psqlForeignKeyTargetHandleId,
+} from "./psqlForeignKeys";
+import {
   diagramSchema,
   type Diagram,
   type DiagramEdge,
@@ -103,6 +109,23 @@ export const parseEssaDiagram = (rawValue: string): Diagram =>
 
 const remapValue = (value: string, idMap: Map<string, string>) =>
   idMap.get(value) ?? value;
+
+const remapPsqlHandle = (
+  handleId: string | null | undefined,
+  idMap: Map<string, string>,
+) => {
+  const columnId = parsePsqlColumnSourceHandleId(handleId);
+  if (columnId) {
+    return psqlColumnSourceHandleId(remapValue(columnId, idMap));
+  }
+
+  const foreignKeyId = parsePsqlForeignKeyTargetHandleId(handleId);
+  if (foreignKeyId) {
+    return psqlForeignKeyTargetHandleId(remapValue(foreignKeyId, idMap));
+  }
+
+  return handleId;
+};
 
 const cloneResourceSchema = (
   schema: ResourceSchemaField[],
@@ -226,10 +249,29 @@ const cloneNodesSecondPass = (
     }
 
     if (node.data.kind === "psqlTable") {
+      const foreignKeys = node.data.foreignKeys.map((foreignKey) => {
+        const id = createId("foreign-key");
+        idMap.set(foreignKey.id, id);
+
+        return {
+          ...foreignKey,
+          id,
+          targetTableId: remapValue(foreignKey.targetTableId, idMap),
+          targetColumnId: remapValue(foreignKey.targetColumnId, idMap),
+        };
+      });
+      const fieldIds = new Set([
+        ...node.data.columns.map((column) => column.id),
+        ...foreignKeys.map((foreignKey) => foreignKey.id),
+      ]);
+
       return {
         ...node,
         data: {
           ...node.data,
+          primaryKey: node.data.primaryKey
+            .map((id) => remapValue(id, idMap))
+            .filter((id) => fieldIds.has(id)),
           columns: node.data.columns.map((column) => ({
             ...column,
             options: column.options
@@ -241,17 +283,7 @@ const cloneNodesSecondPass = (
                 }
               : undefined,
           })),
-          foreignKeys: node.data.foreignKeys.map((foreignKey) => {
-            const id = createId("foreign-key");
-            idMap.set(foreignKey.id, id);
-
-            return {
-              ...foreignKey,
-              id,
-              targetTableId: remapValue(foreignKey.targetTableId, idMap),
-              targetColumnId: remapValue(foreignKey.targetColumnId, idMap),
-            };
-          }),
+          foreignKeys,
           indices: node.data.indices.map((index) => {
             const id = createId("index");
             idMap.set(index.id, id);
@@ -299,7 +331,9 @@ export const prepareImportedDiagram = (diagram: Diagram): Diagram => {
         ...edge,
         id: edgeId,
         source: remapValue(edge.source, idMap),
+        sourceHandle: remapPsqlHandle(edge.sourceHandle, idMap),
         target: remapValue(edge.target, idMap),
+        targetHandle: remapPsqlHandle(edge.targetHandle, idMap),
       };
     }),
   };

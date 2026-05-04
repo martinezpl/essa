@@ -6,6 +6,10 @@ import {
   serializeMarkdownDiagram,
   serializeMermaidDiagram,
 } from "./diagramExport";
+import {
+  psqlColumnSourceHandleId,
+  psqlForeignKeyTargetHandleId,
+} from "./psqlForeignKeys";
 import type { Diagram } from "./types";
 
 const createDiagram = (): Diagram => ({
@@ -146,6 +150,15 @@ const createDiagram = (): Diagram => ({
       type: "smoothstep",
       data: { kind: "read", dataPath: "all" },
     },
+    {
+      id: "edge-fk-author",
+      source: "table-users",
+      sourceHandle: psqlColumnSourceHandleId("column-user-id"),
+      target: "table-posts",
+      targetHandle: psqlForeignKeyTargetHandleId("fk-author"),
+      type: "smoothstep",
+      data: { kind: "read", dataPath: "FK" },
+    },
   ],
 });
 
@@ -178,8 +191,18 @@ describe("diagram export", () => {
     const statusColumn = posts.data.columns.find((column) => column.name === "status");
     expect(statusColumn?.options?.enumId).toBe(imported.psqlEnums[0].id);
     expect(posts.data.indices[0].columns).toEqual([statusColumn?.id]);
+    expect(posts.data.primaryKey).toEqual([posts.data.columns[0].id]);
+    expect(users.data.primaryKey).toEqual([users.data.columns[0].id]);
     expect(posts.data.foreignKeys[0].targetTableId).toBe(users.id);
     expect(posts.data.foreignKeys[0].targetColumnId).toBe(users.data.columns[0].id);
+    expect(imported.edges[1].source).toBe(users.id);
+    expect(imported.edges[1].sourceHandle).toBe(
+      psqlColumnSourceHandleId(users.data.columns[0].id),
+    );
+    expect(imported.edges[1].target).toBe(posts.id);
+    expect(imported.edges[1].targetHandle).toBe(
+      psqlForeignKeyTargetHandleId(posts.data.foreignKeys[0].id),
+    );
   });
 
   it("exports a compact detailed Mermaid flowchart", () => {
