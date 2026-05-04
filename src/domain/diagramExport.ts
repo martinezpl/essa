@@ -923,6 +923,133 @@ const formatPsqlColumnTypeForDdl = (column: PsqlColumn, diagram: Diagram) => {
 const createPsqlTableLookup = (diagram: Diagram) =>
   new Map(getPsqlTableNodes(diagram).map((node) => [node.id, node]));
 
+/** FK targets that participate in emitted REFERENCES (same rules as `serializePsqlTableDdl`). */
+const getEmittedForeignKeyPrerequisiteIds = (
+  table: PsqlTableDiagramNode,
+  tableLookup: Map<string, PsqlTableDiagramNode>,
+  validTableIds: ReadonlySet<string>,
+): string[] => {
+  const prereqs = new Set<string>();
+
+  for (const foreignKey of table.data.foreignKeys) {
+    if (
+      !foreignKey.name.trim() ||
+      !foreignKey.targetTableId ||
+      !foreignKey.targetColumnId
+    ) {
+      continue;
+    }
+
+    if (foreignKey.targetTableId === table.id) {
+      continue;
+    }
+
+    if (!validTableIds.has(foreignKey.targetTableId)) {
+      continue;
+    }
+
+    const targetTable = tableLookup.get(foreignKey.targetTableId);
+    const targetColumn = targetTable?.data.columns.find(
+      (column) => column.id === foreignKey.targetColumnId && column.name.trim(),
+    );
+
+    if (targetTable && targetColumn) {
+      prereqs.add(targetTable.id);
+    }
+  }
+
+  return [...prereqs];
+};
+
+/**
+ * Topological order: referenced tables before referencing tables.
+ * Preserves diagram order among unrelated tables; cyclic FK graphs fall back to diagram order.
+ */
+const sortPsqlTableNodesForDdl = (
+  tableNodes: PsqlTableDiagramNode[],
+  tableLookup: Map<string, PsqlTableDiagramNode>,
+): PsqlTableDiagramNode[] => {
+  const validTableIds = new Set(tableNodes.map((node) => node.id));
+  const indexById = new Map(tableNodes.map((node, index) => [node.id, index]));
+
+  const indegree = new Map<string, number>();
+  const dependentsByPrereq = new Map<string, string[]>();
+
+  for (const node of tableNodes) {
+    const prereqs = getEmittedForeignKeyPrerequisiteIds(node, tableLookup, validTableIds);
+    indegree.set(node.id, prereqs.length);
+
+    for (const prereqId of prereqs) {
+      const list = dependentsByPrereq.get(prereqId);
+      if (list) {
+        list.push(node.id);
+      } else {
+        dependentsByPrereq.set(prereqId, [node.id]);
+      }
+    }
+  }
+
+  const takeSmallestIndex = (candidates: string[]): string | undefined => {
+    if (candidates.length === 0) {
+      return undefined;
+    }
+
+    let best = candidates[0];
+    let bestIdx = indexById.get(best) ?? 0;
+
+    for (let i = 1; i < candidates.length; i++) {
+      const id = candidates[i];
+      const idx = indexById.get(id) ?? 0;
+      if (idx < bestIdx) {
+        best = id;
+        bestIdx = idx;
+      }
+    }
+
+    return best;
+  };
+
+  const ready: string[] = [];
+  for (const node of tableNodes) {
+    if ((indegree.get(node.id) ?? 0) === 0) {
+      ready.push(node.id);
+    }
+  }
+
+  const orderedIds: string[] = [];
+  const placed = new Set<string>();
+
+  while (ready.length > 0) {
+    const nextId = takeSmallestIndex(ready);
+    if (!nextId) {
+      break;
+    }
+
+    const idx = ready.indexOf(nextId);
+    ready.splice(idx, 1);
+    orderedIds.push(nextId);
+    placed.add(nextId);
+
+    for (const dependentId of dependentsByPrereq.get(nextId) ?? []) {
+      const nextDegree = (indegree.get(dependentId) ?? 0) - 1;
+      indegree.set(dependentId, nextDegree);
+
+      if (nextDegree === 0) {
+        ready.push(dependentId);
+      }
+    }
+  }
+
+  for (const node of tableNodes) {
+    if (!placed.has(node.id)) {
+      orderedIds.push(node.id);
+    }
+  }
+
+  const nodeById = new Map(tableNodes.map((node) => [node.id, node]));
+  return orderedIds.map((id) => nodeById.get(id)).filter((n): n is PsqlTableDiagramNode => Boolean(n));
+};
+
 const serializePsqlEnumDdl = (diagram: Diagram) => {
   const usedEnumIds = new Set(
     getPsqlTableNodes(diagram).flatMap((node) =>
@@ -1062,7 +1189,7 @@ const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
 
 const serializePsqlDdl = (diagram: Diagram) => {
   const tableLookup = createPsqlTableLookup(diagram);
-  const tableNodes = getPsqlTableNodes(diagram);
+  const tableNodes = sortPsqlTableNodesForDdl(getPsqlTableNodes(diagram), tableLookup);
   const statements = [
     ...serializePsqlEnumDdl(diagram),
     ...tableNodes.map((table) => serializePsqlTableDdl(table, diagram, tableLookup)),

@@ -223,6 +223,11 @@ describe("diagram export", () => {
     expect(markdown).toContain('"required": [\n                      "status"\n                    ]');
     expect(markdown).toContain("## PostgreSQL Schema");
     expect(markdown).toContain("```sql\nCREATE TYPE \"status_enum\" AS ENUM ('draft', 'published');");
+    const usersCreateIdx = markdown.indexOf('CREATE TABLE "users" (');
+    const postsCreateIdx = markdown.indexOf('CREATE TABLE "posts" (');
+    expect(usersCreateIdx).toBeGreaterThan(-1);
+    expect(postsCreateIdx).toBeGreaterThan(-1);
+    expect(usersCreateIdx).toBeLessThan(postsCreateIdx);
     expect(markdown).toContain("CREATE TABLE \"posts\" (");
     expect(markdown).toContain('"id" uuid NOT NULL');
     expect(markdown).toContain('"status" "status_enum" NOT NULL');
