@@ -521,14 +521,23 @@ const getPsqlForeignKeyEdges = (diagram: Diagram) => {
 
       const targetTable = psqlTableById.get(foreignKey.targetTableId);
       const targetColumn = targetTable?.data.columns.find(
-        (column) =>
-          column.id === foreignKey.targetColumnId &&
-          targetTable.data.primaryKey.includes(column.id),
+        (column) => column.id === foreignKey.targetColumnId && column.name.trim(),
       );
 
       if (!targetTable || !targetColumn) {
         return [];
       }
+
+      const actions = [
+        foreignKey.onDelete && foreignKey.onDelete !== "NO ACTION"
+          ? `ON DELETE ${foreignKey.onDelete}`
+          : "",
+        foreignKey.onUpdate && foreignKey.onUpdate !== "NO ACTION"
+          ? `ON UPDATE ${foreignKey.onUpdate}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("; ");
 
       return [
         {
@@ -536,7 +545,7 @@ const getPsqlForeignKeyEdges = (diagram: Diagram) => {
           target: targetTable.id,
           label: `FK: ${foreignKey.name || "foreign_key"} -> ${
             targetTable.data.tableName || "table"
-          }.${targetColumn.name || "column"}`,
+          }.${targetColumn.name || "column"}${actions ? `; ${actions}` : ""}`,
         },
       ];
     });
@@ -603,6 +612,60 @@ const formatErComment = (parts: string[]) => {
   return comment ? ` ${quoteErComment(comment)}` : "";
 };
 
+const truncateErText = (value: string, maxLen: number) =>
+  value.length <= maxLen ? value : `${value.slice(0, maxLen - 1)}…`;
+
+const formatErAttributeRow = (
+  sqlType: string,
+  name: string,
+  attributeKeys: readonly ("PK" | "FK" | "UK")[],
+  commentParts: string[],
+) => {
+  const keyPart = attributeKeys.length ? ` ${attributeKeys.join(" ")}` : "";
+  return `    ${erFieldType(sqlType)} ${erFieldName(name)}${keyPart}${formatErComment(
+    commentParts,
+  )}`;
+};
+
+const formatRestResourceMethodsEr = (node: RestResourceDiagramNode) =>
+  node.data.methods
+    .map((method) => {
+      const inputs =
+        method.input
+          .map(
+            (input) =>
+              `${input.name || "input"}:${input.type}${
+                input.mode === "query" ? " query" : " body"
+              }`,
+          )
+          .join(", ") || "—";
+      return `${method.kind} (${inputs})${method.output.returnsArray ? " → array" : ""}`;
+    })
+    .join("; ");
+
+const formatResourceFieldSourceErPart = (
+  field: ResourceSchemaField,
+  tableLookup: Map<string, PsqlTableDiagramNode>,
+): string => {
+  const table = tableLookup.get(field.sourceTableId);
+  const column = table?.data.columns.find((c) => c.id === field.sourceColumnId);
+  if (!table?.data.tableName?.trim() || !column?.name?.trim()) {
+    return "";
+  }
+  return `maps ${table.data.tableName}.${column.name}`;
+};
+
+const psqlSerialBackingTypes = {
+  serial: "integer",
+  bigserial: "bigint",
+  smallserial: "smallint",
+} as const;
+
+const getPsqlSerialBackingType = (type: PsqlColumn["type"]) =>
+  type in psqlSerialBackingTypes
+    ? psqlSerialBackingTypes[type as keyof typeof psqlSerialBackingTypes]
+    : null;
+
 const getResourceSchema = (
   node: DiagramNode,
   resourceSchemas: Map<string, ResourceSchemaField[]>,
@@ -634,7 +697,36 @@ const serializeErDiagram = (diagram: Diagram) => {
   const resourceSchemas = deriveResourceSchemas(diagram);
   const nodesForMermaid = getMermaidDiagramNodes(diagram);
   const entityIdMap = createErEntityIdMap(nodesForMermaid);
+  const psqlTableById = new Map(
+    diagram.nodes
+      .filter((n): n is PsqlTableDiagramNode => n.data.kind === "psqlTable")
+      .map((n) => [n.id, n]),
+  );
   const lines = ["erDiagram"];
+
+  const resolveForeignKeyErSqlType = (foreignKey: PsqlForeignKey) => {
+    const targetTable = psqlTableById.get(foreignKey.targetTableId);
+    const targetColumn = targetTable?.data.columns.find(
+      (c) => c.id === foreignKey.targetColumnId,
+    );
+    return (
+      (targetColumn ? getPsqlSerialBackingType(targetColumn.type) : null) ??
+      getPsqlSerialBackingType(foreignKey.type as PsqlColumn["type"]) ??
+      foreignKey.type
+    );
+  };
+
+  const resolvePsqlIndexFieldName = (
+    table: PsqlTableDiagramNode,
+    fieldId: string,
+  ): string | null => {
+    const column = table.data.columns.find((c) => c.id === fieldId && c.name.trim());
+    if (column) {
+      return column.name;
+    }
+    const fk = table.data.foreignKeys.find((f) => f.id === fieldId && f.name.trim());
+    return fk?.name ?? null;
+  };
 
   nodesForMermaid.forEach((node) => {
     const entityId = entityIdMap.get(node.id);
@@ -646,32 +738,130 @@ const serializeErDiagram = (diagram: Diagram) => {
     lines.push(`  ${entityId} {`);
 
     if (node.data.kind === "restResource") {
-      const schema = getResourceSchema(node, resourceSchemas);
+      const rest = node as RestResourceDiagramNode;
+      const path = rest.data.resourceName?.trim().replace(/^\/+/, "") || "";
+      lines.push(
+        formatErAttributeRow("string", "resource_path", [], [
+          path ? `/${path}` : "unnamed resource",
+        ]),
+      );
+      const description = rest.data.description?.trim();
+      if (description) {
+        lines.push(
+          formatErAttributeRow("string", "resource_description", [], [
+            truncateErText(description, 240),
+          ]),
+        );
+      }
+      const methodsLine = formatRestResourceMethodsEr(rest);
+      if (methodsLine) {
+        lines.push(
+          formatErAttributeRow("string", "http_methods", [], [
+            truncateErText(methodsLine, 360),
+          ]),
+        );
+      }
+
+      const schema = getResourceSchema(rest, resourceSchemas);
       if (schema.length === 0) {
-        lines.push(`    string resource ${quoteErComment("resource")}`);
+        lines.push(`    string resource ${quoteErComment("no schema fields")}`);
       }
 
       schema.forEach((field) => {
         lines.push(
-          `    ${erFieldType(formatResourceSchemaFieldType(field, diagram.psqlEnums))} ${erFieldName(
+          formatErAttributeRow(
+            formatResourceSchemaFieldType(field, diagram.psqlEnums),
             field.name || "field",
-          )}${formatErComment([
-            field.nullable ? "nullable" : "required",
-            field.enum?.length ? `enum: ${field.enum.join(", ")}` : "",
-            field.description ?? "",
-          ])}`,
+            [],
+            [
+              field.nullable ? "nullable" : "required",
+              field.enum?.length ? `enum: ${field.enum.join(", ")}` : "",
+              formatResourceFieldSourceErPart(field, psqlTableById),
+              field.description ?? "",
+            ],
+          ),
         );
       });
     } else if (node.data.kind === "psqlTable") {
-      const pkColumnIds = new Set(node.data.primaryKey);
-      node.data.columns.forEach((column) => {
+      const table = node as PsqlTableDiagramNode;
+      const pkColumnIds = new Set(table.data.primaryKey);
+      table.data.columns.forEach((column) => {
+        if (!column.name.trim()) {
+          return;
+        }
+        const keys: ("PK" | "FK" | "UK")[] = [];
+        if (pkColumnIds.has(column.id)) {
+          keys.push("PK");
+        }
+        if (column.unique && !pkColumnIds.has(column.id)) {
+          keys.push("UK");
+        }
+        const defaultExpr = column.defaultValue?.trim();
+        const checkExpr = column.check?.trim();
         lines.push(
-          `    ${erFieldType(formatPsqlColumnType(column, diagram.psqlEnums))} ${erFieldName(
-            column.name || "column",
-          )}${formatErComment([
-            pkColumnIds.has(column.id) ? "PK" : "",
-            column.nullable ? "nullable" : "required",
-          ])}`,
+          formatErAttributeRow(
+            formatPsqlColumnType(column, diagram.psqlEnums),
+            column.name,
+            keys,
+            [
+              column.nullable ? "nullable" : "required",
+              defaultExpr ? `default: ${truncateErText(defaultExpr, 80)}` : "",
+              checkExpr ? `check: ${truncateErText(checkExpr, 80)}` : "",
+            ],
+          ),
+        );
+      });
+
+      table.data.foreignKeys.forEach((foreignKey) => {
+        if (!foreignKey.name.trim()) {
+          return;
+        }
+        const targetTable = psqlTableById.get(foreignKey.targetTableId);
+        const targetColumn = targetTable?.data.columns.find(
+          (c) => c.id === foreignKey.targetColumnId && c.name.trim(),
+        );
+        const ref =
+          targetTable && targetColumn
+            ? `-> ${targetTable.data.tableName || "table"}.${targetColumn.name}`
+            : "";
+        const actionParts = [
+          foreignKey.onDelete && foreignKey.onDelete !== "NO ACTION"
+            ? `ON DELETE ${foreignKey.onDelete}`
+            : "",
+          foreignKey.onUpdate && foreignKey.onUpdate !== "NO ACTION"
+            ? `ON UPDATE ${foreignKey.onUpdate}`
+            : "",
+        ].filter(Boolean);
+        const keys: ("PK" | "FK" | "UK")[] = ["FK"];
+        if (pkColumnIds.has(foreignKey.id)) {
+          keys.unshift("PK");
+        }
+        lines.push(
+          formatErAttributeRow(
+            resolveForeignKeyErSqlType(foreignKey),
+            foreignKey.name,
+            keys,
+            [foreignKey.nullable ? "nullable" : "required", ref, ...actionParts],
+          ),
+        );
+      });
+
+      table.data.indices.forEach((index, indexOrdinal) => {
+        const columnNames = index.columns
+          .map((id) => resolvePsqlIndexFieldName(table, id))
+          .filter((name): name is string => Boolean(name));
+        if (columnNames.length === 0) {
+          return;
+        }
+        lines.push(
+          formatErAttributeRow(
+            "string",
+            `idx_${indexOrdinal + 1}`,
+            [],
+            [
+              `INDEX ${index.method}${index.unique ? " UNIQUE" : ""} (${columnNames.join(", ")})`,
+            ],
+          ),
         );
       });
     }
@@ -960,17 +1150,6 @@ const formatPsqlColumnTypeForDdl = (column: PsqlColumn, diagram: Diagram) => {
 
   return formatPsqlColumnType(column, diagram.psqlEnums);
 };
-
-const psqlSerialBackingTypes = {
-  serial: "integer",
-  bigserial: "bigint",
-  smallserial: "smallint",
-} as const;
-
-const getPsqlSerialBackingType = (type: PsqlColumn["type"]) =>
-  type in psqlSerialBackingTypes
-    ? psqlSerialBackingTypes[type as keyof typeof psqlSerialBackingTypes]
-    : null;
 
 const createPsqlTableLookup = (diagram: Diagram) =>
   new Map(getPsqlTableNodes(diagram).map((node) => [node.id, node]));

@@ -283,6 +283,15 @@ describe("diagram export", () => {
     expect(markdown).not.toContain("PK; required; Current publication status");
     expect(markdown).toContain('POSTS ||--o{ POSTS_2 : "read: all"');
     expect(markdown).toContain('USERS ||--o{ POSTS_2 : "FK: author_id');
+    expect(markdown).toContain("uuid id PK");
+    expect(markdown).toContain("status_enum status UK");
+    expect(markdown).toContain("author_id FK");
+    expect(markdown).toContain("-> users.id");
+    expect(markdown).toContain("INDEX btree (status)");
+    expect(markdown).toContain("INDEX btree (author_id)");
+    expect(markdown).toContain("maps posts.status");
+    expect(markdown).toContain("resource_path");
+    expect(markdown).toContain("http_methods");
     expect(markdown).toContain("## OpenAPI");
     expect(markdown).toContain('```json\n{\n  "openapi": "3.1.0"');
     expect(markdown).toContain('"title": "Export Test"');
