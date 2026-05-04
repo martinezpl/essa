@@ -671,24 +671,26 @@ export const App = () => {
                     />
                   </svg>
                 </button>
-                <select
-                  aria-label={`Export ${activeDiagram.name}`}
-                  className="diagram-actions__export"
-                  value=""
-                  onChange={(event) => {
-                    const format = event.target.value as DiagramExportFormat;
+                <div className="diagram-actions__export-wrap">
+                  <select
+                    aria-label={`Export ${activeDiagram.name}`}
+                    className="diagram-actions__export"
+                    value=""
+                    onChange={(event) => {
+                      const format = event.target.value as DiagramExportFormat;
 
-                    if (format) {
-                      handleExportDiagram(activeDiagram, format);
-                    }
-                  }}
-                >
-                  <option value="" disabled>
-                    Export as...
-                  </option>
-                  <option value="essa">.essa</option>
-                  <option value="markdown">.md</option>
-                </select>
+                      if (format) {
+                        handleExportDiagram(activeDiagram, format);
+                      }
+                    }}
+                  >
+                    <option value="" disabled>
+                      Export as...
+                    </option>
+                    <option value="essa">.essa</option>
+                    <option value="markdown">.md</option>
+                  </select>
+                </div>
               </div>
             </div>
             <div className="app-topbar__right">

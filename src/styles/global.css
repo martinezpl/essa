@@ -90,16 +90,16 @@
   --text-block-base: calc(1rem * var(--essa-ui-scale));
 
   /* Row popovers share the canvas transform context */
-  --text-popover-base: calc(1.0625rem * var(--essa-ui-scale));
-  --text-popover-label: calc(0.875rem * var(--essa-ui-scale));
-  --text-popover-control: calc(1.125rem * var(--essa-ui-scale));
+  --text-popover-base: calc(1.25rem * var(--essa-ui-scale));
+  --text-popover-label: calc(1.0625rem * var(--essa-ui-scale));
+  --text-popover-control: calc(1.3125rem * var(--essa-ui-scale));
 
   /* Edge midpoint labels */
   --text-edge-label: calc(0.9375rem * var(--essa-ui-scale));
   --text-edge-kind: calc(0.8125rem * var(--essa-ui-scale));
 
   /* Form controls (checkbox, native selects, icon buttons) — not text-token size */
-  --control-checkbox-size: 1.375rem;
+  --control-checkbox-size: 2rem;
   --control-checkbox-radius: 5px;
   --control-select-min-height: 2.75rem;
   --control-select-padding-y: 0.65rem;
@@ -636,9 +636,31 @@ h3 {
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
 }
 
+.diagram-actions__export-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.diagram-actions__export-wrap::after {
+  content: '';
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
 .diagram-actions__export {
+  appearance: none;
+  -webkit-appearance: none;
   max-width: 7.25rem;
-  padding: 0 0.45rem;
+  padding: 0 1.3rem 0 0.45rem;
 }
 
 @media (max-width: 760px) {
@@ -1265,7 +1287,7 @@ h3 {
 .block-node__badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.8rem;
   font-size: var(--text-canvas-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1275,8 +1297,8 @@ h3 {
 
 .block-node__badge::before {
   content: "";
-  width: 6px;
-  height: 6px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: currentcolor;
 }
@@ -1718,7 +1740,7 @@ h3 {
 }
 
 .row-popover .method-pill {
-  font-size: var(--text-canvas-xs);
+  font-size: var(--text-popover-label);
 }
 
 .row-popover .inline-button {
@@ -1745,7 +1767,7 @@ h3 {
 .row-popover__section--constraints {
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
+  gap: 2rem;
   padding-top: 1.125rem;
   margin-top: 0.25rem;
   border-top: 1px solid var(--border);
@@ -1753,6 +1775,40 @@ h3 {
 
 .row-popover__section--constraints label {
   gap: 0.55rem;
+}
+
+.plate-toggle-group {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.plate-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  padding: 0.58rem 0.8rem;
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.plate-toggle:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plate-toggle--active,
+.plate-toggle--active:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 .row-popover textarea {

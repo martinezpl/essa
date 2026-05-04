@@ -73,8 +73,7 @@ const getSelectedEnumId = (
       )?.id ?? "")
     : "";
 
-const nameMinWidth = (name: string) =>
-  Math.max(440, name.length * 20 + 50);
+const nameMinWidth = (name: string) => Math.max(440, name.length * 20 + 50);
 
 export const RestResourceNode = ({
   id,
@@ -379,7 +378,8 @@ const SchemaFieldPopover = ({
             onChange({
               type: "string",
               enum: event.target.value
-                ? psqlEnums.find((item) => item.id === event.target.value)?.values
+                ? psqlEnums.find((item) => item.id === event.target.value)
+                    ?.values
                 : undefined,
             })
           }
@@ -558,11 +558,13 @@ const InputPopover = ({
             })
           }
         >
-          {(input.mode === "query" ? ["string"] : jsonFieldTypes).map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
+          {(input.mode === "query" ? ["string"] : jsonFieldTypes).map(
+            (type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ),
+          )}
         </select>
       </label>
 

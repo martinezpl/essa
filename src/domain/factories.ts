@@ -79,7 +79,7 @@ export const createStarterDiagram = (): Diagram => {
       {
         id: postsResourceId,
         type: "restResource",
-        position: { x: 80, y: 80 },
+        position: { x: -74.56451606595385, y: -475.0711173803418 },
         data: {
           kind: "restResource",
           resourceName: "posts",
@@ -172,7 +172,7 @@ export const createStarterDiagram = (): Diagram => {
       {
         id: usersResourceId,
         type: "restResource",
-        position: { x: 80, y: 760 },
+        position: { x: -93.83123605065526, y: 1346.4802894392803 },
         data: {
           kind: "restResource",
           resourceName: "users",
@@ -218,7 +218,7 @@ export const createStarterDiagram = (): Diagram => {
       {
         id: postsTableId,
         type: "psqlTable",
-        position: { x: 600, y: 80 },
+        position: { x: 2211.6582788515184, y: -491.45540875519043 },
         data: {
           kind: "psqlTable",
           tableName: "post",
@@ -287,7 +287,7 @@ export const createStarterDiagram = (): Diagram => {
       {
         id: usersTableId,
         type: "psqlTable",
-        position: { x: 600, y: 760 },
+        position: { x: 1057.2582437240349, y: 1294.1707337742985 },
         data: {
           kind: "psqlTable",
           tableName: "user",

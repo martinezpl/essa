@@ -744,23 +744,24 @@ const ColumnPopover = ({
     ) : null}
 
     <div className="row-popover__section row-popover__section--constraints">
-      <label className="checkbox-field">
-        <input
-          checked={column.nullable}
-          type="checkbox"
-          onChange={(event) => onChange({ nullable: event.target.checked })}
-        />
-        nullable
-      </label>
-
-      <label className="checkbox-field">
-        <input
-          checked={column.unique ?? false}
-          type="checkbox"
-          onChange={(event) => onChange({ unique: event.target.checked })}
-        />
-        unique
-      </label>
+      <div className="plate-toggle-group" aria-label="Column constraints">
+        <button
+          type="button"
+          className={`plate-toggle${column.nullable ? " plate-toggle--active" : ""}`}
+          aria-pressed={column.nullable}
+          onClick={() => onChange({ nullable: !column.nullable })}
+        >
+          nullable
+        </button>
+        <button
+          type="button"
+          className={`plate-toggle${column.unique ? " plate-toggle--active" : ""}`}
+          aria-pressed={column.unique ?? false}
+          onClick={() => onChange({ unique: !(column.unique ?? false) })}
+        >
+          unique
+        </button>
+      </div>
 
       <label>
         Default (SQL expression)
