@@ -88,6 +88,7 @@ type AnnotationResizeDraft = {
 
 const MIN_ANNOTATION_SIZE = 24;
 const WHEEL_LINE_HEIGHT = 16;
+const contextMenuBlocks = blockList.filter(({ kind }) => kind !== "annotation");
 
 const getWheelDeltaScale = (
   event: ReactWheelEvent<HTMLDivElement>,
@@ -532,7 +533,7 @@ export const DiagramCanvas = ({
           style={{ left: contextMenu.left, top: contextMenu.top }}
         >
           <span className="eyebrow">Add block</span>
-          {blockList.map(({ kind, label }) => (
+          {contextMenuBlocks.map(({ kind, label }) => (
             <button
               key={kind}
               type="button"

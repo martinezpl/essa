@@ -16,6 +16,7 @@ const usersTable: DiagramNode = {
         name: "id",
         type: "uuid",
         nullable: false,
+        unique: false,
       },
     ],
     foreignKeys: [],
@@ -37,12 +38,14 @@ const postsTable: DiagramNode = {
         name: "id",
         type: "uuid",
         nullable: false,
+        unique: false,
       },
       {
         id: "posts-author",
         name: "author_id",
         type: "uuid",
         nullable: false,
+        unique: false,
       },
     ],
     foreignKeys: [

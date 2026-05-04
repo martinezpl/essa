@@ -335,6 +335,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
       name: "",
       type: "text",
       nullable: false,
+      unique: false,
     };
   }
 
@@ -350,6 +351,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
           name: "id",
           type: "uuid",
           nullable: false,
+          unique: false,
         },
       ],
       foreignKeys: [],
@@ -369,12 +371,14 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
           name: "id",
           type: "uuid",
           nullable: false,
+          unique: false,
         },
         {
           id: createId("column"),
           name: "name",
           type: "text",
           nullable: false,
+          unique: false,
         },
       ],
       foreignKeys: [],

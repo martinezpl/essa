@@ -221,6 +221,19 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                 {data.primaryKey.includes(column.id) ? (
                   <span className="flag-chip">PK</span>
                 ) : null}
+                {column.unique ? (
+                  <span className="flag-chip">UNIQUE</span>
+                ) : null}
+                {column.defaultValue?.trim() ? (
+                  <span className="flag-chip" title={column.defaultValue}>
+                    DEFAULT
+                  </span>
+                ) : null}
+                {column.check?.trim() ? (
+                  <span className="flag-chip" title={column.check}>
+                    CHECK
+                  </span>
+                ) : null}
                 {column.nullable ? (
                   <span className="flag-chip flag-chip--null">?</span>
                 ) : null}
@@ -730,14 +743,59 @@ const ColumnPopover = ({
       </label>
     ) : null}
 
-    <label className="checkbox-field">
-      <input
-        checked={column.nullable}
-        type="checkbox"
-        onChange={(event) => onChange({ nullable: event.target.checked })}
-      />
-      nullable
-    </label>
+    <div className="row-popover__section row-popover__section--constraints">
+      <label className="checkbox-field">
+        <input
+          checked={column.nullable}
+          type="checkbox"
+          onChange={(event) => onChange({ nullable: event.target.checked })}
+        />
+        nullable
+      </label>
+
+      <label className="checkbox-field">
+        <input
+          checked={column.unique ?? false}
+          type="checkbox"
+          onChange={(event) => onChange({ unique: event.target.checked })}
+        />
+        unique
+      </label>
+
+      <label>
+        Default (SQL expression)
+        <input
+          placeholder="e.g. gen_random_uuid() or 'draft'"
+          value={column.defaultValue ?? ""}
+          onChange={(event) => {
+            const next = event.target.value;
+            onChange({
+              defaultValue: next.trim() === "" ? undefined : next,
+            });
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onClose();
+            }
+          }}
+        />
+      </label>
+
+      <label>
+        CHECK (predicate only)
+        <textarea
+          rows={2}
+          placeholder="e.g. length(trim(name)) > 0"
+          value={column.check ?? ""}
+          onChange={(event) => {
+            const next = event.target.value;
+            onChange({
+              check: next.trim() === "" ? undefined : next,
+            });
+          }}
+        />
+      </label>
+    </div>
 
   </div>
   );

@@ -73,6 +73,8 @@ const createDiagram = (): Diagram => ({
             name: "id",
             type: "uuid",
             nullable: false,
+            unique: false,
+            defaultValue: "gen_random_uuid()",
           },
           {
             id: "column-status",
@@ -80,6 +82,8 @@ const createDiagram = (): Diagram => ({
             type: "enum",
             options: { enumId: "enum-status" },
             nullable: false,
+            unique: true,
+            check: "true",
           },
         ],
         foreignKeys: [
@@ -102,6 +106,13 @@ const createDiagram = (): Diagram => ({
             method: "btree",
             unique: false,
           },
+          {
+            id: "index-fk-author",
+            name: "idx_posts_author_fk",
+            columns: ["fk-author"],
+            method: "btree",
+            unique: false,
+          },
         ],
       },
     },
@@ -119,6 +130,7 @@ const createDiagram = (): Diagram => ({
             name: "id",
             type: "uuid",
             nullable: false,
+            unique: false,
           },
         ],
         foreignKeys: [],
@@ -229,11 +241,16 @@ describe("diagram export", () => {
     expect(postsCreateIdx).toBeGreaterThan(-1);
     expect(usersCreateIdx).toBeLessThan(postsCreateIdx);
     expect(markdown).toContain("CREATE TABLE \"posts\" (");
-    expect(markdown).toContain('"id" uuid NOT NULL');
-    expect(markdown).toContain('"status" "status_enum" NOT NULL');
+    expect(markdown).toContain('"id" uuid NOT NULL DEFAULT gen_random_uuid()');
+    expect(markdown).toContain(
+      '"status" "status_enum" NOT NULL UNIQUE CHECK (true)',
+    );
     expect(markdown).toContain('"author_id" uuid NOT NULL');
     expect(markdown).toContain('PRIMARY KEY ("id")');
     expect(markdown).toContain('FOREIGN KEY ("author_id") REFERENCES "users" ("id")');
     expect(markdown).toContain('CREATE INDEX "idx_posts_status" ON "posts" ("status");');
+    expect(markdown).toContain(
+      'CREATE INDEX "idx_posts_author_fk" ON "posts" ("author_id");',
+    );
   });
 });

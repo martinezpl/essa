@@ -194,13 +194,28 @@ export const restResourceDataSchema = z.object({
 export type RestResourceData = z.infer<typeof restResourceDataSchema> &
   Record<string, unknown>;
 
-export const psqlColumnSchema = z.object({
-  id: z.string().min(1),
-  name: z.string(),
-  type: psqlColumnTypeSchema,
-  options: psqlColumnOptionsSchema.optional(),
-  nullable: z.boolean(),
-});
+export const psqlColumnSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") return value;
+    const v = value as Record<string, unknown>;
+    const next = { ...v };
+    if (next.defaultValue === "") delete next.defaultValue;
+    if (next.check === "") delete next.check;
+    return next;
+  },
+  z.object({
+    id: z.string().min(1),
+    name: z.string(),
+    type: psqlColumnTypeSchema,
+    options: psqlColumnOptionsSchema.optional(),
+    nullable: z.boolean(),
+    /** Raw SQL expression for `DEFAULT ...` (not quoted). */
+    defaultValue: z.string().optional(),
+    unique: z.boolean().default(false),
+    /** Raw SQL predicate inside `CHECK (...)` (not quoted). */
+    check: z.string().optional(),
+  }),
+);
 export type PsqlColumn = z.infer<typeof psqlColumnSchema>;
 
 export const psqlForeignKeyActionSchema = z.enum([
@@ -364,7 +379,7 @@ export const diagramSchema = z.object({
 export type Diagram = z.infer<typeof diagramSchema>;
 
 export const diagramCollectionSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   activeDiagramId: z.string().min(1),
   diagrams: z.array(diagramSchema).min(1),
 });

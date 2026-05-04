@@ -14,7 +14,7 @@ describe("reconcilePsqlTableData", () => {
       tableName: "t",
       primaryKey: ["col-1", "ghost-pk", "fk-1"],
       columns: [
-        { id: "col-1", name: "a", type: "text" as const, nullable: false },
+        { id: "col-1", name: "a", type: "text" as const, nullable: false, unique: false },
       ],
       foreignKeys: [
         {
@@ -66,7 +66,7 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         kind: "psqlTable",
         tableName: "users",
         primaryKey: ["u-id"],
-        columns: [{ id: "u-id", name: "id", type: "uuid", nullable: false }],
+        columns: [{ id: "u-id", name: "id", type: "uuid", nullable: false, unique: false }],
         foreignKeys: [],
         indices: [],
       },
@@ -81,8 +81,8 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         tableName: "posts",
         primaryKey: ["p-id"],
         columns: [
-          { id: "p-id", name: "id", type: "uuid", nullable: false },
-          { id: "p-author", name: "author_id", type: "uuid", nullable: false },
+          { id: "p-id", name: "id", type: "uuid", nullable: false, unique: false },
+          { id: "p-author", name: "author_id", type: "uuid", nullable: false, unique: false },
         ],
         foreignKeys: [
           {
@@ -138,7 +138,7 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         kind: "psqlTable",
         tableName: "users",
         primaryKey: ["u-id"],
-        columns: [{ id: "u-id", name: "id", type: "bigint", nullable: false }],
+        columns: [{ id: "u-id", name: "id", type: "bigint", nullable: false, unique: false }],
         foreignKeys: [],
         indices: [],
       },
@@ -152,7 +152,7 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         kind: "psqlTable",
         tableName: "posts",
         primaryKey: ["p-id"],
-        columns: [{ id: "p-id", name: "id", type: "uuid", nullable: false }],
+        columns: [{ id: "p-id", name: "id", type: "uuid", nullable: false, unique: false }],
         foreignKeys: [
           {
             id: "fk-author",
@@ -169,11 +169,15 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
       },
     };
 
-    const previousColumns = [{ id: "u-id", name: "id", type: "uuid" as const, nullable: false }];
+    const previousColumns = [
+      { id: "u-id", name: "id", type: "uuid" as const, nullable: false, unique: false },
+    ];
 
     const mergedUsers: PsqlTableData = {
       ...(users.data as PsqlTableData),
-      columns: [{ id: "u-id", name: "id", type: "bigint" as const, nullable: false }],
+      columns: [
+        { id: "u-id", name: "id", type: "bigint" as const, nullable: false, unique: false },
+      ],
     };
 
     const diagram = baseDiagram([users, posts]);
@@ -208,8 +212,8 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         tableName: "items",
         primaryKey: ["c1"],
         columns: [
-          { id: "c1", name: "id", type: "uuid", nullable: false },
-          { id: "c2", name: "price", type: "numeric", nullable: true },
+          { id: "c1", name: "id", type: "uuid", nullable: false, unique: false },
+          { id: "c2", name: "price", type: "numeric", nullable: true, unique: false },
         ],
         foreignKeys: [],
         indices: [],
@@ -275,8 +279,8 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
         tableName: "items",
         primaryKey: ["c1"],
         columns: [
-          { id: "c1", name: "id", type: "uuid", nullable: false },
-          { id: "c2", name: "price", type: "numeric", nullable: true },
+          { id: "c1", name: "id", type: "uuid", nullable: false, unique: false },
+          { id: "c2", name: "price", type: "numeric", nullable: true, unique: false },
         ],
         foreignKeys: [],
         indices: [],
@@ -338,7 +342,7 @@ describe("reconcileDiagramAfterPsqlTableRemoved", () => {
         kind: "psqlTable",
         tableName: "users",
         primaryKey: ["u-id"],
-        columns: [{ id: "u-id", name: "id", type: "uuid", nullable: false }],
+        columns: [{ id: "u-id", name: "id", type: "uuid", nullable: false, unique: false }],
         foreignKeys: [],
         indices: [],
       },
@@ -352,7 +356,7 @@ describe("reconcileDiagramAfterPsqlTableRemoved", () => {
         kind: "psqlTable",
         tableName: "posts",
         primaryKey: ["p-id"],
-        columns: [{ id: "p-id", name: "id", type: "uuid", nullable: false }],
+        columns: [{ id: "p-id", name: "id", type: "uuid", nullable: false, unique: false }],
         foreignKeys: [
           {
             id: "fk",
@@ -422,7 +426,7 @@ describe("reconcileDiagramForPsqlTableNode", () => {
         kind: "psqlTable",
         tableName: "t",
         primaryKey: ["c1", "ghost"],
-        columns: [{ id: "c1", name: "id", type: "uuid", nullable: false }],
+        columns: [{ id: "c1", name: "id", type: "uuid", nullable: false, unique: false }],
         foreignKeys: [],
         indices: [],
       },

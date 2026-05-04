@@ -143,7 +143,53 @@ describe("domain schemas", () => {
         type: "uuid",
         nullable: false,
       }),
-    ).not.toHaveProperty("foreignKey");
+    ).toEqual({
+      id: "column-id",
+      name: "id",
+      type: "uuid",
+      nullable: false,
+      unique: false,
+    });
+  });
+
+  it("parses PSQL column constraints and strips empty default/check", () => {
+    expect(
+      psqlColumnSchema.parse({
+        id: "column-1",
+        name: "score",
+        type: "integer",
+        nullable: true,
+        unique: true,
+        defaultValue: "0",
+        check: "score >= 0",
+      }),
+    ).toEqual({
+      id: "column-1",
+      name: "score",
+      type: "integer",
+      nullable: true,
+      unique: true,
+      defaultValue: "0",
+      check: "score >= 0",
+    });
+
+    expect(
+      psqlColumnSchema.parse({
+        id: "column-2",
+        name: "note",
+        type: "text",
+        nullable: false,
+        defaultValue: "",
+        check: "",
+        unique: false,
+      }),
+    ).toEqual({
+      id: "column-2",
+      name: "note",
+      type: "text",
+      nullable: false,
+      unique: false,
+    });
   });
 
   it("parses PSQL column options and enum definitions", () => {

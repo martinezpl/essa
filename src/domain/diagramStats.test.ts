@@ -34,6 +34,7 @@ const createDiagram = (): Diagram => ({
             name: "id",
             type: "uuid",
             nullable: false,
+            unique: false,
           },
         ],
         foreignKeys: [
@@ -75,6 +76,7 @@ const createDiagram = (): Diagram => ({
             name: "id",
             type: "uuid",
             nullable: false,
+            unique: false,
           },
         ],
         foreignKeys: [],

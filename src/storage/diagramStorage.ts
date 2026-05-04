@@ -10,11 +10,11 @@ const STORAGE_KEY = "essa.diagrams.v1";
 export const createInitialCollection = (): DiagramCollection => {
   const starterDiagram = createStarterDiagram();
 
-  return {
+  return diagramCollectionSchema.parse({
     version: LATEST_DIAGRAM_COLLECTION_VERSION,
     activeDiagramId: starterDiagram.id,
     diagrams: [starterDiagram],
-  };
+  });
 };
 
 export const loadDiagramCollection = (): DiagramCollection => {

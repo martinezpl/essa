@@ -91,6 +91,7 @@ describe("block model", () => {
         name: "parent_id",
         type: "uuid",
         nullable: true,
+        unique: false,
       },
     ];
     source.data.foreignKeys = [
@@ -170,6 +171,7 @@ describe("block model", () => {
       name: "",
       type: "text",
       nullable: false,
+      unique: false,
     });
     expect(createRestMethodInput()).toMatchObject({
       name: "",

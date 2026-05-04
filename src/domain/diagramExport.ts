@@ -1076,6 +1076,17 @@ const serializePsqlTableDdl = (
   tableLookup: Map<string, PsqlTableDiagramNode>,
 ) => {
   const tableName = quoteSqlIdentifier(table.data.tableName, "table");
+  const formatColumnConstraints = (column: PsqlColumn) => {
+    const defaultExpr = column.defaultValue?.trim();
+    const checkExpr = column.check?.trim();
+    return [
+      column.nullable ? "" : " NOT NULL",
+      defaultExpr ? ` DEFAULT ${defaultExpr}` : "",
+      column.unique ? " UNIQUE" : "",
+      checkExpr ? ` CHECK (${checkExpr})` : "",
+    ].join("");
+  };
+
   const columnLines = table.data.columns
     .filter((column) => column.name.trim())
     .map(
@@ -1083,7 +1094,7 @@ const serializePsqlTableDdl = (
         `  ${quoteSqlIdentifier(column.name, "column")} ${formatPsqlColumnTypeForDdl(
           column,
           diagram,
-        )}${column.nullable ? "" : " NOT NULL"}`,
+        )}${formatColumnConstraints(column)}`,
     );
   const foreignKeyColumnLines = table.data.foreignKeys
     .filter((foreignKey) => foreignKey.name.trim())
@@ -1163,15 +1174,25 @@ const serializePsqlTableDdl = (
   return `CREATE TABLE ${tableName} (\n${definitionLines.join(",\n")}\n);`;
 };
 
+const quoteIndexColumn = (table: PsqlTableDiagramNode, fieldId: string): string | null => {
+  const column = table.data.columns.find((c) => c.id === fieldId && c.name.trim());
+  if (column) {
+    return quoteSqlIdentifier(column.name, "column");
+  }
+  const foreignKey = table.data.foreignKeys.find((fk) => fk.id === fieldId && fk.name.trim());
+  if (foreignKey) {
+    return quoteSqlIdentifier(foreignKey.name, "foreign_key");
+  }
+  return null;
+};
+
 const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
   table.data.indices.flatMap((index) => {
-    const columns = index.columns
-      .map((columnId) =>
-        table.data.columns.find((column) => column.id === columnId && column.name.trim()),
-      )
-      .filter((column): column is PsqlColumn => Boolean(column));
+    const quoted = index.columns
+      .map((fieldId) => quoteIndexColumn(table, fieldId))
+      .filter((part): part is string => part !== null);
 
-    if (columns.length === 0) {
+    if (quoted.length === 0 || quoted.length !== index.columns.length) {
       return [];
     }
 
@@ -1181,9 +1202,7 @@ const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
         "index",
       )} ON ${quoteSqlIdentifier(table.data.tableName, "table")}${
         index.method === "btree" ? "" : ` USING ${index.method}`
-      } (${columns
-        .map((column) => quoteSqlIdentifier(column.name, "column"))
-        .join(", ")});`,
+      } (${quoted.join(", ")});`,
     ];
   });
 
