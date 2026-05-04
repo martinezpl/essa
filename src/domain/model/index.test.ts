@@ -137,6 +137,7 @@ describe("block model", () => {
       name: "id",
       type: "uuid",
       nullable: false,
+      defaultValue: "get_random_uuid()",
     });
     expect(table.data.primaryKey).toEqual([table.data.columns[0].id]);
   });

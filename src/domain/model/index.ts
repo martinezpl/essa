@@ -351,6 +351,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
           name: "id",
           type: "uuid",
           nullable: false,
+          defaultValue: "get_random_uuid()",
           unique: false,
         },
       ],
@@ -371,6 +372,7 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
           name: "id",
           type: "uuid",
           nullable: false,
+          defaultValue: "get_random_uuid()",
           unique: false,
         },
         {
