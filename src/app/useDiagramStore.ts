@@ -23,6 +23,13 @@ import {
   createPsqlIndex,
   DiagramModel,
 } from "../domain/model";
+import {
+  reconcileDiagramAfterPsqlColumnsChange,
+  reconcileDiagramAfterPsqlForeignKeysChange,
+  reconcileDiagramAfterPsqlIndicesChange,
+  reconcileDiagramAfterPsqlTableRemoved,
+  reconcileDiagramForPsqlTableNode,
+} from "../domain/psqlTableReferences";
 import type {
   BlockData,
   BlockKind,
@@ -40,6 +47,7 @@ import type {
   PsqlEnum,
   PsqlForeignKey,
   PsqlIndex,
+  PsqlTableData,
 } from "../domain/types";
 import {
   createInitialCollection,
@@ -502,13 +510,23 @@ export const useDiagramStore = () => {
 
   const deleteNode = useCallback(
     (nodeId: string) => {
-      updateActiveDiagram((diagram) => ({
-        ...diagram,
-        nodes: diagram.nodes.filter((node) => node.id !== nodeId),
-        edges: diagram.edges.filter(
-          (edge) => edge.source !== nodeId && edge.target !== nodeId,
-        ),
-      }));
+      updateActiveDiagram((diagram) => {
+        const victim = diagram.nodes.find((node) => node.id === nodeId);
+
+        let next: Diagram = {
+          ...diagram,
+          nodes: diagram.nodes.filter((node) => node.id !== nodeId),
+          edges: diagram.edges.filter(
+            (edge) => edge.source !== nodeId && edge.target !== nodeId,
+          ),
+        };
+
+        if (victim?.data.kind === "psqlTable") {
+          next = reconcileDiagramAfterPsqlTableRemoved(next, nodeId);
+        }
+
+        return next;
+      });
     },
     [updateActiveDiagram],
   );
@@ -525,20 +543,75 @@ export const useDiagramStore = () => {
 
   const updateNodeData = useCallback(
     (nodeId: string, patch: NodeDataPatch) => {
-      updateActiveDiagram((diagram) => ({
-        ...diagram,
-        nodes: diagram.nodes.map((node) =>
-          node.id === nodeId
-            ? {
-                ...node,
-                data: {
-                  ...node.data,
-                  ...patch,
-                } as BlockData,
-              }
-            : node,
-        ),
-      }));
+      updateActiveDiagram((diagram) => {
+        const node = diagram.nodes.find((item) => item.id === nodeId);
+
+        if (!node) {
+          return diagram;
+        }
+
+        if (node.data.kind !== "psqlTable") {
+          return {
+            ...diagram,
+            nodes: diagram.nodes.map((item) =>
+              item.id === nodeId
+                ? {
+                    ...item,
+                    data: {
+                      ...item.data,
+                      ...patch,
+                    } as BlockData,
+                  }
+                : item,
+            ),
+          };
+        }
+
+        const previousTable = node.data;
+        const merged = {
+          ...previousTable,
+          ...patch,
+        } as PsqlTableData;
+
+        const intermediate: Diagram = {
+          ...diagram,
+          nodes: diagram.nodes.map((item) =>
+            item.id === nodeId
+              ? {
+                  ...item,
+                  data: merged,
+                }
+              : item,
+          ),
+        };
+
+        if ("columns" in patch) {
+          return reconcileDiagramAfterPsqlColumnsChange({
+            diagram: intermediate,
+            tableNodeId: nodeId,
+            previousColumns: previousTable.columns,
+            mergedTableData: merged,
+          });
+        }
+
+        if ("foreignKeys" in patch) {
+          return reconcileDiagramAfterPsqlForeignKeysChange({
+            diagram: intermediate,
+            tableNodeId: nodeId,
+            mergedTableData: merged,
+          });
+        }
+
+        if ("indices" in patch) {
+          return reconcileDiagramAfterPsqlIndicesChange({
+            diagram: intermediate,
+            tableNodeId: nodeId,
+            mergedTableData: merged,
+          });
+        }
+
+        return reconcileDiagramForPsqlTableNode(intermediate, nodeId, merged);
+      });
     },
     [updateActiveDiagram],
   );
@@ -609,9 +682,34 @@ export const useDiagramStore = () => {
 
   const replacePsqlColumns = useCallback(
     (nodeId: string, columns: PsqlColumn[]) => {
-      updateNodeData(nodeId, { columns } as NodeDataPatch);
+      updateActiveDiagram((diagram) => {
+        const node = diagram.nodes.find((item) => item.id === nodeId);
+
+        if (node?.data.kind !== "psqlTable") {
+          return diagram;
+        }
+
+        const merged: PsqlTableData = {
+          ...node.data,
+          columns,
+        };
+
+        const intermediate: Diagram = {
+          ...diagram,
+          nodes: diagram.nodes.map((item) =>
+            item.id === nodeId ? { ...item, data: merged } : item,
+          ),
+        };
+
+        return reconcileDiagramAfterPsqlColumnsChange({
+          diagram: intermediate,
+          tableNodeId: nodeId,
+          previousColumns: node.data.columns,
+          mergedTableData: merged,
+        });
+      });
     },
-    [updateNodeData],
+    [updateActiveDiagram],
   );
 
   const updatePsqlColumnOptions = useCallback(
@@ -659,16 +757,64 @@ export const useDiagramStore = () => {
 
   const replacePsqlForeignKeys = useCallback(
     (nodeId: string, foreignKeys: PsqlForeignKey[]) => {
-      updateNodeData(nodeId, { foreignKeys } as NodeDataPatch);
+      updateActiveDiagram((diagram) => {
+        const node = diagram.nodes.find((item) => item.id === nodeId);
+
+        if (node?.data.kind !== "psqlTable") {
+          return diagram;
+        }
+
+        const merged: PsqlTableData = {
+          ...node.data,
+          foreignKeys,
+        };
+
+        const intermediate: Diagram = {
+          ...diagram,
+          nodes: diagram.nodes.map((item) =>
+            item.id === nodeId ? { ...item, data: merged } : item,
+          ),
+        };
+
+        return reconcileDiagramAfterPsqlForeignKeysChange({
+          diagram: intermediate,
+          tableNodeId: nodeId,
+          mergedTableData: merged,
+        });
+      });
     },
-    [updateNodeData],
+    [updateActiveDiagram],
   );
 
   const replacePsqlIndices = useCallback(
     (nodeId: string, indices: PsqlIndex[]) => {
-      updateNodeData(nodeId, { indices } as NodeDataPatch);
+      updateActiveDiagram((diagram) => {
+        const node = diagram.nodes.find((item) => item.id === nodeId);
+
+        if (node?.data.kind !== "psqlTable") {
+          return diagram;
+        }
+
+        const merged: PsqlTableData = {
+          ...node.data,
+          indices,
+        };
+
+        const intermediate: Diagram = {
+          ...diagram,
+          nodes: diagram.nodes.map((item) =>
+            item.id === nodeId ? { ...item, data: merged } : item,
+          ),
+        };
+
+        return reconcileDiagramAfterPsqlIndicesChange({
+          diagram: intermediate,
+          tableNodeId: nodeId,
+          mergedTableData: merged,
+        });
+      });
     },
-    [updateNodeData],
+    [updateActiveDiagram],
   );
 
   const addPsqlIndex = useCallback(
@@ -781,9 +927,19 @@ export const useDiagramStore = () => {
           ),
         );
         const nextCollection = patchDiagram(current.present, activeDiagram.id, (diagram) => {
+          const removedPsqlTableIds = changes.flatMap((change) => {
+            if (change.type !== "remove") {
+              return [];
+            }
+
+            const removed = diagram.nodes.find((node) => node.id === change.id);
+
+            return removed?.data.kind === "psqlTable" ? [change.id] : [];
+          });
+
           const nodes = applyNodeChanges(changes, diagram.nodes) as DiagramNode[];
 
-          return {
+          let nextDiagram: Diagram = {
             ...diagram,
             nodes:
               settledMovingNodeIds.size > 0
@@ -798,6 +954,12 @@ export const useDiagramStore = () => {
                 ),
             ),
           };
+
+          for (const tableId of removedPsqlTableIds) {
+            nextDiagram = reconcileDiagramAfterPsqlTableRemoved(nextDiagram, tableId);
+          }
+
+          return nextDiagram;
         });
 
         if (!shouldRecordNodeChanges(changes)) {
