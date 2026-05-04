@@ -203,6 +203,46 @@ describe("diagram export", () => {
     );
   });
 
+  it("omits annotation blocks from Mermaid flowchart and ER export", () => {
+    const base = createDiagram();
+    const annotationId = "annotation-1";
+    const diagram: Diagram = {
+      ...base,
+      nodes: [
+        ...base.nodes,
+        {
+          id: annotationId,
+          type: "annotation",
+          position: { x: 0, y: 0 },
+          data: {
+            kind: "annotation",
+            label: "Sticky note for reviewers",
+            color: "#818cf8",
+            width: 520,
+            height: 320,
+          },
+        },
+      ],
+      edges: [
+        ...base.edges,
+        {
+          id: "edge-to-annotation",
+          source: "resource-1",
+          target: annotationId,
+          type: "smoothstep",
+          data: { kind: "read", dataPath: "all" },
+        },
+      ],
+    };
+
+    const mermaid = serializeMermaidDiagram(diagram);
+    expect(mermaid).not.toContain("Sticky note for reviewers");
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    expect(markdown).not.toContain("Sticky note for reviewers");
+    expect(markdown).not.toContain("string note");
+  });
+
   it("exports a compact detailed Mermaid flowchart", () => {
     const mermaid = serializeMermaidDiagram(createDiagram());
 

@@ -27,6 +27,16 @@ type RestResourceDiagramNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "restResource" }>;
 };
 
+type MermaidExportedDiagramNode = RestResourceDiagramNode | PsqlTableDiagramNode;
+
+const isMermaidExportedNode = (
+  node: DiagramNode,
+): node is MermaidExportedDiagramNode =>
+  node.data.kind === "restResource" || node.data.kind === "psqlTable";
+
+const getMermaidDiagramNodes = (diagram: Diagram): MermaidExportedDiagramNode[] =>
+  diagram.nodes.filter(isMermaidExportedNode);
+
 type OpenApiSchema = {
   type?: string;
   format?: string;
@@ -340,16 +350,12 @@ export const prepareImportedDiagram = (diagram: Diagram): Diagram => {
   };
 };
 
-const getBlockMermaidName = (node: DiagramNode) => {
+const getBlockMermaidName = (node: MermaidExportedDiagramNode) => {
   if (node.data.kind === "restResource") {
     return node.data.resourceName || "resource";
   }
 
-  if (node.data.kind === "psqlTable") {
-    return node.data.tableName || "psql_table";
-  }
-
-  return node.data.label || "annotation";
+  return node.data.tableName || "psql_table";
 };
 
 const sanitizeMermaidId = (value: string) => {
@@ -365,7 +371,7 @@ const sanitizeMermaidId = (value: string) => {
   return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `block_${sanitized}`;
 };
 
-const createMermaidNodeIdMap = (nodes: DiagramNode[]) => {
+const createMermaidNodeIdMap = (nodes: MermaidExportedDiagramNode[]) => {
   const usedIds = new Map<string, number>();
 
   return new Map(
@@ -539,11 +545,12 @@ const getPsqlForeignKeyEdges = (diagram: Diagram) => {
 
 export const serializeMermaidDiagram = (diagram: Diagram) => {
   const resourceSchemas = deriveResourceSchemas(diagram);
-  const nodeIdMap = createMermaidNodeIdMap(diagram.nodes);
+  const nodesForMermaid = getMermaidDiagramNodes(diagram);
+  const nodeIdMap = createMermaidNodeIdMap(nodesForMermaid);
 
   const lines = ["flowchart LR"];
 
-  diagram.nodes.forEach((node) => {
+  nodesForMermaid.forEach((node) => {
     const schema =
       node.data.kind === "restResource" && node.data.schema.length > 0
         ? node.data.schema
@@ -609,7 +616,7 @@ const getResourceSchema = (
     : (resourceSchemas.get(node.id) ?? []);
 };
 
-const createErEntityIdMap = (nodes: DiagramNode[]) => {
+const createErEntityIdMap = (nodes: MermaidExportedDiagramNode[]) => {
   const usedIds = new Map<string, number>();
 
   return new Map(
@@ -625,10 +632,11 @@ const createErEntityIdMap = (nodes: DiagramNode[]) => {
 
 const serializeErDiagram = (diagram: Diagram) => {
   const resourceSchemas = deriveResourceSchemas(diagram);
-  const entityIdMap = createErEntityIdMap(diagram.nodes);
+  const nodesForMermaid = getMermaidDiagramNodes(diagram);
+  const entityIdMap = createErEntityIdMap(nodesForMermaid);
   const lines = ["erDiagram"];
 
-  diagram.nodes.forEach((node) => {
+  nodesForMermaid.forEach((node) => {
     const entityId = entityIdMap.get(node.id);
 
     if (!entityId) {
@@ -666,8 +674,6 @@ const serializeErDiagram = (diagram: Diagram) => {
           ])}`,
         );
       });
-    } else {
-      lines.push(`    string note ${quoteErComment(getBlockMermaidName(node))}`);
     }
 
     lines.push("  }");
