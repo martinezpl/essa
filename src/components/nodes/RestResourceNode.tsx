@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import {
@@ -15,6 +15,7 @@ import type {
   RestResourceData,
   RestResourceMethod,
 } from "../../domain/types";
+import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
@@ -82,6 +83,10 @@ export const RestResourceNode = ({
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
   const [expandedMethodId, setExpandedMethodId] = useState<string | null>(null);
+  const [titleLayout, setTitleLayout] = useState(data.resourceName);
+  const handleTitleDraftChange = useCallback((draft: string) => {
+    setTitleLayout(draft);
+  }, []);
   const closeEditing = () => setEditing(null);
 
   const remainingMethodKinds = restMethods.filter(
@@ -93,7 +98,7 @@ export const RestResourceNode = ({
       className={`block-node block-node--resource block-node--editable${
         selected ? " block-node--editing" : ""
       }`}
-      style={{ minWidth: nameMinWidth(data.resourceName) }}
+      style={{ minWidth: nameMinWidth(titleLayout) }}
     >
       <BlockHandles kind="restResource" />
 
@@ -108,16 +113,15 @@ export const RestResourceNode = ({
         </span>
       </header>
 
-      <input
+      <BlockTitleInput
+        nodeId={id}
+        committedValue={data.resourceName}
+        onCommit={(next) => ctx.onUpdateNodeData(id, { resourceName: next })}
+        onDraftChange={handleTitleDraftChange}
         aria-label="Resource name"
-        className={`block-node__title-input nodrag nowheel${
-          data.resourceName ? "" : " block-node__title-input--placeholder"
-        }`}
+        className="block-node__title-input nodrag nowheel"
+        emptyClassName="block-node__title-input--placeholder"
         placeholder="resource"
-        value={data.resourceName}
-        onChange={(event) =>
-          ctx.onUpdateNodeData(id, { resourceName: event.target.value })
-        }
       />
 
       <textarea

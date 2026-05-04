@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import { psqlColumnTypes, psqlForeignKeyActions, psqlIndexMethods } from "../../domain/options";
@@ -20,6 +20,7 @@ import type {
   PsqlIndex,
   PsqlTableData,
 } from "../../domain/types";
+import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { updateColumn } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
@@ -88,6 +89,10 @@ const nameMinWidth = (name: string) =>
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
+  const [titleLayout, setTitleLayout] = useState(data.tableName);
+  const handleTitleDraftChange = useCallback((draft: string) => {
+    setTitleLayout(draft);
+  }, []);
   const closeEditing = () => setEditing(null);
   const psqlTables = ctx.nodes.filter(
     (node): node is PsqlTableDiagramNode => node.data.kind === "psqlTable",
@@ -135,7 +140,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       className={`block-node block-node--table block-node--editable${
         selected ? " block-node--editing" : ""
       }`}
-      style={{ minWidth: nameMinWidth(data.tableName) }}
+      style={{ minWidth: nameMinWidth(titleLayout) }}
     >
       <BlockHandles kind="psqlTable" />
 
@@ -150,16 +155,15 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         </span>
       </header>
 
-      <input
+      <BlockTitleInput
+        nodeId={id}
+        committedValue={data.tableName}
+        onCommit={(next) => ctx.onUpdateNodeData(id, { tableName: next })}
+        onDraftChange={handleTitleDraftChange}
         aria-label="Table name"
-        className={`block-node__title-input nodrag nowheel${
-          data.tableName ? "" : " block-node__title-input--placeholder"
-        }`}
+        className="block-node__title-input nodrag nowheel"
+        emptyClassName="block-node__title-input--placeholder"
         placeholder="table_name"
-        value={data.tableName}
-        onChange={(event) =>
-          ctx.onUpdateNodeData(id, { tableName: event.target.value })
-        }
       />
 
       <section className="block-node__section">
@@ -951,18 +955,14 @@ const IndexPopover = ({
 
     <label>
       Method
-      <select
+      <ComboInput
+        ariaLabel="Index method"
+        options={psqlIndexMethods}
         value={index.method}
-        onChange={(event) =>
-          onChange({ method: event.target.value as PsqlIndex["method"] })
+        onChange={(next) =>
+          onChange({ method: next as PsqlIndex["method"] })
         }
-      >
-        {psqlIndexMethods.map((method) => (
-          <option key={method} value={method}>
-            {method}
-          </option>
-        ))}
-      </select>
+      />
     </label>
 
     <div>
