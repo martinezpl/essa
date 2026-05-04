@@ -5,7 +5,25 @@ import {
   migrateDiagramCollection,
 } from "./diagramMigrations";
 
-const STORAGE_KEY = "essa.diagrams.v1";
+const STORAGE_KEY_PREFIX = "essa.diagrams.v";
+
+export type DiagramCollectionLoadResult = {
+  collection: DiagramCollection;
+  didFallback: boolean;
+};
+
+export const getPrimaryDiagramStorageKey = () =>
+  `${STORAGE_KEY_PREFIX}${LATEST_DIAGRAM_COLLECTION_VERSION}`;
+
+export const getDiagramStorageKeys = (): string[] => {
+  const keys = [];
+
+  for (let version = LATEST_DIAGRAM_COLLECTION_VERSION; version >= 1; version -= 1) {
+    keys.push(`${STORAGE_KEY_PREFIX}${version}`);
+  }
+
+  return keys;
+};
 
 export const createInitialCollection = (): DiagramCollection => {
   const starterDiagram = createStarterDiagram();
@@ -17,28 +35,41 @@ export const createInitialCollection = (): DiagramCollection => {
   });
 };
 
-export const loadDiagramCollection = (): DiagramCollection => {
-  try {
-    const rawValue = localStorage.getItem(STORAGE_KEY);
+export const loadDiagramCollection = (): DiagramCollectionLoadResult => {
+  let foundStoredValue = false;
+  const primaryKey = getPrimaryDiagramStorageKey();
+
+  for (const key of getDiagramStorageKeys()) {
+    const rawValue = localStorage.getItem(key);
 
     if (!rawValue) {
-      return createInitialCollection();
+      continue;
     }
 
-    const parsedValue = JSON.parse(rawValue) as unknown;
-    const shouldPersistMigration = !diagramCollectionSchema.safeParse(parsedValue).success;
-    const collection = migrateDiagramCollection(parsedValue);
+    foundStoredValue = true;
 
-    if (shouldPersistMigration) {
-      saveDiagramCollection(collection);
+    try {
+      const parsedValue = JSON.parse(rawValue) as unknown;
+      const shouldPersistMigration =
+        key !== primaryKey || !diagramCollectionSchema.safeParse(parsedValue).success;
+      const collection = migrateDiagramCollection(parsedValue);
+
+      if (shouldPersistMigration) {
+        saveDiagramCollection(collection);
+      }
+
+      return { collection, didFallback: false };
+    } catch {
+      continue;
     }
-
-    return collection;
-  } catch {
-    return createInitialCollection();
   }
+
+  return {
+    collection: createInitialCollection(),
+    didFallback: foundStoredValue,
+  };
 };
 
 export const saveDiagramCollection = (collection: DiagramCollection) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+  localStorage.setItem(getPrimaryDiagramStorageKey(), JSON.stringify(collection));
 };

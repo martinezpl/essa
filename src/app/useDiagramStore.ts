@@ -306,13 +306,21 @@ export const duplicateDiagramSelection = (
 };
 
 export const useDiagramStore = () => {
-  const [history, setHistory] = useState(() =>
-    createHistory(loadDiagramCollection()),
-  );
+  const skipInitialSaveRef = useRef(false);
+  const [history, setHistory] = useState(() => {
+    const loadResult = loadDiagramCollection();
+    skipInitialSaveRef.current = loadResult.didFallback;
+    return createHistory(loadResult.collection);
+  });
   const pendingNodeDragCollectionRef = useRef<DiagramCollection | null>(null);
   const collection = history.present;
 
   useEffect(() => {
+    if (skipInitialSaveRef.current) {
+      skipInitialSaveRef.current = false;
+      return;
+    }
+
     saveDiagramCollection(collection);
   }, [collection]);
 

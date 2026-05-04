@@ -40,6 +40,7 @@ When changing the persisted schema:
 4. Add a migration function for exactly one version step, such as `migrateV1ToV2`.
 5. Wire that function into `migrateDiagramCollection()` so migrations run sequentially.
 6. Add tests proving old stored data migrates to the latest shape.
+7. Confirm `diagramStorage.ts` reads old `essa.diagrams.vN` keys and writes only to the key derived from the new `LATEST_DIAGRAM_COLLECTION_VERSION`.
 
 ### Migration Rules
 
@@ -48,6 +49,7 @@ When changing the persisted schema:
 - Validate unknown persisted data before migrating it.
 - Validate the migrated result against the latest schema before returning it to the app.
 - Do not silently discard user data unless the schema change intentionally removes it.
+- Do not overwrite older `localStorage` keys during schema upgrades. A new schema version should write to a new `essa.diagrams.vN` key and leave older keys available as user-data backups.
 - Keep migration tests close to the storage layer.
 
 If invalid or unrecoverable data is found, the app may fall back to a fresh starter diagram. That should remain the last resort, not the normal path for schema evolution.

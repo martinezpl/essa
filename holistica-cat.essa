@@ -1,0 +1,789 @@
+{
+  "kind": "essa.diagram",
+  "version": 1,
+  "diagram": {
+    "id": "diagram-0453ecdb-c9ca-410d-b8db-981bbf15c805",
+    "name": "holistica.cat",
+    "createdAt": "2026-05-04T13:16:37.558Z",
+    "updatedAt": "2026-05-04T17:26:35.605Z",
+    "psqlEnums": [
+      {
+        "id": "psql-enum-5bb628b3-2861-48f6-a101-e2e77219c1bd",
+        "name": "gender",
+        "values": [
+          "male",
+          "female",
+          "other"
+        ]
+      },
+      {
+        "id": "psql-enum-f2fbbb02-5924-454a-9192-552fe388089b",
+        "name": "answer_type",
+        "values": [
+          "text",
+          "grade",
+          "boolean",
+          "choice"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "id": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+        "type": "psqlTable",
+        "position": {
+          "x": -641.4133008444538,
+          "y": -198.12712670210516
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "user",
+          "primaryKey": [
+            "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720"
+          ],
+          "columns": [
+            {
+              "id": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "name": "id",
+              "type": "uuid",
+              "nullable": false
+            },
+            {
+              "id": "column-7a27e21b-cbab-4ebf-8f8f-be1d3ada091d",
+              "name": "name",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-212eb1b2-01ea-499d-bafe-c9b82edc598d",
+              "name": "birth_date",
+              "type": "date",
+              "nullable": false
+            },
+            {
+              "id": "column-dc473e55-73ac-4dd5-b0f8-e3ad8851430f",
+              "name": "created_at",
+              "type": "timestamptz",
+              "nullable": false
+            },
+            {
+              "id": "column-3ce69db5-326a-419e-a0ca-f3d7a5059888",
+              "name": "gender",
+              "type": "enum",
+              "options": {
+                "enumId": "psql-enum-5bb628b3-2861-48f6-a101-e2e77219c1bd"
+              },
+              "nullable": false
+            },
+            {
+              "id": "column-7d5770b1-6e53-4067-81a3-b232e9148489",
+              "name": "email",
+              "type": "text",
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [],
+          "indices": [
+            {
+              "id": "index-da5f641f-b0e1-4f45-a441-8df2978d7ecf",
+              "name": "vendor_id_idx",
+              "columns": [],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 711,
+          "height": 1399
+        }
+      },
+      {
+        "id": "node-846e919d-aa5a-4289-bd2b-88c7cd9bca68",
+        "type": "psqlTable",
+        "position": {
+          "x": 857.9380660326171,
+          "y": -1698.821118900932
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "survey",
+          "primaryKey": [
+            "column-02054534-1b3d-4ad7-8925-de6dbbb2e498"
+          ],
+          "columns": [
+            {
+              "id": "column-02054534-1b3d-4ad7-8925-de6dbbb2e498",
+              "name": "slug",
+              "type": "varchar",
+              "options": {
+                "length": 10
+              },
+              "nullable": false
+            },
+            {
+              "id": "column-17098a03-56ad-4d22-8ed7-9cc32b5fbe7e",
+              "name": "answer",
+              "type": "text",
+              "nullable": true
+            },
+            {
+              "id": "column-960f6733-d558-421f-844f-7deb4f2943bb",
+              "name": "name",
+              "type": "text",
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-60071a75-25f4-4fce-baf2-d348c7c28bcc",
+              "name": "user_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+              "targetColumnId": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-f3258f9c-ef99-4b8b-9ff9-d7672065ecdf",
+              "name": "question_slug",
+              "type": "varchar",
+              "nullable": false,
+              "targetTableId": "node-31fbdfe8-6c5d-4ebf-bfc0-9d88273c562c",
+              "targetColumnId": "column-cca29748-05d2-4ec0-b848-27d040d687b2",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": [
+            {
+              "id": "index-cfa655da-f1cc-49c2-b3f1-1c470c484fb8",
+              "name": "idx_user_id",
+              "columns": [
+                "foreign-key-60071a75-25f4-4fce-baf2-d348c7c28bcc"
+              ],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 982,
+          "height": 1262
+        }
+      },
+      {
+        "id": "node-31fbdfe8-6c5d-4ebf-bfc0-9d88273c562c",
+        "type": "psqlTable",
+        "position": {
+          "x": -350.0857331679467,
+          "y": -1880.7591554853516
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "question",
+          "primaryKey": [
+            "column-cca29748-05d2-4ec0-b848-27d040d687b2"
+          ],
+          "columns": [
+            {
+              "id": "column-cca29748-05d2-4ec0-b848-27d040d687b2",
+              "name": "slug",
+              "type": "varchar",
+              "options": {
+                "length": 10
+              },
+              "nullable": false
+            },
+            {
+              "id": "column-34a2afd6-904e-4a41-9e3b-c97ecfd42752",
+              "name": "content_en",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-ce26cbc4-3788-463a-8a74-836705d14daf",
+              "name": "content_es",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-99973aa3-9f2a-4e66-b76f-4db3bab1f6a0",
+              "name": "content_ca",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-b4c39ef3-cde7-442d-8afb-4636fc19216b",
+              "name": "answer_type",
+              "type": "enum",
+              "options": {
+                "enumId": "psql-enum-f2fbbb02-5924-454a-9192-552fe388089b"
+              },
+              "nullable": false
+            },
+            {
+              "id": "column-6a93f64c-dd7a-413f-81a3-306db30c03be",
+              "name": "choice_resource",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "foreignKeys": [],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 711,
+          "height": 1380
+        }
+      },
+      {
+        "id": "node-0002dcf5-975b-4af8-beb1-66fe7823e6b8",
+        "type": "psqlTable",
+        "position": {
+          "x": 567.3009280529034,
+          "y": 1305.6924875845116
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "vendor",
+          "primaryKey": [
+            "column-f6b2bf25-1155-479d-b4d5-1c4975a1e7fc"
+          ],
+          "columns": [
+            {
+              "id": "column-f6b2bf25-1155-479d-b4d5-1c4975a1e7fc",
+              "name": "id",
+              "type": "uuid",
+              "nullable": false
+            },
+            {
+              "id": "column-83511f93-41de-44e7-a5ce-9233bacb786c",
+              "name": "location",
+              "type": "point",
+              "nullable": true
+            },
+            {
+              "id": "column-968559f1-0ad2-4136-970f-e3493eecf3b1",
+              "name": "name",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-d1be7a32-67dc-4d84-9bb2-5598916da464",
+              "name": "description",
+              "type": "text",
+              "nullable": true
+            }
+          ],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-327e5250-d331-44e3-af73-a3e60a480902",
+              "name": "owner_id",
+              "type": "uuid",
+              "nullable": true,
+              "targetTableId": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+              "targetColumnId": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "onDelete": "SET NULL",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 733,
+          "height": 1243
+        }
+      },
+      {
+        "id": "node-249bc992-51a6-4d31-b366-8a06529e1b85",
+        "type": "psqlTable",
+        "position": {
+          "x": 970.6753151345501,
+          "y": 2919.3111874396
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "discipline",
+          "primaryKey": [
+            "column-fcfae3bf-c74e-4972-848f-5b9748d0a6f2"
+          ],
+          "columns": [
+            {
+              "id": "column-fcfae3bf-c74e-4972-848f-5b9748d0a6f2",
+              "name": "id",
+              "type": "serial",
+              "nullable": false
+            },
+            {
+              "id": "column-dd8fd0e4-5d0c-4e75-83ab-b8b3d774e6a5",
+              "name": "name_en",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-106b287b-8f43-4a56-bb4b-debb15af6f35",
+              "name": "name_es",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-3f4b2d73-f20a-4058-86fd-6f93c8769c4f",
+              "name": "name_ca",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-0acd39cc-2fca-42b9-838e-b26c9e3e3df9",
+              "name": "description_en",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-d5d75e0c-0e6d-4f7a-9fc9-1a6d12b026af",
+              "name": "description_es",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-c7542d50-b414-429e-9d0c-6b6c294f178c",
+              "name": "description_ca",
+              "type": "text",
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 711,
+          "height": 1458
+        }
+      },
+      {
+        "id": "node-bf3df6c3-b164-4bea-91fd-c0fa227006be",
+        "type": "psqlTable",
+        "position": {
+          "x": 2022.2869499126427,
+          "y": 826.7740136381361
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "jt_vendor_discipline",
+          "primaryKey": [
+            "foreign-key-b3347d04-1439-4a98-a21f-171b6017383a",
+            "foreign-key-febf6011-b056-409f-bab1-6f6160cf1302"
+          ],
+          "columns": [],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-b3347d04-1439-4a98-a21f-171b6017383a",
+              "name": "vendor_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-0002dcf5-975b-4af8-beb1-66fe7823e6b8",
+              "targetColumnId": "column-f6b2bf25-1155-479d-b4d5-1c4975a1e7fc",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-febf6011-b056-409f-bab1-6f6160cf1302",
+              "name": "discipline_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-249bc992-51a6-4d31-b366-8a06529e1b85",
+              "targetColumnId": "column-fcfae3bf-c74e-4972-848f-5b9748d0a6f2",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": [
+            {
+              "id": "index-aa5afedf-02f0-466f-920b-e68e23a3e603",
+              "name": "idx_discipline_id",
+              "columns": [
+                "foreign-key-febf6011-b056-409f-bab1-6f6160cf1302"
+              ],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 987,
+          "height": 1027
+        }
+      },
+      {
+        "id": "node-c236429b-fe07-4f79-a59c-d87ccbfe7c82",
+        "type": "psqlTable",
+        "position": {
+          "x": 2847.690384957913,
+          "y": 2011.2576792628126
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "event",
+          "primaryKey": [
+            "column-fc2552e2-177b-4f6a-a7ba-b2eb7441991a"
+          ],
+          "columns": [
+            {
+              "id": "column-fc2552e2-177b-4f6a-a7ba-b2eb7441991a",
+              "name": "id",
+              "type": "uuid",
+              "nullable": false
+            },
+            {
+              "id": "column-1ef31751-2025-4a59-bcce-4401973670ef",
+              "name": "location",
+              "type": "point",
+              "nullable": false
+            },
+            {
+              "id": "column-6f274c71-3966-4fb6-9d48-8410fc4f92ba",
+              "name": "starts_at",
+              "type": "timestamptz",
+              "nullable": false
+            },
+            {
+              "id": "column-4c74e7ac-0092-4e2b-9647-a0411bcc4f41",
+              "name": "ends_at",
+              "type": "timestamptz",
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-20b9c109-5ef4-42ca-8f2d-809f065e6c80",
+              "name": "vendor_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-0002dcf5-975b-4af8-beb1-66fe7823e6b8",
+              "targetColumnId": "column-f6b2bf25-1155-479d-b4d5-1c4975a1e7fc",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": [
+            {
+              "id": "index-bde0dd04-9bda-4559-916a-2d4df0697fbf",
+              "name": "idx_schedule_id",
+              "columns": [],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 756,
+          "height": 1262
+        }
+      },
+      {
+        "id": "node-20c5211d-d413-4423-bcc7-626e67cdd7b0",
+        "type": "psqlTable",
+        "position": {
+          "x": 4076.5675757033628,
+          "y": 3031.8818549669913
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "jt_discipline_event",
+          "primaryKey": [
+            "foreign-key-3c43ec40-f6c8-47fe-b03c-9f3d846597bd",
+            "foreign-key-fe2f9c67-57d2-4631-8804-89eb8cd35b49"
+          ],
+          "columns": [],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-3c43ec40-f6c8-47fe-b03c-9f3d846597bd",
+              "name": "event_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c236429b-fe07-4f79-a59c-d87ccbfe7c82",
+              "targetColumnId": "column-fc2552e2-177b-4f6a-a7ba-b2eb7441991a",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-fe2f9c67-57d2-4631-8804-89eb8cd35b49",
+              "name": "discipline_id",
+              "type": "serial",
+              "nullable": false,
+              "targetTableId": "node-249bc992-51a6-4d31-b366-8a06529e1b85",
+              "targetColumnId": "column-fcfae3bf-c74e-4972-848f-5b9748d0a6f2",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": [
+            {
+              "id": "index-cf98d5cd-ae7b-428e-881e-bc5fb0cec256",
+              "name": "idx_discipline_id",
+              "columns": [
+                "foreign-key-fe2f9c67-57d2-4631-8804-89eb8cd35b49"
+              ],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 1026,
+          "height": 1027
+        }
+      },
+      {
+        "id": "node-4c74eac0-4fae-43f0-b18d-5a5eb4f3a533",
+        "type": "psqlTable",
+        "position": {
+          "x": 3818.8050175687777,
+          "y": 247.66665666921944
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "jt_event_user",
+          "primaryKey": [
+            "foreign-key-2e23c7d0-936f-489d-a567-920f1aeb19b6",
+            "foreign-key-8d77079d-cc01-43b5-9fb6-7b8e868ba058"
+          ],
+          "columns": [],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-2e23c7d0-936f-489d-a567-920f1aeb19b6",
+              "name": "event_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c236429b-fe07-4f79-a59c-d87ccbfe7c82",
+              "targetColumnId": "column-fc2552e2-177b-4f6a-a7ba-b2eb7441991a",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-8d77079d-cc01-43b5-9fb6-7b8e868ba058",
+              "name": "user_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+              "targetColumnId": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": [
+            {
+              "id": "index-35800208-74d5-493a-9f55-b10700e55217",
+              "name": "idx_user_id",
+              "columns": [
+                "foreign-key-8d77079d-cc01-43b5-9fb6-7b8e868ba058"
+              ],
+              "method": "btree",
+              "unique": false
+            }
+          ]
+        },
+        "selected": false,
+        "measured": {
+          "width": 776,
+          "height": 1027
+        },
+        "dragging": false
+      },
+      {
+        "id": "node-2f5aeec7-07a6-414b-8e30-a3ff80dc8657",
+        "type": "psqlTable",
+        "position": {
+          "x": 2137.334154301412,
+          "y": -1957.4446432899108
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "ethnicity",
+          "primaryKey": [
+            "column-1f1f438e-93f9-413c-a4f3-5bcddcc84fde"
+          ],
+          "columns": [
+            {
+              "id": "column-1f1f438e-93f9-413c-a4f3-5bcddcc84fde",
+              "name": "id",
+              "type": "serial",
+              "nullable": false
+            },
+            {
+              "id": "column-16d04860-2044-45dc-8e55-fd19b8aa1eb9",
+              "name": "name",
+              "type": "text",
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [],
+          "indices": []
+        },
+        "selected": true,
+        "measured": {
+          "width": 711,
+          "height": 1067
+        }
+      },
+      {
+        "id": "node-db7a5d04-2367-4a3e-8dbe-6a50450f7302",
+        "type": "psqlTable",
+        "position": {
+          "x": 4232.785013137505,
+          "y": -2029.4807294356542
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "language",
+          "primaryKey": [
+            "column-a4c7e576-e6b8-4f2f-b055-58d89178386a"
+          ],
+          "columns": [
+            {
+              "id": "column-da592851-5c2f-4342-9528-a1b92c088ab5",
+              "name": "name",
+              "type": "text",
+              "nullable": false
+            },
+            {
+              "id": "column-a4c7e576-e6b8-4f2f-b055-58d89178386a",
+              "name": "code",
+              "type": "varchar",
+              "options": {
+                "length": 5
+              },
+              "nullable": false
+            }
+          ],
+          "foreignKeys": [],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 711,
+          "height": 1067
+        }
+      },
+      {
+        "id": "node-246b4835-a427-4bf1-b281-4626dd19bd00",
+        "type": "psqlTable",
+        "position": {
+          "x": 3135.490855230542,
+          "y": -1266.0841143596076
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "jt_ethnicity_user",
+          "primaryKey": [
+            "foreign-key-e918e385-bb9a-4bbd-986f-04763600f10c",
+            "foreign-key-669aadf6-d003-490b-bd13-df4fdf1bd5d4"
+          ],
+          "columns": [],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-e918e385-bb9a-4bbd-986f-04763600f10c",
+              "name": "user_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+              "targetColumnId": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-669aadf6-d003-490b-bd13-df4fdf1bd5d4",
+              "name": "ethnicity_id",
+              "type": "serial",
+              "nullable": false,
+              "targetTableId": "node-2f5aeec7-07a6-414b-8e30-a3ff80dc8657",
+              "targetColumnId": "column-1f1f438e-93f9-413c-a4f3-5bcddcc84fde",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 983,
+          "height": 1008
+        }
+      },
+      {
+        "id": "node-f75abd4e-aac5-4d2c-a5a7-1cbe07acf18a",
+        "type": "psqlTable",
+        "position": {
+          "x": 5156.443287577013,
+          "y": -657.4114329639184
+        },
+        "data": {
+          "kind": "psqlTable",
+          "tableName": "jt_language_user",
+          "primaryKey": [
+            "foreign-key-d5f077ea-a221-4350-8931-601e7e981d95",
+            "foreign-key-e8ff2398-e138-47c8-84ea-d85293810324"
+          ],
+          "columns": [],
+          "foreignKeys": [
+            {
+              "id": "foreign-key-d5f077ea-a221-4350-8931-601e7e981d95",
+              "name": "user_id",
+              "type": "uuid",
+              "nullable": false,
+              "targetTableId": "node-c93d1c18-4c1f-4bcc-a927-856186fb4f0f",
+              "targetColumnId": "column-21bb71c3-c2b8-4e9d-b6cb-ea8b3e13d720",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            },
+            {
+              "id": "foreign-key-e8ff2398-e138-47c8-84ea-d85293810324",
+              "name": "language_code",
+              "type": "varchar",
+              "nullable": false,
+              "targetTableId": "node-db7a5d04-2367-4a3e-8dbe-6a50450f7302",
+              "targetColumnId": "column-a4c7e576-e6b8-4f2f-b055-58d89178386a",
+              "onDelete": "CASCADE",
+              "onUpdate": "NO ACTION"
+            }
+          ],
+          "indices": []
+        },
+        "selected": false,
+        "measured": {
+          "width": 1045,
+          "height": 1008
+        }
+      },
+      {
+        "id": "node-61a6abfc-e507-4b4b-aee0-ad0021932dbb",
+        "type": "annotation",
+        "position": {
+          "x": -987.7310365324118,
+          "y": -2191.3302792523145
+        },
+        "data": {
+          "kind": "annotation",
+          "label": "holistica_db",
+          "color": "#818cf8",
+          "width": 7739.609952643863,
+          "height": 6807.1268258193
+        },
+        "measured": {
+          "width": 7740,
+          "height": 6807
+        }
+      }
+    ],
+    "edges": []
+  }
+}
