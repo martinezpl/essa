@@ -399,7 +399,6 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   ctx.onUpdateNodeData(id, { primaryKey: [] });
                   closeEditing();
                 }}
-                onClose={closeEditing}
               />
             </RowEditPopover>
           ) : null}
@@ -1041,7 +1040,6 @@ type PrimaryKeyPopoverProps = {
   foreignKeys: PsqlForeignKey[];
   onChange: (primaryKey: string[]) => void;
   onClear: () => void;
-  onClose: () => void;
 };
 
 const PrimaryKeyPopover = ({
@@ -1050,7 +1048,6 @@ const PrimaryKeyPopover = ({
   foreignKeys,
   onChange,
   onClear,
-  onClose: _onClose,
 }: PrimaryKeyPopoverProps) => (
   <div className="row-popover__inner">
     <div className="row-popover__header">

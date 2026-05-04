@@ -47,8 +47,16 @@ const migrateV1toV2 = (v1: Record<string, unknown>): Record<string, unknown> => 
             data: {
               ...data,
               primaryKey: pkIds,
-              columns: columns.map(({ primaryKey: _pk, ...col }) => col),
-              foreignKeys: foreignKeys.map(({ primaryKey: _pk, ...fk }) => fk),
+              columns: columns.map((col) => {
+                const { primaryKey, ...rest } = col;
+                void primaryKey;
+                return rest;
+              }),
+              foreignKeys: foreignKeys.map((fk) => {
+                const { primaryKey, ...rest } = fk;
+                void primaryKey;
+                return rest;
+              }),
             },
           };
         }),
