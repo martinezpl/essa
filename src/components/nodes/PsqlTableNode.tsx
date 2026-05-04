@@ -376,8 +376,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   ? index.columns
                       .map(
                         (columnId) =>
-                          data.columns.find((item) => item.id === columnId)
-                            ?.name || columnId,
+                          data.columns.find((item) => item.id === columnId)?.name ||
+                          data.foreignKeys.find((item) => item.id === columnId)?.name ||
+                          columnId,
                       )
                       .join(", ")
                   : "no columns"}
@@ -396,6 +397,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   <IndexPopover
                     index={index}
                     columns={data.columns}
+                    foreignKeys={data.foreignKeys}
                     onChange={(patch) =>
                       ctx.onReplacePsqlIndices(
                         id,
@@ -875,6 +877,7 @@ const ForeignKeyPopover = ({
 type IndexPopoverProps = {
   index: PsqlIndex;
   columns: PsqlColumn[];
+  foreignKeys: PsqlForeignKey[];
   onChange: (patch: Partial<PsqlIndex>) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -883,6 +886,7 @@ type IndexPopoverProps = {
 const IndexPopover = ({
   index,
   columns,
+  foreignKeys,
   onChange,
   onDelete,
   onClose,
@@ -927,33 +931,56 @@ const IndexPopover = ({
     <div>
       <span className="eyebrow">Columns</span>
       <div className="chip-picker">
-        {columns.length === 0 ? (
+        {columns.length === 0 && foreignKeys.length === 0 ? (
           <span className="block-node__empty">Add columns first.</span>
-        ) : (
-          columns.map((column) => {
-            const checked = index.columns.includes(column.id);
-            return (
-              <label
-                key={column.id}
-                className={`chip${checked ? " chip--active" : ""}`}
-              >
-                <input
-                  hidden
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) =>
-                    onChange({
-                      columns: event.target.checked
-                        ? [...index.columns, column.id]
-                        : index.columns.filter((item) => item !== column.id),
-                    })
-                  }
-                />
-                {column.name || column.id}
-              </label>
-            );
-          })
-        )}
+        ) : null}
+        {columns.map((column) => {
+          const checked = index.columns.includes(column.id);
+          return (
+            <label
+              key={column.id}
+              className={`chip${checked ? " chip--active" : ""}`}
+            >
+              <input
+                hidden
+                type="checkbox"
+                checked={checked}
+                onChange={(event) =>
+                  onChange({
+                    columns: event.target.checked
+                      ? [...index.columns, column.id]
+                      : index.columns.filter((item) => item !== column.id),
+                  })
+                }
+              />
+              {column.name || column.id}
+            </label>
+          );
+        })}
+        {foreignKeys.map((foreignKey) => {
+          const checked = index.columns.includes(foreignKey.id);
+          return (
+            <label
+              key={foreignKey.id}
+              className={`chip${checked ? " chip--active" : ""}`}
+            >
+              <input
+                hidden
+                type="checkbox"
+                checked={checked}
+                onChange={(event) =>
+                  onChange({
+                    columns: event.target.checked
+                      ? [...index.columns, foreignKey.id]
+                      : index.columns.filter((item) => item !== foreignKey.id),
+                  })
+                }
+              />
+              {foreignKey.name || foreignKey.id}
+              <span className="chip__badge">FK</span>
+            </label>
+          );
+        })}
       </div>
     </div>
 
