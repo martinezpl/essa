@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { countDiagramConnections } from "../domain/diagramStats";
 import type { Diagram } from "../domain/types";
 
-export type DiagramExportFormat = "essa" | "markdown";
-
 type DiagramSidebarProps = {
   activeDiagramId: string;
   diagrams: Diagram[];
@@ -11,7 +9,6 @@ type DiagramSidebarProps = {
   onClose: () => void;
   onCreateDiagram: () => void;
   onDeleteDiagram: (diagramId: string) => void;
-  onExportDiagram: (diagram: Diagram, format: DiagramExportFormat) => void;
   onImportEssa: (file: File) => void;
   onRenameDiagram: (diagramId: string, name: string) => void;
   onSelectDiagram: (diagramId: string) => void;
@@ -24,7 +21,6 @@ export const DiagramSidebar = ({
   onClose,
   onCreateDiagram,
   onDeleteDiagram,
-  onExportDiagram,
   onImportEssa,
   onRenameDiagram,
   onSelectDiagram,
@@ -204,27 +200,6 @@ export const DiagramSidebar = ({
                     {diagram.nodes.length === 1 ? "block" : "blocks"} ·{" "}
                     {linkCount} {linkCount === 1 ? "link" : "links"}
                   </span>
-                  <select
-                    aria-label={`Export ${diagram.name}`}
-                    className="diagram-card__export"
-                    defaultValue=""
-                    onChange={(event) => {
-                      const format = event.target.value as DiagramExportFormat;
-                      if (format) {
-                        onExportDiagram(diagram, format);
-                        event.currentTarget.value = "";
-                      }
-                    }}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <option value="" disabled>
-                      Export as...
-                    </option>
-                    <option value="essa">.essa</option>
-                    <option value="markdown">
-                      .md (Mermaid, openAPI, SQL)
-                    </option>
-                  </select>
                 </div>
                 <button
                   aria-label={`Delete ${diagram.name}`}

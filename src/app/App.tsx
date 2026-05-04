@@ -5,10 +5,7 @@ import {
   type CanvasInputMode,
   type CanvasMode,
 } from "../components/DiagramCanvas";
-import {
-  DiagramSidebar,
-  type DiagramExportFormat,
-} from "../components/DiagramSidebar";
+import { DiagramSidebar } from "../components/DiagramSidebar";
 import { CanvasMinimap } from "../components/CanvasMinimap";
 import { HelpModal } from "../components/HelpModal";
 import { PerfOverlay, isPerfOverlayEnabled } from "../components/PerfOverlay";
@@ -18,6 +15,11 @@ import {
   serializeEssaDiagram,
   serializeMarkdownDiagram,
 } from "../domain/diagramExport";
+import {
+  createDiagramShareHash,
+  DIAGRAM_SHARE_HASH_PARAM,
+  parseDiagramShareHash,
+} from "../domain/diagramShare";
 import { deriveResourceSchemas } from "../domain/resourceSchema";
 import {
   psqlColumnSourceHandleId,
@@ -31,6 +33,9 @@ import { useTheme } from "./useTheme";
 type PsqlTableDiagramNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
 };
+
+type DiagramExportFormat = "essa" | "markdown";
+type ShareStatus = "idle" | "copied" | "failed";
 
 const slugifyFileName = (name: string) =>
   name
@@ -72,7 +77,9 @@ export const App = () => {
   const [minimapHovered, setMinimapHovered] = useState(false);
   const [copiedNodes, setCopiedNodes] = useState<DiagramNode[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [shareStatus, setShareStatus] = useState<ShareStatus>("idle");
   const copiedNodesRef = useRef<DiagramNode[]>([]);
+  const shareStatusTimeoutRef = useRef<number | null>(null);
   const selectedNodesRef = useRef<DiagramNode[]>([]);
   const { theme, toggleTheme } = useTheme();
   const {
@@ -276,10 +283,69 @@ export const App = () => {
     [importDiagram],
   );
 
+  const resetShareStatusSoon = useCallback((status: ShareStatus) => {
+    setShareStatus(status);
+
+    if (shareStatusTimeoutRef.current !== null) {
+      window.clearTimeout(shareStatusTimeoutRef.current);
+    }
+
+    shareStatusTimeoutRef.current = window.setTimeout(() => {
+      setShareStatus("idle");
+      shareStatusTimeoutRef.current = null;
+    }, 1800);
+  }, []);
+
+  const handleShareDiagram = useCallback(async () => {
+    const url = new URL(window.location.href);
+    url.hash = createDiagramShareHash(activeDiagram);
+
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      resetShareStatusSoon("copied");
+    } catch {
+      resetShareStatusSoon("failed");
+    }
+  }, [activeDiagram, resetShareStatusSoon]);
+
   const closeHelp = useCallback(() => {
     setHelpCookie();
     setHelpOpen(false);
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+
+    if (!params.has(DIAGRAM_SHARE_HASH_PARAM)) {
+      return;
+    }
+
+    try {
+      const diagram = parseDiagramShareHash(window.location.hash);
+
+      if (diagram) {
+        importDiagram(diagram);
+        setSelectedNodeId(null);
+      }
+    } catch {
+      window.alert("Could not import this shared diagram link.");
+    } finally {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
+  }, [importDiagram]);
+
+  useEffect(
+    () => () => {
+      if (shareStatusTimeoutRef.current !== null) {
+        window.clearTimeout(shareStatusTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const isEditableTarget = (target: EventTarget | null) => {
@@ -551,9 +617,78 @@ export const App = () => {
                 </svg>
               </a>
               <ThemeToggle theme={theme} onToggle={toggleTheme} />
-              <div className="diagram-title">
-                <span className="eyebrow">Diagram</span>
-                <h2>{activeDiagram.name}</h2>
+              <div className="diagram-actions">
+                <div className="diagram-title">
+                  <span className="eyebrow">Diagram</span>
+                  <h2>{activeDiagram.name}</h2>
+                </div>
+                <button
+                  aria-label={
+                    shareStatus === "copied"
+                      ? "Share link copied"
+                      : shareStatus === "failed"
+                        ? "Could not copy share link"
+                        : `Copy share link for ${activeDiagram.name}`
+                  }
+                  className={`diagram-actions__share${
+                    shareStatus === "copied"
+                      ? " diagram-actions__share--copied"
+                      : shareStatus === "failed"
+                        ? " diagram-actions__share--failed"
+                        : ""
+                  }`}
+                  title={
+                    shareStatus === "copied"
+                      ? "Copied"
+                      : shareStatus === "failed"
+                        ? "Copy failed"
+                        : "Copy share link"
+                  }
+                  type="button"
+                  onClick={handleShareDiagram}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10.5 13.5 13.5 10.5"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8.4 11.6 6.8 13.2a3.4 3.4 0 0 0 4.8 4.8l2.4-2.4a3.4 3.4 0 0 0 0-4.8"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.6 12.4 17.2 10.8a3.4 3.4 0 0 0-4.8-4.8L10 8.4a3.4 3.4 0 0 0 0 4.8"
+                    />
+                  </svg>
+                </button>
+                <select
+                  aria-label={`Export ${activeDiagram.name}`}
+                  className="diagram-actions__export"
+                  value=""
+                  onChange={(event) => {
+                    const format = event.target.value as DiagramExportFormat;
+
+                    if (format) {
+                      handleExportDiagram(activeDiagram, format);
+                    }
+                  }}
+                >
+                  <option value="" disabled>
+                    Export as...
+                  </option>
+                  <option value="essa">.essa</option>
+                  <option value="markdown">.md</option>
+                </select>
               </div>
             </div>
             <div className="app-topbar__right">
@@ -615,7 +750,6 @@ export const App = () => {
               deleteDiagram(diagramId);
               setSelectedNodeId(null);
             }}
-            onExportDiagram={handleExportDiagram}
             onImportEssa={handleImportEssa}
             onRenameDiagram={renameDiagram}
             onSelectDiagram={(diagramId) => {

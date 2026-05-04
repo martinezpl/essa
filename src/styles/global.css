@@ -562,17 +562,26 @@ h3 {
   gap: 0.5rem;
 }
 
-.diagram-title {
-  display: grid;
-  gap: 0.05rem;
-  padding: 0.45rem 0.85rem;
+.diagram-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem;
   background: var(--bg-glass);
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  width: max-content;
+  max-width: calc(100vw - 18rem);
+}
+
+.diagram-title {
+  display: grid;
+  gap: 0.05rem;
   min-width: 0;
+  padding: 0.1rem 0.5rem;
 }
 
 .diagram-title .eyebrow {
@@ -584,9 +593,60 @@ h3 {
   font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 24rem;
+}
+
+.diagram-actions__share,
+.diagram-actions__export {
+  min-height: 2rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.diagram-actions__share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  padding: 0;
+}
+
+.diagram-actions__share svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.diagram-actions__share:hover,
+.diagram-actions__export:hover {
+  background: var(--hover);
+  border-color: var(--border-strong);
+}
+
+.diagram-actions__share--copied {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.diagram-actions__share--failed {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.diagram-actions__export {
+  max-width: 7.25rem;
+  padding: 0 0.45rem;
+}
+
+@media (max-width: 760px) {
+  .diagram-actions {
+    gap: 0.35rem;
+    max-width: calc(100vw - 7rem);
+    overflow-x: auto;
+  }
 }
 
 /* ── Help modal ───────────────────────────────────────────────────────── */
