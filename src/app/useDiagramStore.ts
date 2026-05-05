@@ -624,6 +624,34 @@ export const useDiagramStore = () => {
     [updateActiveDiagram],
   );
 
+  const resizeAnnotation = useCallback(
+    (
+      nodeId: string,
+      frame: { height: number; left: number; top: number; width: number },
+    ) => {
+      updateActiveDiagram((diagram) => ({
+        ...diagram,
+        nodes: diagram.nodes.map((node) =>
+          node.id === nodeId && node.data.kind === "annotation"
+            ? {
+                ...node,
+                position: {
+                  x: frame.left,
+                  y: frame.top,
+                },
+                data: {
+                  ...node.data,
+                  width: frame.width,
+                  height: frame.height,
+                },
+              }
+            : node,
+        ),
+      }));
+    },
+    [updateActiveDiagram],
+  );
+
   const replaceRestMethods = useCallback(
     (nodeId: string, methods: RestResourceMethod[]) => {
       updateNodeData(nodeId, { methods } as NodeDataPatch);
@@ -1078,6 +1106,7 @@ export const useDiagramStore = () => {
     replacePsqlForeignKeys,
     replacePsqlIndices,
     removeRestMethod,
+    resizeAnnotation,
     selectDiagram,
     canRedo: history.future.length > 0,
     canUndo: history.past.length > 0,

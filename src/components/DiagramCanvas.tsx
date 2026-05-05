@@ -47,6 +47,15 @@ type DiagramCanvasProps = {
   onDeleteNode: (nodeId: string) => void;
   onSelectEdge: (edgeId: string | null) => void;
   onSelectNode: (nodeId: string | null) => void;
+  onResizeAnnotation: (
+    nodeId: string,
+    frame: {
+      height: number;
+      left: number;
+      top: number;
+      width: number;
+    },
+  ) => void;
   onUpdateNodeData: (
     nodeId: string,
     data: Partial<DiagramNode["data"]>,
@@ -76,19 +85,80 @@ type AnnotationDiagramNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "annotation" }>;
 };
 
+type AnnotationResizeDirection =
+  | "n"
+  | "ne"
+  | "e"
+  | "se"
+  | "s"
+  | "sw"
+  | "w"
+  | "nw";
+
 type AnnotationResizeDraft = {
+  direction: AnnotationResizeDirection;
   height: number;
   id: string;
+  left: number;
   startHeight: number;
+  startLeft: number;
+  startTop: number;
   startWidth: number;
   startX: number;
   startY: number;
+  top: number;
   width: number;
 };
 
 const MIN_ANNOTATION_SIZE = 24;
 const WHEEL_LINE_HEIGHT = 16;
 const contextMenuBlocks = blockList.filter(({ kind }) => kind !== "annotation");
+const annotationResizeDirections: AnnotationResizeDirection[] = [
+  "nw",
+  "n",
+  "ne",
+  "e",
+  "se",
+  "s",
+  "sw",
+  "w",
+];
+
+const getResizedAnnotationFrame = (
+  draft: AnnotationResizeDraft,
+  clientX: number,
+  clientY: number,
+  zoom: number,
+) => {
+  const deltaX = (clientX - draft.startX) / zoom;
+  const deltaY = (clientY - draft.startY) / zoom;
+  const frame = {
+    left: draft.startLeft,
+    top: draft.startTop,
+    width: draft.startWidth,
+    height: draft.startHeight,
+  };
+
+  if (draft.direction.includes("e")) {
+    frame.width = Math.max(MIN_ANNOTATION_SIZE, draft.startWidth + deltaX);
+  }
+
+  if (draft.direction.includes("s")) {
+    frame.height = Math.max(MIN_ANNOTATION_SIZE, draft.startHeight + deltaY);
+  }
+
+  if (draft.direction.includes("w")) {
+    frame.width = Math.max(MIN_ANNOTATION_SIZE, draft.startWidth - deltaX);
+    frame.left = draft.startLeft + draft.startWidth - frame.width;
+  }
+
+  if (draft.direction.includes("n")) {
+    frame.height = Math.max(MIN_ANNOTATION_SIZE, draft.startHeight - deltaY);
+    frame.top = draft.startTop + draft.startHeight - frame.height;
+  }
+
+  return frame;
+};
 
 const getWheelDeltaScale = (
   event: ReactWheelEvent<HTMLDivElement>,
@@ -123,6 +193,7 @@ export const DiagramCanvas = ({
   onDeleteNode,
   onEdgesChange,
   onNodesChange,
+  onResizeAnnotation,
   onSelectEdge,
   onSelectNode,
   onUpdateNodeData,
@@ -180,6 +251,14 @@ export const DiagramCanvas = ({
   const isResizingEditingAnnotation =
     Boolean(annotationResizeDraft && editingAnnotation) &&
     annotationResizeDraft?.id === editingAnnotation?.id;
+  const editingAnnotationLeft =
+    isResizingEditingAnnotation && annotationResizeDraft
+      ? annotationResizeDraft.left
+      : editingAnnotationBounds?.left;
+  const editingAnnotationTop =
+    isResizingEditingAnnotation && annotationResizeDraft
+      ? annotationResizeDraft.top
+      : editingAnnotationBounds?.top;
   const editingAnnotationWidth =
     isResizingEditingAnnotation && annotationResizeDraft
       ? annotationResizeDraft.width
@@ -213,36 +292,25 @@ export const DiagramCanvas = ({
 
         return {
           ...current,
-          width: Math.max(
-            MIN_ANNOTATION_SIZE,
-            current.startWidth +
-              (event.clientX - current.startX) / viewport.zoom,
-          ),
-          height: Math.max(
-            MIN_ANNOTATION_SIZE,
-            current.startHeight +
-              (event.clientY - current.startY) / viewport.zoom,
+          ...getResizedAnnotationFrame(
+            current,
+            event.clientX,
+            event.clientY,
+            viewport.zoom,
           ),
         };
       });
     };
 
     const handlePointerUp = (event: PointerEvent) => {
-      const width = Math.max(
-        MIN_ANNOTATION_SIZE,
-        resizeDraft.startWidth +
-          (event.clientX - resizeDraft.startX) / viewport.zoom,
-      );
-      const height = Math.max(
-        MIN_ANNOTATION_SIZE,
-        resizeDraft.startHeight +
-          (event.clientY - resizeDraft.startY) / viewport.zoom,
+      const frame = getResizedAnnotationFrame(
+        resizeDraft,
+        event.clientX,
+        event.clientY,
+        viewport.zoom,
       );
 
-      onUpdateNodeData(resizeDraft.id, {
-        width,
-        height,
-      });
+      onResizeAnnotation(resizeDraft.id, frame);
       setAnnotationResizeDraft(null);
     };
 
@@ -253,7 +321,7 @@ export const DiagramCanvas = ({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [annotationResizeDraft, onUpdateNodeData, viewport.zoom]);
+  }, [annotationResizeDraft, onResizeAnnotation, viewport.zoom]);
   const createAnnotationFromDraft = (
     event: ReactMouseEvent<HTMLDivElement>,
   ) => {
@@ -457,35 +525,45 @@ export const DiagramCanvas = ({
       ) : null}
       {editingAnnotation &&
       editingAnnotationBounds &&
+      editingAnnotationLeft !== undefined &&
+      editingAnnotationTop !== undefined &&
       editingAnnotationWidth &&
       editingAnnotationHeight ? (
         <div
           className="annotation-edit-frame"
           style={{
-            left: editingAnnotationBounds.left * viewport.zoom + viewport.x,
-            top: editingAnnotationBounds.top * viewport.zoom + viewport.y,
+            left: editingAnnotationLeft * viewport.zoom + viewport.x,
+            top: editingAnnotationTop * viewport.zoom + viewport.y,
             width: editingAnnotationWidth * viewport.zoom,
             height: editingAnnotationHeight * viewport.zoom,
           }}
         >
-          <button
-            type="button"
-            aria-label="Resize annotation"
-            className="annotation-edit-frame__resize"
-            onPointerDown={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setAnnotationResizeDraft({
-                id: editingAnnotation.id,
-                startX: event.clientX,
-                startY: event.clientY,
-                startWidth: editingAnnotationWidth,
-                startHeight: editingAnnotationHeight,
-                width: editingAnnotationWidth,
-                height: editingAnnotationHeight,
-              });
-            }}
-          />
+          {annotationResizeDirections.map((direction) => (
+            <button
+              key={direction}
+              type="button"
+              aria-label={`Resize annotation ${direction}`}
+              className={`annotation-edit-frame__resize annotation-edit-frame__resize--${direction}`}
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setAnnotationResizeDraft({
+                  direction,
+                  id: editingAnnotation.id,
+                  left: editingAnnotationLeft,
+                  top: editingAnnotationTop,
+                  startX: event.clientX,
+                  startY: event.clientY,
+                  startLeft: editingAnnotationLeft,
+                  startTop: editingAnnotationTop,
+                  startWidth: editingAnnotationWidth,
+                  startHeight: editingAnnotationHeight,
+                  width: editingAnnotationWidth,
+                  height: editingAnnotationHeight,
+                });
+              }}
+            />
+          ))}
           <div className="annotation-editor nodrag nowheel">
             <label className="annotation-editor__field">
               <span>Name</span>

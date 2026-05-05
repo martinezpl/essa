@@ -950,18 +950,6 @@ const IndexPopover = ({
       <TrashButton ariaLabel="Remove index" onClick={onDelete} />
     </div>
 
-    <label>
-      Method
-      <ComboInput
-        ariaLabel="Index method"
-        options={psqlIndexMethods}
-        value={index.method}
-        onChange={(next) =>
-          onChange({ method: next as PsqlIndex["method"] })
-        }
-      />
-    </label>
-
     <div>
       <span className="eyebrow">Columns</span>
       <div className="chip-picker">
@@ -1017,6 +1005,18 @@ const IndexPopover = ({
         })}
       </div>
     </div>
+
+    <label>
+      Method
+      <ComboInput
+        ariaLabel="Index method"
+        options={psqlIndexMethods}
+        value={index.method}
+        onChange={(next) =>
+          onChange({ method: next as PsqlIndex["method"] })
+        }
+      />
+    </label>
 
     <label className="checkbox-field">
       <input

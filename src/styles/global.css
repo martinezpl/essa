@@ -1068,7 +1068,15 @@ h3 {
   cursor: grab;
 }
 
+.canvas-shell--grip .react-flow__node-annotation {
+  cursor: grab;
+}
+
 .canvas-shell--grip .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.canvas-shell--grip .react-flow__node-annotation:active {
   cursor: grabbing;
 }
 
@@ -1102,8 +1110,6 @@ h3 {
 
 .annotation-edit-frame__resize {
   position: absolute;
-  right: -0.45rem;
-  bottom: -0.45rem;
   z-index: 2;
   width: 0.9rem;
   height: 0.9rem;
@@ -1112,8 +1118,59 @@ h3 {
   border-radius: 999px;
   background: var(--accent);
   box-shadow: var(--shadow-sm);
-  cursor: nwse-resize;
   pointer-events: auto;
+}
+
+.annotation-edit-frame__resize--n {
+  top: -0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.annotation-edit-frame__resize--ne {
+  top: -0.45rem;
+  right: -0.45rem;
+  cursor: nesw-resize;
+}
+
+.annotation-edit-frame__resize--e {
+  top: 50%;
+  right: -0.45rem;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.annotation-edit-frame__resize--se {
+  right: -0.45rem;
+  bottom: -0.45rem;
+  cursor: nwse-resize;
+}
+
+.annotation-edit-frame__resize--s {
+  bottom: -0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.annotation-edit-frame__resize--sw {
+  bottom: -0.45rem;
+  left: -0.45rem;
+  cursor: nesw-resize;
+}
+
+.annotation-edit-frame__resize--w {
+  top: 50%;
+  left: -0.45rem;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.annotation-edit-frame__resize--nw {
+  top: -0.45rem;
+  left: -0.45rem;
+  cursor: nwse-resize;
 }
 
 .annotation-editor {

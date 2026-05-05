@@ -113,6 +113,7 @@ export const App = () => {
     replacePsqlForeignKeys,
     replacePsqlIndices,
     removeRestMethod,
+    resizeAnnotation,
     redo,
     selectDiagram,
     undo,
@@ -516,6 +517,7 @@ export const App = () => {
               onDeleteNode={deleteNode}
               onEdgesChange={onEdgesChange}
               onNodesChange={onNodesChange}
+              onResizeAnnotation={resizeAnnotation}
               onSelectEdge={() => {}}
               onSelectNode={setSelectedNodeId}
               onUpdateNodeData={updateNodeData}
