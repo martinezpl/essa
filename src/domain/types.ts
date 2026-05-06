@@ -144,6 +144,8 @@ export const psqlColumnTypeSchema = z.enum([
   "circle",
   "tsvector",
   "tsquery",
+  "geometry",
+  "geography",
   "uuid[]",
   "text[]",
   "integer[]",
@@ -162,6 +164,8 @@ export const psqlColumnOptionsSchema = z.object({
   scale: z.number().int().nonnegative().optional(),
   arrayItemType: psqlColumnTypeSchema.optional(),
   enumId: z.string().optional(),
+  geometrySubtype: z.string().optional(),
+  srid: z.number().int().positive().optional(),
 });
 export type PsqlColumnOptions = z.infer<typeof psqlColumnOptionsSchema>;
 

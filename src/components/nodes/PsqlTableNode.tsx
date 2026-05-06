@@ -495,6 +495,18 @@ const precisionOptionTypes = new Set<PsqlColumnType>([
   "interval",
 ]);
 
+const geometryOptionTypes = new Set<PsqlColumnType>(["geometry", "geography"]);
+
+const geometrySubtypes = [
+  "Point",
+  "LineString",
+  "Polygon",
+  "MultiPoint",
+  "MultiLineString",
+  "MultiPolygon",
+  "GeometryCollection",
+];
+
 const arrayOptionTypes = new Set<PsqlColumnType>(
   psqlColumnTypes.filter((type) => type.endsWith("[]")),
 );
@@ -657,6 +669,48 @@ const ColumnPopover = ({
           }
         />
       </label>
+    ) : null}
+
+    {geometryOptionTypes.has(column.type) ? (
+      <>
+        <label>
+          Subtype
+          <ComboInput
+            ariaLabel="Geometry subtype"
+            options={geometrySubtypes}
+            placeholder="e.g. Point"
+            value={optionValues.geometrySubtype ?? ""}
+            onChange={(next) =>
+              onChange({
+                options: {
+                  ...optionValues,
+                  geometrySubtype: next || undefined,
+                  srid: next ? optionValues.srid : undefined,
+                },
+              })
+            }
+          />
+        </label>
+        {optionValues.geometrySubtype ? (
+          <label>
+            SRID
+            <input
+              type="number"
+              min={1}
+              placeholder="e.g. 4326"
+              value={optionValues.srid ?? ""}
+              onChange={(event) =>
+                onChange({
+                  options: {
+                    ...optionValues,
+                    srid: toOptionalInteger(event.target.value),
+                  },
+                })
+              }
+            />
+          </label>
+        ) : null}
+      </>
     ) : null}
 
     {column.type === "enum" ? (

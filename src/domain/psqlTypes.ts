@@ -1,4 +1,4 @@
-import type { PsqlColumn, PsqlEnum } from "./types";
+import type { PsqlColumn, PsqlColumnType, PsqlEnum } from "./types";
 
 export const formatPsqlColumnType = (
   column: PsqlColumn,
@@ -43,5 +43,19 @@ export const formatPsqlColumnType = (
     return `${type}(${options.precision})`;
   }
 
+  if ((type === "geometry" || type === "geography") && options?.geometrySubtype) {
+    return options.srid !== undefined
+      ? `${type}(${options.geometrySubtype}, ${options.srid})`
+      : `${type}(${options.geometrySubtype})`;
+  }
+
   return type;
 };
+
+const extensionByType: Partial<Record<PsqlColumnType, string>> = {
+  geometry: "postgis",
+  geography: "postgis",
+};
+
+export const getRequiredExtension = (type: PsqlColumnType): string | undefined =>
+  extensionByType[type];

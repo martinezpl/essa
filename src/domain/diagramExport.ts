@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createId } from "./id";
 import { deriveResourceSchemas } from "./resourceSchema";
-import { formatPsqlColumnType } from "./psqlTypes";
+import { formatPsqlColumnType, getRequiredExtension } from "./psqlTypes";
 import {
   parsePsqlColumnSourceHandleId,
   parsePsqlForeignKeyTargetHandleId,
@@ -1454,7 +1454,17 @@ const serializePsqlIndexDdl = (table: PsqlTableDiagramNode) =>
 const serializePsqlDdl = (diagram: Diagram) => {
   const tableLookup = createPsqlTableLookup(diagram);
   const tableNodes = sortPsqlTableNodesForDdl(getPsqlTableNodes(diagram), tableLookup);
+
+  const requiredExtensions = new Set<string>();
+  for (const table of tableNodes) {
+    for (const column of table.data.columns) {
+      const ext = getRequiredExtension(column.type);
+      if (ext) requiredExtensions.add(ext);
+    }
+  }
+
   const statements = [
+    ...[...requiredExtensions].map((ext) => `CREATE EXTENSION IF NOT EXISTS ${ext};`),
     ...serializePsqlEnumDdl(diagram),
     ...tableNodes.map((table) => serializePsqlTableDdl(table, diagram, tableLookup)),
     ...tableNodes.flatMap(serializePsqlIndexDdl),

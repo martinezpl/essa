@@ -49,6 +49,8 @@ const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
   circle: "object",
   tsvector: "string",
   tsquery: "string",
+  geometry: "object",
+  geography: "object",
   "uuid[]": "object",
   "text[]": "object",
   "integer[]": "object",
