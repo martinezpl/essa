@@ -717,21 +717,16 @@ const ColumnPopover = ({
       <>
         <label>
           Enum type
-          <select
-            value={column.options?.enumId ?? ""}
-            onChange={(event) =>
-              onChange({
-                options: { ...optionValues, enumId: event.target.value },
-              })
-            }
-          >
-            <option value="">Select enum</option>
-            {psqlEnums.map((psqlEnum) => (
-              <option key={psqlEnum.id} value={psqlEnum.id}>
-                {psqlEnum.name || "unnamed_enum"}
-              </option>
-            ))}
-          </select>
+          <ComboInput
+            ariaLabel="Enum type"
+            options={psqlEnums.map((e) => e.name || "unnamed_enum")}
+            placeholder="Select enum"
+            value={selectedEnum?.name ?? ""}
+            onChange={(next) => {
+              const found = psqlEnums.find((e) => (e.name || "unnamed_enum") === next);
+              if (found) onChange({ options: { ...optionValues, enumId: found.id } });
+            }}
+          />
         </label>
 
         <button type="button" onClick={handleCreateEnum}>

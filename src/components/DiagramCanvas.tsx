@@ -496,6 +496,18 @@ export const DiagramCanvas = ({
 
           onSelectNode(null);
         }}
+        onNodeContextMenu={(event, node) => {
+          if (node.type !== "annotation") return;
+          event.preventDefault();
+          setContextMenu({
+            left: event.clientX,
+            top: event.clientY,
+            position: screenToFlowPosition({
+              x: event.clientX,
+              y: event.clientY,
+            }),
+          });
+        }}
         onPaneContextMenu={(event) => {
           event.preventDefault();
           setContextMenu({
