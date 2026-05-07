@@ -330,6 +330,57 @@ describe("reconcileDiagramAfterPsqlColumnsChange", () => {
 
     expect(next.edges[0].data.dataPath).toBe("all");
   });
+
+  it("preserves edge dataPath when all selected column names still exist", () => {
+    const table: DiagramNode = {
+      id: "t1",
+      type: "psqlTable",
+      position: { x: 0, y: 0 },
+      data: {
+        kind: "psqlTable",
+        tableName: "items",
+        primaryKey: ["c1"],
+        columns: [
+          { id: "c1", name: "id", type: "uuid", nullable: false, unique: false },
+          { id: "c2", name: "price", type: "numeric", nullable: true, unique: false },
+        ],
+        foreignKeys: [],
+        indices: [],
+      },
+    };
+
+    const resource: DiagramNode = {
+      id: "r1",
+      type: "restResource",
+      position: { x: 0, y: 100 },
+      data: {
+        kind: "restResource",
+        resourceName: "items",
+        methods: [],
+        schema: [],
+      },
+    };
+
+    const edge: DiagramEdge = {
+      id: "e1",
+      source: "r1",
+      target: "t1",
+      type: "smoothstep",
+      data: { kind: "write", dataPath: "id, price" },
+    };
+
+    const diagram = baseDiagram([table, resource], [edge]);
+    const tableDataEdge = table.data as PsqlTableData;
+
+    const next = reconcileDiagramAfterPsqlColumnsChange({
+      diagram,
+      tableNodeId: "t1",
+      previousColumns: tableDataEdge.columns,
+      mergedTableData: tableDataEdge,
+    });
+
+    expect(next.edges[0].data.dataPath).toBe("id, price");
+  });
 });
 
 describe("reconcileDiagramAfterPsqlTableRemoved", () => {

@@ -221,7 +221,7 @@ export const createPsqlEnum = (): PsqlEnum => ({
 
 export class RestResourceBlock extends Block<RestResourceData> {
   readonly kind = "restResource";
-  readonly label = "Resource";
+  readonly label = "API";
   readonly ports = restResourcePorts;
   readonly schemaSpec: SchemaSpec = {
     allowedTypes: jsonFieldTypeSchema.options,
@@ -520,7 +520,7 @@ export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
 export const blockDefinitions = {
   restResource: {
     kind: "restResource",
-    label: "Resource",
+    label: "API",
     ports: restResourcePorts,
     schemaSpec: { allowedTypes: jsonFieldTypeSchema.options },
     create: RestResourceBlock.create,

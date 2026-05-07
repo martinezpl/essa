@@ -1686,11 +1686,13 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding: 0.35rem 0.4rem;
+  padding: 0.65rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-  transition: border-color var(--dur-fast) var(--ease);
+  background: var(--hover);
+  font-size: var(--text-canvas-lg);
+  line-height: var(--lh-tight);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 .method-row--expanded {
@@ -1888,6 +1890,11 @@ h3 {
   font-family: var(--font-mono);
 }
 
+.combo-input input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .combo-input__list {
   position: absolute;
   top: calc(100% + 4px);
@@ -1969,13 +1976,19 @@ h3 {
 }
 
 .chip:hover {
+  background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--text);
 }
 
 .chip--active {
   background: var(--accent);
   border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.chip--active:hover {
+  background: var(--accent);
   color: var(--accent-text);
 }
 

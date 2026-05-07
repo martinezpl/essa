@@ -1,12 +1,21 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+type ComboInputOption = string | { value: string; label: string };
+
 type ComboInputProps = {
   value: string;
-  options: readonly string[];
+  options: readonly ComboInputOption[];
   onChange: (value: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  disabled?: boolean;
 };
+
+const getOptionValue = (option: ComboInputOption) =>
+  typeof option === "string" ? option : option.value;
+
+const getOptionLabel = (option: ComboInputOption) =>
+  typeof option === "string" ? option : option.label;
 
 export const ComboInput = ({
   value,
@@ -14,27 +23,32 @@ export const ComboInput = ({
   onChange,
   placeholder,
   ariaLabel,
+  disabled = false,
 }: ComboInputProps) => {
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [query, setQuery] = useState(value);
+  const valueLabel =
+    options.find((option) => getOptionValue(option) === value) ?? value;
+  const [query, setQuery] = useState(getOptionLabel(valueLabel));
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
 
   useEffect(() => {
     if (!open) {
-      setQuery(value);
+      setQuery(getOptionLabel(valueLabel));
     }
-  }, [value, open]);
+  }, [valueLabel, open]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q || q === value.toLowerCase()) {
+    if (!q || q === getOptionLabel(valueLabel).toLowerCase()) {
       return options;
     }
-    return options.filter((opt) => opt.toLowerCase().includes(q));
-  }, [options, query, value]);
+    return options.filter((option) =>
+      getOptionLabel(option).toLowerCase().includes(q),
+    );
+  }, [options, query, valueLabel]);
 
   useEffect(() => {
     setHighlight((current) =>
@@ -54,14 +68,14 @@ export const ComboInput = ({
     }
   }, [highlight, open]);
 
-  const commit = (next: string) => {
-    onChange(next);
-    setQuery(next);
+  const commit = (next: ComboInputOption) => {
+    onChange(getOptionValue(next));
+    setQuery(getOptionLabel(next));
     setOpen(false);
   };
 
   const revert = () => {
-    setQuery(value);
+    setQuery(getOptionLabel(valueLabel));
     setOpen(false);
   };
 
@@ -77,13 +91,14 @@ export const ComboInput = ({
         aria-label={ariaLabel}
         autoComplete="off"
         spellCheck={false}
+        disabled={disabled}
         placeholder={placeholder}
         value={query}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
+        onFocus={() => setOpen(!disabled)}
+        onClick={() => setOpen(!disabled)}
         onChange={(event) => {
           setQuery(event.target.value);
-          setOpen(true);
+          setOpen(!disabled);
         }}
         onBlur={(event) => {
           if (
@@ -123,7 +138,7 @@ export const ComboInput = ({
           }
         }}
       />
-      {open && filtered.length > 0 ? (
+      {open && !disabled && filtered.length > 0 ? (
         <div
           id={listId}
           ref={listRef}
@@ -132,13 +147,13 @@ export const ComboInput = ({
         >
           {filtered.map((opt, i) => (
             <button
-              key={opt}
+              key={getOptionValue(opt)}
               type="button"
               role="option"
               aria-selected={i === highlight}
               className={`combo-input__option${
                 i === highlight ? " combo-input__option--active" : ""
-              }${opt === value ? " combo-input__option--current" : ""}`}
+              }${getOptionValue(opt) === value ? " combo-input__option--current" : ""}`}
               onMouseDown={(event) => event.preventDefault()}
               onMouseEnter={() => setHighlight(i)}
               onClick={() => {
@@ -146,7 +161,7 @@ export const ComboInput = ({
                 inputRef.current?.focus();
               }}
             >
-              {opt}
+              {getOptionLabel(opt)}
             </button>
           ))}
         </div>

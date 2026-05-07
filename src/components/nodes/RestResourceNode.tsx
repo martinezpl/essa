@@ -16,6 +16,7 @@ import type {
   RestResourceMethod,
 } from "../../domain/types";
 import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
+import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
@@ -103,7 +104,7 @@ export const RestResourceNode = ({
       <BlockHandles kind="restResource" />
 
       <header className="block-node__head">
-        <span className="block-node__badge">Resource</span>
+        <span className="block-node__badge">API</span>
         <span className="block-node__head-spacer" />
         <span className="block-node__head-trash">
           <TrashButton
@@ -352,45 +353,41 @@ const SchemaFieldPopover = ({
 
     <label>
       Type
-      <select
+      <ComboInput
+        ariaLabel="Schema field type"
         value={field.type}
-        onChange={(event) =>
+        options={jsonFieldTypes}
+        onChange={(value) =>
           onChange({
-            type: event.target.value as ResourceSchemaField["type"],
+            type: value as ResourceSchemaField["type"],
             enum: undefined,
           })
         }
-      >
-        {jsonFieldTypes.map((type) => (
-          <option key={type} value={type}>
-            {type}
-          </option>
-        ))}
-      </select>
+      />
     </label>
 
     {psqlEnums.length > 0 ? (
       <label>
         Enum
-        <select
+        <ComboInput
+          ariaLabel="Schema field enum"
           value={getSelectedEnumId(field, psqlEnums)}
-          onChange={(event) =>
+          options={[
+            { value: "", label: "None" },
+            ...psqlEnums.map((psqlEnum) => ({
+              value: psqlEnum.id,
+              label: psqlEnum.name || "unnamed_enum",
+            })),
+          ]}
+          onChange={(value) =>
             onChange({
               type: "string",
-              enum: event.target.value
-                ? psqlEnums.find((item) => item.id === event.target.value)
-                    ?.values
+              enum: value
+                ? psqlEnums.find((item) => item.id === value)?.values
                 : undefined,
             })
           }
-        >
-          <option value="">None</option>
-          {psqlEnums.map((psqlEnum) => (
-            <option key={psqlEnum.id} value={psqlEnum.id}>
-              {psqlEnum.name || "unnamed_enum"}
-            </option>
-          ))}
-        </select>
+        />
       </label>
     ) : null}
 
@@ -549,44 +546,34 @@ const InputPopover = ({
     <div className="row">
       <label>
         Type
-        <select
+        <ComboInput
+          ariaLabel="Input type"
           value={input.type}
           disabled={input.mode === "query"}
-          onChange={(event) =>
+          options={input.mode === "query" ? ["string"] : jsonFieldTypes}
+          onChange={(value) =>
             onChange({
-              type: event.target.value as RestMethodInputField["type"],
+              type: value as RestMethodInputField["type"],
             })
           }
-        >
-          {(input.mode === "query" ? ["string"] : jsonFieldTypes).map(
-            (type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ),
-          )}
-        </select>
+        />
       </label>
 
       <label>
         Mode
-        <select
+        <ComboInput
+          ariaLabel="Input mode"
           value={input.mode}
-          onChange={(event) => {
-            if (event.target.value === "query") {
+          options={restMethodInputModes}
+          onChange={(value) => {
+            if (value === "query") {
               onChange({ mode: "query", type: "string" });
               return;
             }
 
             onChange({ mode: "payload", type: input.type });
           }}
-        >
-          {restMethodInputModes.map((mode) => (
-            <option key={mode} value={mode}>
-              {mode}
-            </option>
-          ))}
-        </select>
+        />
       </label>
     </div>
 

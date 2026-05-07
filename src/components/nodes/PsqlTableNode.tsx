@@ -21,6 +21,7 @@ import type {
   PsqlTableData,
 } from "../../domain/types";
 import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
+import { ChipSelector } from "../blockEditors/ChipSelector";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { updateColumn } from "../blockEditors/helpers";
@@ -46,6 +47,8 @@ type ForeignKeyTarget = {
   table: PsqlTableDiagramNode;
   column: PsqlColumn;
 };
+
+type PsqlSelectableField = PsqlColumn | PsqlForeignKey;
 
 const updateIndex = (
   indices: PsqlIndex[],
@@ -85,6 +88,11 @@ const formatForeignKeyReference = (
 
 const nameMinWidth = (name: string) =>
   Math.max(440, name.length * 20 + 50);
+
+const getPsqlFieldCandidates = (
+  columns: PsqlColumn[],
+  foreignKeys: PsqlForeignKey[],
+): PsqlSelectableField[] => [...columns, ...foreignKeys];
 
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
@@ -992,91 +1000,50 @@ const IndexPopover = ({
   foreignKeys,
   onChange,
   onDelete,
-}: IndexPopoverProps) => (
-  <div className="row-popover__inner">
-    <div className="row-popover__header">
-      <span className="eyebrow">Index</span>
-      <TrashButton ariaLabel="Remove index" onClick={onDelete} />
-    </div>
+}: IndexPopoverProps) => {
+  const foreignKeyIds = new Set(foreignKeys.map((foreignKey) => foreignKey.id));
 
-    <div>
-      <span className="eyebrow">Columns</span>
-      <div className="chip-picker">
-        {columns.length === 0 && foreignKeys.length === 0 ? (
-          <span className="block-node__empty">Add columns first.</span>
-        ) : null}
-        {columns.map((column) => {
-          const checked = index.columns.includes(column.id);
-          return (
-            <label
-              key={column.id}
-              className={`chip${checked ? " chip--active" : ""}`}
-            >
-              <input
-                hidden
-                type="checkbox"
-                checked={checked}
-                onChange={(event) =>
-                  onChange({
-                    columns: event.target.checked
-                      ? [...index.columns, column.id]
-                      : index.columns.filter((item) => item !== column.id),
-                  })
-                }
-              />
-              {column.name || column.id}
-            </label>
-          );
-        })}
-        {foreignKeys.map((foreignKey) => {
-          const checked = index.columns.includes(foreignKey.id);
-          return (
-            <label
-              key={foreignKey.id}
-              className={`chip${checked ? " chip--active" : ""}`}
-            >
-              <input
-                hidden
-                type="checkbox"
-                checked={checked}
-                onChange={(event) =>
-                  onChange({
-                    columns: event.target.checked
-                      ? [...index.columns, foreignKey.id]
-                      : index.columns.filter((item) => item !== foreignKey.id),
-                  })
-                }
-              />
-              {foreignKey.name || foreignKey.id}
-              <span className="chip__badge">FK</span>
-            </label>
-          );
-        })}
+  return (
+    <div className="row-popover__inner">
+      <div className="row-popover__header">
+        <span className="eyebrow">Index</span>
+        <TrashButton ariaLabel="Remove index" onClick={onDelete} />
       </div>
+
+      <div>
+        <span className="eyebrow">Columns</span>
+        <ChipSelector
+          candidates={getPsqlFieldCandidates(columns, foreignKeys)}
+          value={index.columns}
+          onChange={(nextColumns) => onChange({ columns: nextColumns })}
+          emptyLabel="Add columns first."
+          getBadge={(field) => (foreignKeyIds.has(field.id) ? "FK" : null)}
+        />
+      </div>
+
+      <label>
+        Method
+        <ComboInput
+          ariaLabel="Index method"
+          options={psqlIndexMethods}
+          value={index.method}
+          onChange={(next) =>
+            onChange({ method: next as PsqlIndex["method"] })
+          }
+        />
+      </label>
+
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={index.unique}
+          onChange={(event) => onChange({ unique: event.target.checked })}
+        />
+        unique
+      </label>
     </div>
-
-    <label>
-      Method
-      <ComboInput
-        ariaLabel="Index method"
-        options={psqlIndexMethods}
-        value={index.method}
-        onChange={(next) =>
-          onChange({ method: next as PsqlIndex["method"] })
-        }
-      />
-    </label>
-
-    <label className="checkbox-field">
-      <input
-        type="checkbox"
-        checked={index.unique}
-        onChange={(event) => onChange({ unique: event.target.checked })}
-      />
-      unique
-    </label>
-  </div>
-);
+  );
+};
 
 type PrimaryKeyPopoverProps = {
   primaryKey: string[];
@@ -1092,67 +1059,26 @@ const PrimaryKeyPopover = ({
   foreignKeys,
   onChange,
   onClear,
-}: PrimaryKeyPopoverProps) => (
-  <div className="row-popover__inner">
-    <div className="row-popover__header">
-      <span className="eyebrow">Primary key</span>
-      <TrashButton ariaLabel="Clear primary key" onClick={onClear} />
-    </div>
+}: PrimaryKeyPopoverProps) => {
+  const foreignKeyIds = new Set(foreignKeys.map((foreignKey) => foreignKey.id));
 
-    <div>
-      <span className="eyebrow">Columns</span>
-      <div className="chip-picker">
-        {columns.length === 0 && foreignKeys.length === 0 ? (
-          <span className="block-node__empty">Add columns first.</span>
-        ) : null}
-        {columns.map((column) => {
-          const checked = primaryKey.includes(column.id);
-          return (
-            <label
-              key={column.id}
-              className={`chip${checked ? " chip--active" : ""}`}
-            >
-              <input
-                hidden
-                type="checkbox"
-                checked={checked}
-                onChange={(event) =>
-                  onChange(
-                    event.target.checked
-                      ? [...primaryKey, column.id]
-                      : primaryKey.filter((id) => id !== column.id),
-                  )
-                }
-              />
-              {column.name || column.id}
-            </label>
-          );
-        })}
-        {foreignKeys.map((foreignKey) => {
-          const checked = primaryKey.includes(foreignKey.id);
-          return (
-            <label
-              key={foreignKey.id}
-              className={`chip${checked ? " chip--active" : ""}`}
-            >
-              <input
-                hidden
-                type="checkbox"
-                checked={checked}
-                onChange={(event) =>
-                  onChange(
-                    event.target.checked
-                      ? [...primaryKey, foreignKey.id]
-                      : primaryKey.filter((id) => id !== foreignKey.id),
-                  )
-                }
-              />
-              {foreignKey.name || foreignKey.id}
-              <span className="chip__badge">FK</span>
-            </label>
-          );
-        })}
+  return (
+    <div className="row-popover__inner">
+      <div className="row-popover__header">
+        <span className="eyebrow">Primary key</span>
+      </div>
+
+      <div>
+        <span className="eyebrow">Columns</span>
+        <ChipSelector
+          candidates={getPsqlFieldCandidates(columns, foreignKeys)}
+          value={primaryKey}
+          onChange={onChange}
+          onClear={onClear}
+          emptyLabel="Add columns first."
+          getBadge={(field) => (foreignKeyIds.has(field.id) ? "FK" : null)}
+        />
       </div>
     </div>
-  </div>
-);
+  );
+};

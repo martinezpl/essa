@@ -6,11 +6,19 @@ import {
 } from "../../domain/model";
 import { getResourceSchemaOptions } from "../../domain/resourceSchema";
 import type { ConnectionKind, DiagramEdge } from "../../domain/types";
+import { ChipSelector } from "./ChipSelector";
+import { ComboInput } from "./ComboInput";
 import { TrashButton } from "./TrashButton";
 
 type ConnectionEditorProps = {
   edge: DiagramEdge;
 };
+
+const parseSelectedDataPath = (dataPath: string | undefined) =>
+  (dataPath || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 
 export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
   const ctx = useDiagramContext();
@@ -39,6 +47,20 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
       : [];
   const kindOptions =
     allowedKinds.length > 0 ? allowedKinds : [edge.data.kind];
+  const canSelectWrittenColumns =
+    edge.data.kind !== "read" &&
+    sourceNode?.data.kind === "restResource" &&
+    targetNode?.data.kind === "psqlTable";
+  const writtenColumnCandidates =
+    canSelectWrittenColumns && targetNode?.data.kind === "psqlTable"
+      ? targetNode.data.columns
+          .filter((column) => column.name.trim())
+          .map((column) => ({ id: column.name, name: column.name }))
+      : [];
+  const selectedWrittenColumns =
+    edge.data.dataPath === "all"
+      ? []
+      : parseSelectedDataPath(edge.data.dataPath);
 
   return (
     <div className="connection-editor nowheel">
@@ -60,38 +82,70 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
 
       <label>
         Type
-        <select
+        <ComboInput
+          ariaLabel="Connection type"
           disabled={kindOptions.length <= 1}
           value={edge.data.kind}
-          onChange={(event) =>
+          options={kindOptions}
+          onChange={(value) => {
+            const kind = value as ConnectionKind;
             ctx.onUpdateEdgeData(edge.id, {
-              kind: event.target.value as ConnectionKind,
-            })
-          }
-        >
-          {kindOptions.map((kind) => (
-            <option key={kind} value={kind}>
-              {kind}
-            </option>
-          ))}
-        </select>
+              kind,
+              ...(kind === "read" ? { dataPath: "all" } : {}),
+            });
+          }}
+        />
       </label>
 
-      <label>
-        Data
-        <select
-          value={edge.data.dataPath || "all"}
-          onChange={(event) =>
-            ctx.onUpdateEdgeData(edge.id, { dataPath: event.target.value })
-          }
-        >
-          {optionList.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
+      {edge.data.kind !== "read" ? (
+        canSelectWrittenColumns ? (
+          <>
+            <label>
+              Written columns
+              <ComboInput
+                ariaLabel="Written columns mode"
+                value={edge.data.dataPath === "all" ? "all" : "selected"}
+                options={[
+                  { value: "all", label: "all" },
+                  { value: "selected", label: "selected columns" },
+                ]}
+                onChange={(value) =>
+                  ctx.onUpdateEdgeData(edge.id, {
+                    dataPath:
+                      value === "all"
+                        ? "all"
+                        : selectedWrittenColumns.join(", "),
+                  })
+                }
+              />
+            </label>
+            {edge.data.dataPath !== "all" ? (
+              <ChipSelector
+                candidates={writtenColumnCandidates}
+                value={selectedWrittenColumns}
+                onChange={(columns) =>
+                  ctx.onUpdateEdgeData(edge.id, {
+                    dataPath: columns.join(", "),
+                  })
+                }
+                emptyLabel="Add table columns first."
+              />
+            ) : null}
+          </>
+        ) : (
+          <label>
+            Data
+            <ComboInput
+              ariaLabel="Connection data"
+              value={edge.data.dataPath || "all"}
+              options={optionList}
+              onChange={(value) =>
+                ctx.onUpdateEdgeData(edge.id, { dataPath: value })
+              }
+            />
+          </label>
+        )
+      ) : null}
     </div>
   );
 };

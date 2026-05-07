@@ -18,6 +18,11 @@ export const restMethodKindSchema = z.enum([
 export type RestMethodKind = z.infer<typeof restMethodKindSchema>;
 export type RestMethod = RestMethodKind;
 
+export type Field = {
+  id: string;
+  name: string;
+};
+
 export const jsonFieldTypeSchema = z.enum([
   "string",
   "integer",

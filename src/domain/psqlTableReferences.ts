@@ -188,8 +188,8 @@ const psqlTableColumnNames = (
 };
 
 /**
- * Resets `edge.data.dataPath` to `"all"` when it referenced a PSQL column name
- * that no longer exists on the connected table (resource↔table edges).
+ * Resets `edge.data.dataPath` to `"all"` when it referenced PSQL column names
+ * that no longer exist on the connected table (resource↔table edges).
  */
 export const reconcileEdgesForPsqlColumnNames = (
   edges: DiagramEdge[],
@@ -226,8 +226,12 @@ export const reconcileEdgesForPsqlColumnNames = (
     const sourceNames = collectNames(source);
     const targetNames = collectNames(target);
     const valid = new Set([...sourceNames, ...targetNames, "all"]);
+    const selectedNames = dataPath
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean);
 
-    if (valid.has(dataPath)) {
+    if (selectedNames.length > 0 && selectedNames.every((name) => valid.has(name))) {
       return edge;
     }
 
