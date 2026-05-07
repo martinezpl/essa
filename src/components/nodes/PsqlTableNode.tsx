@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
-import { psqlColumnTypes, psqlForeignKeyActions, psqlIndexMethods } from "../../domain/options";
+import {
+  psqlColumnTypes,
+  psqlForeignKeyActions,
+  psqlIndexMethods,
+} from "../../domain/options";
 import {
   parsePsqlColumnSourceHandleId,
   parsePsqlForeignKeyTargetHandleId,
@@ -114,7 +118,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const linkedColumnIds = new Set<string>();
 
   ctx.edges.forEach((edge) => {
-    if (!selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target)) {
+    if (
+      !selectedNodeIds.has(edge.source) &&
+      !selectedNodeIds.has(edge.target)
+    ) {
       return;
     }
 
@@ -290,9 +297,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                 type="target"
                 isConnectable={false}
               />
-              <span className="field-row__name">
-                {foreignKey.name || "—"}
-              </span>
+              <span className="field-row__name">{foreignKey.name || "—"}</span>
               <span className="field-row__type">
                 {reference ? `→ ${reference}` : "no reference"}
                 {foreignKey.type ? ` · ${foreignKey.type}` : ""}
@@ -303,10 +308,20 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   <span className="flag-chip">PK</span>
                 ) : null}
                 {foreignKey.onDelete !== "NO ACTION" ? (
-                  <span className="flag-chip flag-chip--cascade" title={`ON DELETE ${foreignKey.onDelete}`}>↓</span>
+                  <span
+                    className="flag-chip flag-chip--cascade"
+                    title={`ON DELETE ${foreignKey.onDelete}`}
+                  >
+                    ↓
+                  </span>
                 ) : null}
                 {foreignKey.onUpdate !== "NO ACTION" ? (
-                  <span className="flag-chip flag-chip--cascade" title={`ON UPDATE ${foreignKey.onUpdate}`}>↑</span>
+                  <span
+                    className="flag-chip flag-chip--cascade"
+                    title={`ON UPDATE ${foreignKey.onUpdate}`}
+                  >
+                    ↑
+                  </span>
                 ) : null}
                 {foreignKey.nullable ? (
                   <span className="flag-chip flag-chip--null">?</span>
@@ -380,7 +395,8 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
         ) : null}
 
         {data.indices.map((index) => {
-          const isEditing = editing?.kind === "index" && editing.id === index.id;
+          const isEditing =
+            editing?.kind === "index" && editing.id === index.id;
 
           return (
             <EditableFieldRow
@@ -414,8 +430,10 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
                   ? index.columns
                       .map(
                         (columnId) =>
-                          data.columns.find((item) => item.id === columnId)?.name ||
-                          data.foreignKeys.find((item) => item.id === columnId)?.name ||
+                          data.columns.find((item) => item.id === columnId)
+                            ?.name ||
+                          data.foreignKeys.find((item) => item.id === columnId)
+                            ?.name ||
                           columnId,
                       )
                       .join(", ")
@@ -530,7 +548,9 @@ const ColumnPopover = ({
   onDelete,
   onClose,
 }: ColumnPopoverProps) => {
-  const selectedEnum = psqlEnums.find((item) => item.id === column.options?.enumId);
+  const selectedEnum = psqlEnums.find(
+    (item) => item.id === column.options?.enumId,
+  );
   const optionValues = column.options ?? {};
   const [enumValuesDraft, setEnumValuesDraft] = useState(
     () => selectedEnum?.values.join(", ") ?? "",
@@ -546,59 +566,95 @@ const ColumnPopover = ({
   };
 
   return (
-  <div className="row-popover__inner">
-    <div className="row-popover__header">
-      <span className="eyebrow">Column</span>
-      <TrashButton ariaLabel="Remove column" onClick={onDelete} />
-    </div>
+    <div className="row-popover__inner">
+      <div className="row-popover__header">
+        <span className="eyebrow">Column</span>
+        <TrashButton ariaLabel="Remove column" onClick={onDelete} />
+      </div>
 
-    <label>
-      Name
-      <input
-        placeholder="column_name"
-        value={column.name}
-        onChange={(event) => onChange({ name: event.target.value })}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            onClose();
-          }
-        }}
-      />
-    </label>
-
-    <label>
-      Type
-      <ComboInput
-        ariaLabel="Column type"
-        options={psqlColumnTypes}
-        value={column.type}
-        onChange={(next) =>
-          onChange({ type: next as PsqlColumn["type"], options: undefined })
-        }
-      />
-    </label>
-
-    {lengthOptionTypes.has(column.type) ? (
       <label>
-        Length
+        Name
         <input
-          min={1}
-          type="number"
-          value={optionValues.length ?? ""}
-          onChange={(event) =>
-            onChange({
-              options: {
-                ...optionValues,
-                length: toOptionalInteger(event.target.value),
-              },
-            })
+          placeholder="column_name"
+          value={column.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onClose();
+            }
+          }}
+        />
+      </label>
+
+      <label>
+        Type
+        <ComboInput
+          ariaLabel="Column type"
+          options={psqlColumnTypes}
+          value={column.type}
+          onChange={(next) =>
+            onChange({ type: next as PsqlColumn["type"], options: undefined })
           }
         />
       </label>
-    ) : null}
 
-    {numericOptionTypes.has(column.type) ? (
-      <div className="row">
+      {lengthOptionTypes.has(column.type) ? (
+        <label>
+          Length
+          <input
+            min={1}
+            type="number"
+            value={optionValues.length ?? ""}
+            onChange={(event) =>
+              onChange({
+                options: {
+                  ...optionValues,
+                  length: toOptionalInteger(event.target.value),
+                },
+              })
+            }
+          />
+        </label>
+      ) : null}
+
+      {numericOptionTypes.has(column.type) ? (
+        <div className="row">
+          <label>
+            Precision
+            <input
+              min={0}
+              type="number"
+              value={optionValues.precision ?? ""}
+              onChange={(event) =>
+                onChange({
+                  options: {
+                    ...optionValues,
+                    precision: toOptionalInteger(event.target.value),
+                  },
+                })
+              }
+            />
+          </label>
+          <label>
+            Scale
+            <input
+              min={0}
+              type="number"
+              value={optionValues.scale ?? ""}
+              onChange={(event) =>
+                onChange({
+                  options: {
+                    ...optionValues,
+                    scale: toOptionalInteger(event.target.value),
+                  },
+                })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+
+      {precisionOptionTypes.has(column.type) ? (
         <label>
           Precision
           <input
@@ -615,219 +671,185 @@ const ColumnPopover = ({
             }
           />
         </label>
-        <label>
-          Scale
-          <input
-            min={0}
-            type="number"
-            value={optionValues.scale ?? ""}
-            onChange={(event) =>
-              onChange({
-                options: {
-                  ...optionValues,
-                  scale: toOptionalInteger(event.target.value),
-                },
-              })
-            }
-          />
-        </label>
-      </div>
-    ) : null}
+      ) : null}
 
-    {precisionOptionTypes.has(column.type) ? (
-      <label>
-        Precision
-        <input
-          min={0}
-          type="number"
-          value={optionValues.precision ?? ""}
-          onChange={(event) =>
-            onChange({
-              options: {
-                ...optionValues,
-                precision: toOptionalInteger(event.target.value),
-              },
-            })
-          }
-        />
-      </label>
-    ) : null}
-
-    {geometryOptionTypes.has(column.type) ? (
-      <>
-        <label>
-          Subtype
-          <ComboInput
-            ariaLabel="Geometry subtype"
-            options={geometrySubtypes}
-            placeholder="e.g. Point"
-            value={optionValues.geometrySubtype ?? ""}
-            onChange={(next) =>
-              onChange({
-                options: {
-                  ...optionValues,
-                  geometrySubtype: next || undefined,
-                  srid: next ? optionValues.srid : undefined,
-                },
-              })
-            }
-          />
-        </label>
-        {optionValues.geometrySubtype ? (
+      {geometryOptionTypes.has(column.type) ? (
+        <>
           <label>
-            SRID
-            <input
-              type="number"
-              min={1}
-              placeholder="e.g. 4326"
-              value={optionValues.srid ?? ""}
-              onChange={(event) =>
+            Subtype
+            <ComboInput
+              ariaLabel="Geometry subtype"
+              options={geometrySubtypes}
+              placeholder="e.g. Point"
+              value={optionValues.geometrySubtype ?? ""}
+              onChange={(next) =>
                 onChange({
                   options: {
                     ...optionValues,
-                    srid: toOptionalInteger(event.target.value),
+                    geometrySubtype: next || undefined,
+                    srid: next ? optionValues.srid : undefined,
                   },
                 })
               }
             />
           </label>
-        ) : null}
-      </>
-    ) : null}
+          {optionValues.geometrySubtype ? (
+            <label>
+              SRID
+              <input
+                type="number"
+                min={1}
+                placeholder="e.g. 4326"
+                value={optionValues.srid ?? ""}
+                onChange={(event) =>
+                  onChange({
+                    options: {
+                      ...optionValues,
+                      srid: toOptionalInteger(event.target.value),
+                    },
+                  })
+                }
+              />
+            </label>
+          ) : null}
+        </>
+      ) : null}
 
-    {column.type === "enum" ? (
-      <>
+      {column.type === "enum" ? (
+        <>
+          <label>
+            Enum type
+            <ComboInput
+              ariaLabel="Enum type"
+              options={psqlEnums.map((e) => e.name || "unnamed_enum")}
+              placeholder="Select enum"
+              value={selectedEnum?.name ?? ""}
+              onChange={(next) => {
+                const found = psqlEnums.find(
+                  (e) => (e.name || "unnamed_enum") === next,
+                );
+                if (found)
+                  onChange({ options: { ...optionValues, enumId: found.id } });
+              }}
+            />
+          </label>
+
+          <button type="button" onClick={handleCreateEnum}>
+            + Create enum
+          </button>
+
+          {selectedEnum ? (
+            <>
+              <label>
+                Enum name
+                <input
+                  placeholder="status_enum"
+                  value={selectedEnum.name}
+                  onChange={(event) =>
+                    onReplacePsqlEnums(
+                      updateEnum(psqlEnums, selectedEnum.id, {
+                        name: event.target.value,
+                      }),
+                    )
+                  }
+                />
+              </label>
+              <label>
+                Enum values
+                <textarea
+                  rows={3}
+                  placeholder="draft, published, archived"
+                  value={enumValuesDraft}
+                  onChange={(event) => {
+                    const nextDraft = event.target.value;
+                    setEnumValuesDraft(nextDraft);
+                    onReplacePsqlEnums(
+                      updateEnum(psqlEnums, selectedEnum.id, {
+                        values: parseEnumValuesDraft(nextDraft),
+                      }),
+                    );
+                  }}
+                />
+              </label>
+            </>
+          ) : null}
+        </>
+      ) : null}
+
+      {arrayOptionTypes.has(column.type) ? (
         <label>
-          Enum type
+          Array item type
           <ComboInput
-            ariaLabel="Enum type"
-            options={psqlEnums.map((e) => e.name || "unnamed_enum")}
-            placeholder="Select enum"
-            value={selectedEnum?.name ?? ""}
-            onChange={(next) => {
-              const found = psqlEnums.find((e) => (e.name || "unnamed_enum") === next);
-              if (found) onChange({ options: { ...optionValues, enumId: found.id } });
+            ariaLabel="Array item type"
+            options={arrayItemTypeOptions}
+            value={optionValues.arrayItemType ?? column.type.replace("[]", "")}
+            onChange={(next) =>
+              onChange({
+                options: {
+                  ...optionValues,
+                  arrayItemType: next as PsqlColumnType,
+                },
+              })
+            }
+          />
+        </label>
+      ) : null}
+
+      <div className="row-popover__section row-popover__section--constraints">
+        <div className="plate-toggle-group" aria-label="Column constraints">
+          <button
+            type="button"
+            className={`plate-toggle${column.nullable ? " plate-toggle--active" : ""}`}
+            aria-pressed={column.nullable}
+            onClick={() => onChange({ nullable: !column.nullable })}
+          >
+            nullable
+          </button>
+          <button
+            type="button"
+            className={`plate-toggle${column.unique ? " plate-toggle--active" : ""}`}
+            aria-pressed={column.unique ?? false}
+            onClick={() => onChange({ unique: !(column.unique ?? false) })}
+          >
+            unique
+          </button>
+        </div>
+
+        <label>
+          Default (SQL expression)
+          <input
+            placeholder="e.g. gen_random_uuid() or 'draft'"
+            value={column.defaultValue ?? ""}
+            onChange={(event) => {
+              const next = event.target.value;
+              onChange({
+                defaultValue: next.trim() === "" ? undefined : next,
+              });
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                onClose();
+              }
             }}
           />
         </label>
 
-        <button type="button" onClick={handleCreateEnum}>
-          + Create enum
-        </button>
-
-        {selectedEnum ? (
-          <>
-            <label>
-              Enum name
-              <input
-                placeholder="status_enum"
-                value={selectedEnum.name}
-                onChange={(event) =>
-                  onReplacePsqlEnums(
-                    updateEnum(psqlEnums, selectedEnum.id, {
-                      name: event.target.value,
-                    }),
-                  )
-                }
-              />
-            </label>
-            <label>
-              Enum values
-              <textarea
-                rows={3}
-                placeholder="draft, published, archived"
-                value={enumValuesDraft}
-                onChange={(event) => {
-                  const nextDraft = event.target.value;
-                  setEnumValuesDraft(nextDraft);
-                  onReplacePsqlEnums(
-                    updateEnum(psqlEnums, selectedEnum.id, {
-                      values: parseEnumValuesDraft(nextDraft),
-                    }),
-                  );
-                }}
-              />
-            </label>
-          </>
-        ) : null}
-      </>
-    ) : null}
-
-    {arrayOptionTypes.has(column.type) ? (
-      <label>
-        Array item type
-        <ComboInput
-          ariaLabel="Array item type"
-          options={arrayItemTypeOptions}
-          value={optionValues.arrayItemType ?? column.type.replace("[]", "")}
-          onChange={(next) =>
-            onChange({
-              options: {
-                ...optionValues,
-                arrayItemType: next as PsqlColumnType,
-              },
-            })
-          }
-        />
-      </label>
-    ) : null}
-
-    <div className="row-popover__section row-popover__section--constraints">
-      <div className="plate-toggle-group" aria-label="Column constraints">
-        <button
-          type="button"
-          className={`plate-toggle${column.nullable ? " plate-toggle--active" : ""}`}
-          aria-pressed={column.nullable}
-          onClick={() => onChange({ nullable: !column.nullable })}
-        >
-          nullable
-        </button>
-        <button
-          type="button"
-          className={`plate-toggle${column.unique ? " plate-toggle--active" : ""}`}
-          aria-pressed={column.unique ?? false}
-          onClick={() => onChange({ unique: !(column.unique ?? false) })}
-        >
-          unique
-        </button>
+        <label>
+          CHECK (predicate only)
+          <textarea
+            rows={2}
+            placeholder="e.g. length(trim(name)) > 0"
+            value={column.check ?? ""}
+            onChange={(event) => {
+              const next = event.target.value;
+              onChange({
+                check: next.trim() === "" ? undefined : next,
+              });
+            }}
+          />
+        </label>
       </div>
-
-      <label>
-        Default (SQL expression)
-        <input
-          placeholder="e.g. gen_random_uuid() or 'draft'"
-          value={column.defaultValue ?? ""}
-          onChange={(event) => {
-            const next = event.target.value;
-            onChange({
-              defaultValue: next.trim() === "" ? undefined : next,
-            });
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              onClose();
-            }
-          }}
-        />
-      </label>
-
-      <label>
-        CHECK (predicate only)
-        <textarea
-          rows={2}
-          placeholder="e.g. length(trim(name)) > 0"
-          value={column.check ?? ""}
-          onChange={(event) => {
-            const next = event.target.value;
-            onChange({
-              check: next.trim() === "" ? undefined : next,
-            });
-          }}
-        />
-      </label>
     </div>
-
-  </div>
   );
 };
 
@@ -841,7 +863,10 @@ type ForeignKeyPopoverProps = {
 
 const fkActionOptions = psqlForeignKeyActions;
 
-const formatReferenceOption = (table: PsqlTableDiagramNode, column: PsqlColumn) =>
+const formatReferenceOption = (
+  table: PsqlTableDiagramNode,
+  column: PsqlColumn,
+) =>
   `${table.data.tableName || "table"}.${column.name || "column"} (${column.type})`;
 
 const ForeignKeyPopover = ({
@@ -1001,9 +1026,7 @@ const IndexPopover = ({
           ariaLabel="Index method"
           options={psqlIndexMethods}
           value={index.method}
-          onChange={(next) =>
-            onChange({ method: next as PsqlIndex["method"] })
-          }
+          onChange={(next) => onChange({ method: next as PsqlIndex["method"] })}
         />
       </label>
 

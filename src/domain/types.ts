@@ -1,10 +1,7 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockNodeKindSchema = z.enum([
-  "restResource",
-  "psqlTable",
-]);
+export const blockNodeKindSchema = z.enum(["restResource", "psqlTable"]);
 export type BlockNodeKind = z.infer<typeof blockNodeKindSchema>;
 export type BlockKind = BlockNodeKind;
 
