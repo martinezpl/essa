@@ -7,6 +7,10 @@ export const psqlForeignKeyTargetHandleId = (foreignKeyId: string) =>
 export const psqlColumnSourceHandleId = (columnId: string) =>
   `${PSQL_COLUMN_SOURCE_HANDLE_PREFIX}${columnId}`;
 
+export const psqlForeignKeyIndicatorTargetHandleId = psqlForeignKeyTargetHandleId;
+
+export const psqlForeignKeyIndicatorSourceHandleId = psqlColumnSourceHandleId;
+
 export const parsePsqlForeignKeyTargetHandleId = (
   handleId?: string | null,
 ) =>
@@ -18,3 +22,9 @@ export const parsePsqlColumnSourceHandleId = (handleId?: string | null) =>
   handleId?.startsWith(PSQL_COLUMN_SOURCE_HANDLE_PREFIX)
     ? handleId.slice(PSQL_COLUMN_SOURCE_HANDLE_PREFIX.length)
     : null;
+
+export const parsePsqlForeignKeyIndicatorTargetHandleId =
+  parsePsqlForeignKeyTargetHandleId;
+
+export const parsePsqlForeignKeyIndicatorSourceHandleId =
+  parsePsqlColumnSourceHandleId;

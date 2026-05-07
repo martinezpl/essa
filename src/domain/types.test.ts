@@ -11,6 +11,7 @@ import {
   restResourceMethodSchema,
   psqlColumnSchema,
   psqlTableDataSchema,
+  appViewDataSchema,
 } from "./types";
 
 describe("domain schemas", () => {
@@ -30,6 +31,36 @@ describe("domain schemas", () => {
     expect(edgeDataSchema.parse({ kind: "read/write" })).toEqual({
       kind: "read/write",
       dataPath: "all",
+    });
+    expect(edgeDataSchema.parse({ kind: "navigate" })).toEqual({
+      kind: "navigate",
+      dataPath: "all",
+    });
+  });
+
+  it("parses AppView data with named events", () => {
+    expect(
+      appViewDataSchema.parse({
+        kind: "appView",
+        viewName: "Posts",
+        route: "/posts",
+        events: [
+          {
+            id: "event-submit",
+            name: "onClick::Submit",
+          },
+        ],
+      }),
+    ).toEqual({
+      kind: "appView",
+      viewName: "Posts",
+      route: "/posts",
+      events: [
+        {
+          id: "event-submit",
+          name: "onClick::Submit",
+        },
+      ],
     });
   });
 

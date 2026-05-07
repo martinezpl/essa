@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { createDiagramNode, createStarterDiagram } from "../factories";
+import {
+  appViewInputHandleId,
+  appViewEventSourceHandleId,
+  appViewOnLoadSourceHandleId,
+  psqlTableInputHandleId,
+  restMethodSourceHandleId,
+  restMethodTargetHandleId,
+} from "../connectionEndpoints";
 import type { Diagram, DiagramNode } from "../types";
 import {
+  AppViewBlock,
   DiagramModel,
   RestResourceBlock,
   PsqlTableBlock,
@@ -22,8 +31,20 @@ type RestResourceNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "restResource" }>;
 };
 
+type AppViewNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "appView" }>;
+};
+
 type PsqlTableNode = DiagramNode & {
   data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
+
+const asAppViewNode = (node: DiagramNode): AppViewNode => {
+  if (node.data.kind !== "appView") {
+    throw new Error("Expected app view test node");
+  }
+
+  return node as AppViewNode;
 };
 
 const asRestResourceNode = (node: DiagramNode): RestResourceNode => {
@@ -59,6 +80,24 @@ describe("block model", () => {
       "GET /",
       "GET /{id}",
     ]);
+  });
+
+  it("creates and clones AppView events", () => {
+    const node = asAppViewNode(
+      AppViewBlock.create({ x: 10, y: 20 }, { seed: true }).serialize(),
+    );
+    const clone = asAppViewNode(AppViewBlock.hydrate(node).clone().serialize());
+
+    expect(node.type).toBe("appView");
+    expect(node.data).toMatchObject({
+      kind: "appView",
+      viewName: "Items",
+      route: "/items",
+    });
+    expect(clone.id).not.toBe(node.id);
+    expect(clone.data.events).toHaveLength(node.data.events.length);
+    expect(clone.data.events[0]?.id).not.toBe(node.data.events[0]?.id);
+    expect(clone.data.events[0]?.name).toBe(node.data.events[0]?.name);
   });
 
   it("clones child collections with fresh ids", () => {
@@ -201,23 +240,86 @@ describe("block model", () => {
 });
 
 describe("connection model", () => {
-  it("validates connections through block ports", () => {
+  it("requires explicit endpoint handles for user-created connections", () => {
+    const view = AppViewBlock.create({ x: 0, y: 0 });
     const resource = RestResourceBlock.create({ x: 100, y: 0 });
     const table = PsqlTableBlock.create({ x: 200, y: 0 });
 
-    expect(getCompatibleConnectionKind(resource, table)).toBe("read");
-    expect(getCompatibleConnectionKinds(resource, table)).toEqual([
-      "read",
-      "write",
-      "read/write",
-    ]);
+    expect(getCompatibleConnectionKind(view, resource)).toBeNull();
+    expect(getCompatibleConnectionKinds(view, resource)).toEqual([]);
+    expect(getCompatibleConnectionKind(resource, table)).toBeNull();
+    expect(getCompatibleConnectionKinds(resource, table)).toEqual([]);
     expect(getCompatibleConnectionKind(table, resource)).toBeNull();
     expect(getCompatibleConnectionKinds(table, resource)).toEqual([]);
   });
 
-  it("creates valid edges and rejects duplicates", () => {
-    const resource = createDiagramNode("restResource", { x: 100, y: 0 });
+  it("validates connections through endpoint handles", () => {
+    const source = asAppViewNode(createDiagramNode("appView", { x: 0, y: 0 }));
+    const target = asAppViewNode(createDiagramNode("appView", { x: 200, y: 0 }));
+    source.data.events = [{ id: "event-next", name: "onClick::Next" }];
+    const resource = asRestResourceNode(
+      createDiagramNode("restResource", { x: 100, y: 0 }, { seed: true }),
+    );
     const table = createDiagramNode("psqlTable", { x: 200, y: 0 });
+    const getMethod = resource.data.methods.find((method) => method.kind === "GET /");
+
+    if (!getMethod) {
+      throw new Error("Expected seeded GET method");
+    }
+
+    expect(
+      getCompatibleConnectionKind(
+        AppViewBlock.hydrate(source),
+        RestResourceBlock.hydrate(resource),
+        appViewOnLoadSourceHandleId(),
+        restMethodTargetHandleId(getMethod.id),
+      ),
+    ).toBe("read");
+    expect(
+      getCompatibleConnectionKind(
+        AppViewBlock.hydrate(source),
+        AppViewBlock.hydrate(target),
+        appViewEventSourceHandleId("event-next"),
+        appViewInputHandleId(),
+      ),
+    ).toBe("navigate");
+    expect(
+      getCompatibleConnectionKind(
+        RestResourceBlock.hydrate(resource),
+        PsqlTableBlock.hydrate(table),
+        restMethodSourceHandleId(getMethod.id),
+        psqlTableInputHandleId(),
+      ),
+    ).toBe("read");
+    expect(
+      getCompatibleConnectionKinds(
+        RestResourceBlock.hydrate(resource),
+        PsqlTableBlock.hydrate(table),
+        restMethodSourceHandleId(getMethod.id),
+        psqlTableInputHandleId(),
+      ),
+    ).toEqual(["read"]);
+    expect(
+      getCompatibleConnectionKind(
+        AppViewBlock.hydrate(source),
+        AppViewBlock.hydrate(target),
+        appViewOnLoadSourceHandleId(),
+        appViewInputHandleId(),
+      ),
+    ).toBeNull();
+  });
+
+  it("creates valid endpoint edges and rejects duplicates", () => {
+    const resource = asRestResourceNode(
+      createDiagramNode("restResource", { x: 100, y: 0 }, { seed: true }),
+    );
+    const table = createDiagramNode("psqlTable", { x: 200, y: 0 });
+    const getMethod = resource.data.methods.find((method) => method.kind === "GET /");
+
+    if (!getMethod) {
+      throw new Error("Expected seeded GET method");
+    }
+
     const diagram: Diagram = {
       id: "diagram-1",
       name: "Test diagram",
@@ -228,11 +330,18 @@ describe("connection model", () => {
       edges: [],
     };
     const model = DiagramModel.hydrate(diagram);
-    const connection = model.createConnection(resource.id, table.id);
+    const connection = model.createConnection(
+      resource.id,
+      table.id,
+      restMethodSourceHandleId(getMethod.id),
+      psqlTableInputHandleId(),
+    );
 
     expect(connection?.serialize()).toMatchObject({
       source: resource.id,
+      sourceHandle: restMethodSourceHandleId(getMethod.id),
       target: table.id,
+      targetHandle: psqlTableInputHandleId(),
       type: "smoothstep",
       data: { kind: "read", dataPath: "all" },
     });
@@ -242,7 +351,161 @@ describe("connection model", () => {
       edges: connection ? [connection.serialize()] : [],
     });
 
-    expect(modelWithConnection.createConnection(resource.id, table.id)).toBeNull();
+    expect(
+      modelWithConnection.createConnection(
+        resource.id,
+        table.id,
+        restMethodSourceHandleId(getMethod.id),
+        psqlTableInputHandleId(),
+      ),
+    ).toBeNull();
+  });
+
+  it("connects AppView onLoad and events to REST method handles", () => {
+    const view = asAppViewNode(createDiagramNode("appView", { x: 0, y: 0 }));
+    const resource = asRestResourceNode(
+      createDiagramNode("restResource", { x: 200, y: 0 }, { seed: true }),
+    );
+    view.data.events = [{ id: "event-submit", name: "onClick::Submit" }];
+    const getMethod = resource.data.methods.find((method) => method.kind === "GET /");
+    const postMethod = resource.data.methods.find(
+      (method) => method.kind === "POST /",
+    );
+
+    if (!getMethod || !postMethod) {
+      throw new Error("Expected seeded REST methods");
+    }
+
+    const diagram: Diagram = {
+      id: "diagram-1",
+      name: "Test diagram",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      updatedAt: "2026-05-02T00:00:00.000Z",
+      psqlEnums: [],
+      nodes: [view, resource],
+      edges: [],
+    };
+    const model = DiagramModel.hydrate(diagram);
+
+    expect(
+      model
+        .createConnection(
+          view.id,
+          resource.id,
+          appViewOnLoadSourceHandleId(),
+          restMethodTargetHandleId(getMethod.id),
+        )
+        ?.serialize(),
+    ).toMatchObject({
+      source: view.id,
+      sourceHandle: appViewOnLoadSourceHandleId(),
+      target: resource.id,
+      targetHandle: restMethodTargetHandleId(getMethod.id),
+      data: { kind: "read", dataPath: "all" },
+    });
+    expect(
+      model
+        .createConnection(
+          view.id,
+          resource.id,
+          appViewEventSourceHandleId("event-submit"),
+          restMethodTargetHandleId(postMethod.id),
+        )
+        ?.serialize(),
+    ).toMatchObject({
+      data: { kind: "write", dataPath: "all" },
+    });
+  });
+
+  it("connects REST method source handles to PSQL tables", () => {
+    const resource = asRestResourceNode(
+      createDiagramNode("restResource", { x: 0, y: 0 }, { seed: true }),
+    );
+    const table = createDiagramNode("psqlTable", { x: 200, y: 0 });
+    const getMethod = resource.data.methods.find((method) => method.kind === "GET /");
+    const postMethod = resource.data.methods.find(
+      (method) => method.kind === "POST /",
+    );
+
+    if (!getMethod || !postMethod) {
+      throw new Error("Expected seeded REST methods");
+    }
+
+    const diagram: Diagram = {
+      id: "diagram-1",
+      name: "Test diagram",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      updatedAt: "2026-05-02T00:00:00.000Z",
+      psqlEnums: [],
+      nodes: [resource, table],
+      edges: [],
+    };
+    const model = DiagramModel.hydrate(diagram);
+
+    expect(
+      model
+        .createConnection(
+          resource.id,
+          table.id,
+          restMethodSourceHandleId(getMethod.id),
+          psqlTableInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({
+      source: resource.id,
+      sourceHandle: restMethodSourceHandleId(getMethod.id),
+      target: table.id,
+      data: { kind: "read", dataPath: "all" },
+    });
+    expect(
+      model
+        .createConnection(
+          resource.id,
+          table.id,
+          restMethodSourceHandleId(postMethod.id),
+          psqlTableInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({
+      data: { kind: "write", dataPath: "all" },
+    });
+  });
+
+  it("connects AppView events to other AppViews as navigation", () => {
+    const source = asAppViewNode(createDiagramNode("appView", { x: 0, y: 0 }));
+    const target = asAppViewNode(createDiagramNode("appView", { x: 200, y: 0 }));
+    source.data.events = [{ id: "event-next", name: "onClick::Next" }];
+    const diagram: Diagram = {
+      id: "diagram-1",
+      name: "Test diagram",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      updatedAt: "2026-05-02T00:00:00.000Z",
+      psqlEnums: [],
+      nodes: [source, target],
+      edges: [],
+    };
+    const model = DiagramModel.hydrate(diagram);
+
+    expect(
+      model
+        .createConnection(
+          source.id,
+          target.id,
+          appViewEventSourceHandleId("event-next"),
+          appViewInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({
+      data: { kind: "navigate", dataPath: "all" },
+    });
+    expect(
+      model.createConnection(
+        source.id,
+        target.id,
+        appViewOnLoadSourceHandleId(),
+        appViewInputHandleId(),
+      ),
+    ).toBeNull();
   });
 });
 

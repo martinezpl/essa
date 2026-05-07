@@ -13,6 +13,8 @@ import {
 export const getConnectionKind = (
   source?: DiagramNode,
   target?: DiagramNode,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
 ): ConnectionKind | null => {
   if (!source || !target || source.id === target.id) {
     return null;
@@ -22,25 +24,41 @@ export const getConnectionKind = (
     return null;
   }
 
-  return getCompatibleConnectionKind(hydrateBlock(source), hydrateBlock(target));
+  return getCompatibleConnectionKind(
+    hydrateBlock(source),
+    hydrateBlock(target),
+    sourceHandle,
+    targetHandle,
+  );
 };
 
 export const hasDuplicateConnection = (
   edges: DiagramEdge[],
   sourceId: string,
   targetId: string,
-) => edges.some((edge) => edge.source === sourceId && edge.target === targetId);
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
+) =>
+  edges.some(
+    (edge) =>
+      edge.source === sourceId &&
+      edge.target === targetId &&
+      (edge.sourceHandle ?? null) === (sourceHandle ?? null) &&
+      (edge.targetHandle ?? null) === (targetHandle ?? null),
+  );
 
 export const createValidatedEdge = (
   nodes: DiagramNode[],
   edges: DiagramEdge[],
   sourceId?: string | null,
   targetId?: string | null,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
 ): DiagramEdge | null => {
   if (
     !sourceId ||
     !targetId ||
-    hasDuplicateConnection(edges, sourceId, targetId)
+    hasDuplicateConnection(edges, sourceId, targetId, sourceHandle, targetHandle)
   ) {
     return null;
   }
@@ -57,12 +75,21 @@ export const createValidatedEdge = (
     return null;
   }
 
-  return Connection.create(hydrateBlock(source), hydrateBlock(target))?.serialize() ?? null;
+  return (
+    Connection.create(hydrateBlock(source), hydrateBlock(target), {
+      sourceHandle,
+      targetHandle,
+    })?.serialize() ?? null
+  );
 };
 
 export const createValidatedConnection = (
   diagram: Pick<DiagramModel, "createConnection">,
   sourceId?: string | null,
   targetId?: string | null,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
 ): DiagramEdge | null =>
-  diagram.createConnection(sourceId, targetId)?.serialize() ?? null;
+  diagram
+    .createConnection(sourceId, targetId, sourceHandle, targetHandle)
+    ?.serialize() ?? null;

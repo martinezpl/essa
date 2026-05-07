@@ -1,16 +1,13 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { useDiagramContext } from "../../app/diagramContext";
-import type { BlockKind } from "../../domain/types";
 import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { TrashButton } from "../blockEditors/TrashButton";
-import { BlockHandles } from "./BlockHandles";
 
 type BlockNodeFrameProps = {
   badge: string;
   children: ReactNode;
   deleteAriaLabel: string;
   id: string;
-  kind: BlockKind;
   selected?: boolean;
   title: string;
   titleAriaLabel: string;
@@ -26,7 +23,6 @@ export const BlockNodeFrame = ({
   children,
   deleteAriaLabel,
   id,
-  kind,
   selected,
   title,
   titleAriaLabel,
@@ -47,8 +43,6 @@ export const BlockNodeFrame = ({
       }`}
       style={{ minWidth: nameMinWidth(titleLayout) }}
     >
-      <BlockHandles kind={kind} />
-
       <header className="block-node__head">
         <span className="block-node__badge">{badge}</span>
         <span className="block-node__head-spacer" />

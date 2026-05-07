@@ -38,6 +38,7 @@ import type {
   DiagramEdge,
   DiagramNode,
   EdgeData,
+  AppViewEvent,
   ResourceSchemaField,
   RestMethodInputField,
   RestMethodKind,
@@ -54,6 +55,12 @@ import {
   loadDiagramCollection,
   saveDiagramCollection,
 } from "../storage/diagramStorage";
+import {
+  parseAppViewEventSourceHandleId,
+  parseRestMethodSourceHandleId,
+  parseRestMethodTargetHandleId,
+  remapConnectionEndpointHandle,
+} from "../domain/connectionEndpoints";
 import {
   createHistory,
   recordHistory,
@@ -206,11 +213,42 @@ export const duplicateDiagramSelection = (
   const idMap = new Map(
     nodesToDuplicate.map((node, index) => [node.id, clonedNodes[index].id]),
   );
+  const appViewEventIdMap = new Map<string, string>();
+  const restMethodIdMap = new Map<string, string>();
   const columnIdMap = new Map<string, string>();
   const fkIdMap = new Map<string, string>();
 
   nodesToDuplicate.forEach((node, index) => {
     const clonedNode = clonedNodes[index];
+
+    if (node.data.kind === "appView" && clonedNode.data.kind === "appView") {
+      const events = node.data.events as AppViewEvent[];
+      const clonedEvents = clonedNode.data.events as AppViewEvent[];
+
+      events.forEach((event, eventIndex) => {
+        const clonedEvent = clonedEvents[eventIndex];
+
+        if (clonedEvent) {
+          appViewEventIdMap.set(event.id, clonedEvent.id);
+        }
+      });
+    }
+
+    if (
+      node.data.kind === "restResource" &&
+      clonedNode.data.kind === "restResource"
+    ) {
+      const methods = node.data.methods as RestResourceMethod[];
+      const clonedMethods = clonedNode.data.methods as RestResourceMethod[];
+
+      methods.forEach((method, methodIndex) => {
+        const clonedMethod = clonedMethods[methodIndex];
+
+        if (clonedMethod) {
+          restMethodIdMap.set(method.id, clonedMethod.id);
+        }
+      });
+    }
 
     if (node.data.kind !== "psqlTable") {
       return;
@@ -297,12 +335,33 @@ export const duplicateDiagramSelection = (
         ...edge,
         id: createId("edge"),
         source,
+        sourceHandle: remapDuplicatedHandle(
+          edge.sourceHandle,
+          appViewEventIdMap,
+          restMethodIdMap,
+        ),
         target,
+        targetHandle: remapDuplicatedHandle(
+          edge.targetHandle,
+          appViewEventIdMap,
+          restMethodIdMap,
+        ),
       },
     ];
   });
 
   return { edges: internalEdges, nodes };
+};
+
+const remapDuplicatedHandle = (
+  handleId: string | null | undefined,
+  appViewEventIdMap: Map<string, string>,
+  restMethodIdMap: Map<string, string>,
+) => {
+  const remapValue = (value: string) =>
+    appViewEventIdMap.get(value) ?? restMethodIdMap.get(value) ?? value;
+
+  return remapConnectionEndpointHandle(handleId, remapValue);
 };
 
 export const useDiagramStore = () => {
@@ -559,7 +618,7 @@ export const useDiagramStore = () => {
         }
 
         if (node.data.kind !== "psqlTable") {
-          return {
+          const nextDiagram: Diagram = {
             ...diagram,
             nodes: diagram.nodes.map((item) =>
               item.id === nodeId
@@ -573,6 +632,52 @@ export const useDiagramStore = () => {
                 : item,
             ),
           };
+
+          if (node.data.kind === "appView" && "events" in patch) {
+            const events = (patch.events ?? node.data.events) as AppViewEvent[];
+            const eventIds = new Set(
+              events.map((event) => event.id),
+            );
+
+            return {
+              ...nextDiagram,
+              edges: nextDiagram.edges.filter((edge) => {
+                if (edge.source !== nodeId) {
+                  return true;
+                }
+
+                const eventId = parseAppViewEventSourceHandleId(edge.sourceHandle);
+                return !eventId || eventIds.has(eventId);
+              }),
+            };
+          }
+
+          if (node.data.kind === "restResource" && "methods" in patch) {
+            const methods = (patch.methods ??
+              node.data.methods) as RestResourceMethod[];
+            const methodIds = new Set(
+              methods.map((method) => method.id),
+            );
+
+            return {
+              ...nextDiagram,
+              edges: nextDiagram.edges.filter((edge) => {
+                if (edge.source === nodeId) {
+                  const methodId = parseRestMethodSourceHandleId(edge.sourceHandle);
+                  return !methodId || methodIds.has(methodId);
+                }
+
+                if (edge.target === nodeId) {
+                  const methodId = parseRestMethodTargetHandleId(edge.targetHandle);
+                  return !methodId || methodIds.has(methodId);
+                }
+
+                return true;
+              }),
+            };
+          }
+
+          return nextDiagram;
         }
 
         const previousTable = node.data;
@@ -1032,10 +1137,15 @@ export const useDiagramStore = () => {
   );
 
   const connectNodes = useCallback(
-    (sourceId?: string | null, targetId?: string | null) => {
+    (
+      sourceId?: string | null,
+      targetId?: string | null,
+      sourceHandle?: string | null,
+      targetHandle?: string | null,
+    ) => {
       updateActiveDiagram((diagram) => {
         const edge = DiagramModel.hydrate(diagram)
-          .createConnection(sourceId, targetId)
+          .createConnection(sourceId, targetId, sourceHandle, targetHandle)
           ?.serialize();
 
         if (!edge) {

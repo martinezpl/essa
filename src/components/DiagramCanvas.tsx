@@ -20,7 +20,13 @@ import {
   type NodeChange,
   type NodeTypes,
 } from "@xyflow/react";
+import {
+  getAllConnectionEndpoints,
+  getCompatibleEndpointConnection,
+  getConnectionEndpointByHandle,
+} from "../domain/connectionEndpoints";
 import { blockList } from "../domain/model";
+import { AppViewNode } from "./nodes/AppViewNode";
 import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnnotationNode } from "./nodes/AnnotationNode";
@@ -41,7 +47,12 @@ type DiagramCanvasProps = {
     position?: { x: number; y: number },
     dataPatch?: Partial<DiagramNode["data"]>,
   ) => string;
-  onConnect: (sourceId?: string | null, targetId?: string | null) => void;
+  onConnect: (
+    sourceId?: string | null,
+    targetId?: string | null,
+    sourceHandle?: string | null,
+    targetHandle?: string | null,
+  ) => void;
   onEdgesChange: (changes: EdgeChange<DiagramEdge>[]) => void;
   onNodesChange: (changes: NodeChange<DiagramNode>[]) => void;
   onDeleteNode: (nodeId: string) => void;
@@ -63,6 +74,7 @@ type DiagramCanvasProps = {
 };
 
 const nodeTypes = {
+  appView: AppViewNode,
   restResource: RestResourceNode,
   psqlTable: PsqlTableNode,
   annotation: AnnotationNode,
@@ -108,6 +120,11 @@ type AnnotationResizeDraft = {
   startY: number;
   top: number;
   width: number;
+};
+
+type ConnectionDragState = {
+  activeEndpointId: string;
+  validTargetEndpointIds: string[];
 };
 
 const MIN_ANNOTATION_SIZE = 24;
@@ -214,8 +231,28 @@ export const DiagramCanvas = ({
   );
   const [annotationResizeDraft, setAnnotationResizeDraft] =
     useState<AnnotationResizeDraft | null>(null);
+  const [connectionDrag, setConnectionDrag] =
+    useState<ConnectionDragState | null>(null);
   const annotationNameInputRef = useRef<HTMLInputElement | null>(null);
   const ignoreNextPaneClickRef = useRef(false);
+
+  const renderedNodes = useMemo<DiagramNode[]>(() => {
+    if (!connectionDrag) {
+      return nodes;
+    }
+
+    return nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        __connectionUx: {
+          activeEndpointId: connectionDrag.activeEndpointId,
+          dragging: true,
+          validTargetEndpointIds: connectionDrag.validTargetEndpointIds,
+        },
+      } as unknown as DiagramNode["data"],
+    }));
+  }, [connectionDrag, nodes]);
 
   const renderedEdges = useMemo(() => {
     const selectedNodeIds = new Set(
@@ -385,7 +422,9 @@ export const DiagramCanvas = ({
 
   return (
     <div
-      className={`canvas-shell canvas-shell--${mode}`}
+      className={`canvas-shell canvas-shell--${mode}${
+        connectionDrag ? " canvas-shell--connecting" : ""
+      }`}
       onWheelCapture={handleCanvasWheelCapture}
       onClickCapture={(event) => {
         if (mode !== "select") {
@@ -459,7 +498,7 @@ export const DiagramCanvas = ({
         maxZoom={MAX_ZOOM}
         minZoom={MIN_ZOOM}
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}
-        nodes={nodes}
+        nodes={renderedNodes}
         panOnDrag={mode === "grip"}
         selectionOnDrag={mode === "select"}
         zoomOnDoubleClick={mode !== "select"}
@@ -469,8 +508,47 @@ export const DiagramCanvas = ({
         edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}
         onConnect={(connection: Connection) =>
-          onConnect(connection.source, connection.target)
+          {
+            setConnectionDrag(null);
+            onConnect(
+            connection.source,
+            connection.target,
+            connection.sourceHandle,
+            connection.targetHandle,
+            );
+          }
         }
+        onConnectStart={(_, params) => {
+          if (params.handleType !== "source") {
+            setConnectionDrag(null);
+            return;
+          }
+
+          const sourceEndpoint = getConnectionEndpointByHandle(
+            nodes,
+            params.nodeId,
+            params.handleId,
+            "output",
+          );
+
+          if (!sourceEndpoint) {
+            setConnectionDrag(null);
+            return;
+          }
+
+          const validTargetEndpointIds = getAllConnectionEndpoints(nodes)
+            .filter((endpoint) => endpoint.direction === "input")
+            .filter((endpoint) =>
+              getCompatibleEndpointConnection(sourceEndpoint, endpoint, nodes),
+            )
+            .map((endpoint) => endpoint.id);
+
+          setConnectionDrag({
+            activeEndpointId: sourceEndpoint.id,
+            validTargetEndpointIds,
+          });
+        }}
+        onConnectEnd={() => setConnectionDrag(null)}
         onEdgesChange={onEdgesChange}
         onEdgeClick={(_, edge) => {
           setContextMenu(null);

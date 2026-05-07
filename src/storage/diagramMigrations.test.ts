@@ -95,7 +95,7 @@ describe("diagram migrations", () => {
     expect(table.data.columns[0]?.unique).toBe(false);
   });
 
-  it("migrates v3 collections to v4 and removes index names", () => {
+  it("migrates v3 collections to latest and removes index names", () => {
     const v3 = {
       version: 3,
       activeDiagramId: "diagram-1",
@@ -144,7 +144,7 @@ describe("diagram migrations", () => {
 
     const result = migrateDiagramCollection(v3);
 
-    expect(result.version).toBe(4);
+    expect(result.version).toBe(LATEST_DIAGRAM_COLLECTION_VERSION);
     const table = result.diagrams[0]?.nodes[0];
     expect(table?.data.kind).toBe("psqlTable");
     if (table?.data.kind !== "psqlTable") {
@@ -155,6 +155,19 @@ describe("diagram migrations", () => {
       columns: ["c1"],
       method: "btree",
       unique: false,
+    });
+  });
+
+  it("migrates v4 collections to v5 without changing diagrams", () => {
+    const collection = createInitialCollection();
+    const v4 = {
+      ...collection,
+      version: 4,
+    };
+
+    expect(migrateDiagramCollection(v4)).toEqual({
+      ...collection,
+      version: LATEST_DIAGRAM_COLLECTION_VERSION,
     });
   });
 });

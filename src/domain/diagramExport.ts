@@ -3,16 +3,18 @@ import { createId } from "./id";
 import { deriveResourceSchemas } from "./resourceSchema";
 import { formatPsqlColumnType, getRequiredExtension } from "./psqlTypes";
 import {
-  parsePsqlColumnSourceHandleId,
-  parsePsqlForeignKeyTargetHandleId,
-  psqlColumnSourceHandleId,
-  psqlForeignKeyTargetHandleId,
+  parsePsqlForeignKeyIndicatorSourceHandleId,
+  parsePsqlForeignKeyIndicatorTargetHandleId,
+  psqlForeignKeyIndicatorSourceHandleId,
+  psqlForeignKeyIndicatorTargetHandleId,
 } from "./psqlForeignKeys";
+import { remapConnectionEndpointHandle } from "./connectionEndpoints";
 import {
   diagramSchema,
   type Diagram,
   type DiagramEdge,
   type DiagramNode,
+  type AppViewEvent,
   type PsqlColumn,
   type PsqlEnum,
   type PsqlForeignKey,
@@ -121,22 +123,50 @@ export const parseEssaDiagram = (rawValue: string): Diagram =>
 const remapValue = (value: string, idMap: Map<string, string>) =>
   idMap.get(value) ?? value;
 
-const remapPsqlHandle = (
+const remapPsqlIndicatorHandle = (
   handleId: string | null | undefined,
   idMap: Map<string, string>,
 ) => {
-  const columnId = parsePsqlColumnSourceHandleId(handleId);
+  const columnId = parsePsqlForeignKeyIndicatorSourceHandleId(handleId);
   if (columnId) {
-    return psqlColumnSourceHandleId(remapValue(columnId, idMap));
+    return psqlForeignKeyIndicatorSourceHandleId(remapValue(columnId, idMap));
   }
 
-  const foreignKeyId = parsePsqlForeignKeyTargetHandleId(handleId);
+  const foreignKeyId = parsePsqlForeignKeyIndicatorTargetHandleId(handleId);
   if (foreignKeyId) {
-    return psqlForeignKeyTargetHandleId(remapValue(foreignKeyId, idMap));
+    return psqlForeignKeyIndicatorTargetHandleId(remapValue(foreignKeyId, idMap));
   }
 
   return handleId;
 };
+
+const remapDiagramHandle = (
+  handleId: string | null | undefined,
+  idMap: Map<string, string>,
+) => {
+  const remappedEndpointHandle = remapConnectionEndpointHandle(
+    handleId,
+    (value) => remapValue(value, idMap),
+  );
+
+  return remappedEndpointHandle === handleId
+    ? remapPsqlIndicatorHandle(handleId, idMap)
+    : remappedEndpointHandle;
+};
+
+const cloneAppViewEvents = (
+  events: AppViewEvent[],
+  idMap: Map<string, string>,
+): AppViewEvent[] =>
+  events.map((event) => {
+    const id = createId("event");
+    idMap.set(event.id, id);
+
+    return {
+      ...event,
+      id,
+    };
+  });
 
 const cloneResourceSchema = (
   schema: ResourceSchemaField[],
@@ -197,6 +227,18 @@ const cloneNodesFirstPass = (
   nodes.map((node) => {
     const id = createId("node");
     idMap.set(node.id, id);
+
+    if (node.data.kind === "appView") {
+      return {
+        ...node,
+        id,
+        selected: false,
+        data: {
+          ...node.data,
+          events: cloneAppViewEvents(node.data.events, idMap),
+        },
+      };
+    }
 
     if (node.data.kind === "restResource") {
       const methods = node.data.methods.map((method) => {
@@ -342,9 +384,9 @@ export const prepareImportedDiagram = (diagram: Diagram): Diagram => {
         ...edge,
         id: edgeId,
         source: remapValue(edge.source, idMap),
-        sourceHandle: remapPsqlHandle(edge.sourceHandle, idMap),
+        sourceHandle: remapDiagramHandle(edge.sourceHandle, idMap),
         target: remapValue(edge.target, idMap),
-        targetHandle: remapPsqlHandle(edge.targetHandle, idMap),
+        targetHandle: remapDiagramHandle(edge.targetHandle, idMap),
       };
     }),
   };

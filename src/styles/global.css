@@ -269,7 +269,7 @@ h3 {
 
 .eyebrow {
   color: var(--text-subtle);
-  font-size: 0.7rem;
+  font-size: var(--text-canvas-xs);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -996,6 +996,7 @@ h3 {
   border-radius: 50%;
 }
 
+.floating-dock__dot--appView { background: var(--view); }
 .floating-dock__dot--restResource { background: var(--resource); }
 .floating-dock__dot--psqlTable { background: var(--table); }
 .floating-dock__dot--annotation { background: var(--read-write); }
@@ -1276,19 +1277,14 @@ h3 {
   box-shadow: var(--shadow-md);
 }
 
-.react-flow__node.selected .block-node,
-.block-node--selected {
-  border-color: transparent;
-  box-shadow: var(--shadow-md), 0 0 0 8px var(--accent);
-}
 
 .react-flow__node.selected .block-node::before,
 .block-node--selected::before {
   content: "";
   position: absolute;
-  inset: -2px;
+  inset: -8px;
   border-radius: calc(var(--radius-lg) + 2px);
-  padding: 2px;
+  padding: 8px;
   background: conic-gradient(
     from var(--essa-angle),
     var(--accent),
@@ -1570,6 +1566,13 @@ h3 {
   line-height: var(--lh-normal);
 }
 
+.block-node__route-input {
+  background: var(--hover);
+  border-color: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--text-canvas-sm);
+}
+
 /* Sections inside an editable block */
 .block-node__section {
   display: flex;
@@ -1648,9 +1651,9 @@ h3 {
 }
 
 .field-row__handle {
-  width: 8px;
-  height: 8px;
-  border-width: 1px;
+  width: 0;
+  height: 0;
+  border-width: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -1681,6 +1684,82 @@ h3 {
   font-size: var(--text-canvas-md);
 }
 
+.app-view-event-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  font-size: var(--text-canvas-lg);
+  line-height: var(--lh-tight);
+  transition: background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.app-view-event-row:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+}
+
+.app-view-event-row--editable {
+  grid-template-columns: 1fr auto;
+}
+
+.app-view-event-row__body {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.app-view-event-row__input,
+.app-view-event-row__description {
+  background: transparent;
+  border-color: transparent;
+  padding: 0.15rem 0.2rem;
+  box-shadow: none;
+}
+
+.app-view-event-row__input {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-canvas-lg);
+}
+
+.app-view-event-row__description {
+  resize: vertical;
+  min-height: 2rem;
+  color: var(--text-muted);
+  font-size: var(--text-canvas-sm);
+  line-height: var(--lh-snug);
+}
+
+.table-connection-target {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.connection-target--valid {
+  border-color: var(--verb-get);
+  background: color-mix(in srgb, var(--verb-get) 14%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--verb-get) 36%, transparent),
+    0 0 28px color-mix(in srgb, var(--verb-get) 28%, transparent);
+}
+
+.connection-target--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+.connection-target--inactive {
+  opacity: 0.54;
+}
+
 /* Method row (expandable) */
 .method-row {
   display: flex;
@@ -1700,7 +1779,14 @@ h3 {
   background: var(--accent-soft);
 }
 
+.method-row--linked {
+  border-color: var(--fk);
+  background: color-mix(in srgb, var(--fk) 14%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--fk) 34%, transparent);
+}
+
 .method-row__head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1725,6 +1811,7 @@ h3 {
   gap: 0.45rem;
   padding-top: 0.3rem;
   border-top: 1px dashed var(--border);
+  font-size: var(--text-canvas-xs);
 }
 
 .method-row__inputs {
@@ -2017,19 +2104,60 @@ h3 {
 
 /* React Flow handles */
 .react-flow__handle {
-  width: 44px;
-  height: 44px;
-  border: 3px solid var(--bg-elevated);
-  opacity: 0.4;
-  background: var(--accent-strong);
-  box-shadow: 0 0 0 8px var(--accent-ring);
-  transition: box-shadow var(--dur-fast) var(--ease),
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.react-flow__handle.connection-handle {
+  width: 12px;
+  height: 42px;
+  border: 1px solid color-mix(in srgb, var(--accent) 56%, transparent);
+  border-radius: 999px;
+  opacity: 0;
+  background: color-mix(in srgb, var(--accent) 28%, var(--bg-elevated));
+  box-shadow: 0 0 0 4px transparent;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
     background var(--dur-fast) var(--ease);
 }
 
-.react-flow__handle:hover {
-  background: var(--accent-strong);
-  box-shadow: 0 0 0 12px var(--accent-ring);
+.react-flow__handle.connection-handle--input {
+  transform: translate(-50%, -50%);
+}
+
+.react-flow__handle.connection-handle--output {
+  transform: translate(50%, -50%);
+}
+
+.block-node:hover > .connection-handle,
+.block-node:hover .table-connection-target > .connection-handle,
+.app-view-event-row:hover .connection-handle,
+.method-row:hover .connection-handle,
+.canvas-shell--connecting .connection-handle--active,
+.canvas-shell--connecting .connection-handle--valid-target {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.react-flow__handle.connection-handle:hover,
+.react-flow__handle.connection-handle--active,
+.react-flow__handle.connection-handle--valid-target {
+  border-color: var(--verb-get);
+  background: color-mix(in srgb, var(--verb-get) 34%, var(--bg-elevated));
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--verb-get) 24%, transparent);
+}
+
+.react-flow__handle.connection-handle--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 34%, var(--bg-elevated));
+  box-shadow: 0 0 0 8px var(--accent-ring);
 }
 
 .react-flow__handle.field-row__handle {
@@ -2488,6 +2616,7 @@ h3 {
 .essa-edge--read .essa-edge__path { stroke: var(--read); }
 .essa-edge--write .essa-edge__path { stroke: var(--write); }
 .essa-edge--read-write .essa-edge__path { stroke: var(--read-write); }
+.essa-edge--navigate .essa-edge__path { stroke: var(--view); }
 .essa-edge--fk .essa-edge__path { stroke: var(--fk); }
 
 .essa-edge__flow {
@@ -2503,12 +2632,13 @@ h3 {
 .essa-edge--linked .essa-edge__flow,
 .essa-edge--selected .essa-edge__flow {
   opacity: 1;
-  animation: edge-flow 0.9s linear infinite;
+  animation: edge-flow 0.5s linear infinite;
 }
 
 .essa-edge--read .essa-edge__flow { stroke: var(--read); }
 .essa-edge--write .essa-edge__flow { stroke: var(--write); }
 .essa-edge--read-write .essa-edge__flow { stroke: var(--read-write); }
+.essa-edge--navigate .essa-edge__flow { stroke: var(--view); }
 .essa-edge--fk .essa-edge__flow { stroke: var(--fk); }
 
 .essa-edge--linked .essa-edge__path,
@@ -2573,6 +2703,7 @@ h3 {
 .essa-edge--read .essa-edge__label-kind { color: var(--read); }
 .essa-edge--write .essa-edge__label-kind { color: var(--write); }
 .essa-edge--read-write .essa-edge__label-kind { color: var(--read-write); }
+.essa-edge--navigate .essa-edge__label-kind { color: var(--view); }
 
 .essa-edge__label-data {
   color: var(--text-muted);

@@ -2,6 +2,12 @@ import { useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import {
+  getRestMethodInputEndpoint,
+  getRestMethodOutputEndpoint,
+  parseRestMethodSourceHandleId,
+  parseRestMethodTargetHandleId,
+} from "../../domain/connectionEndpoints";
+import {
   jsonFieldTypes,
   restMethodInputModes,
   restMethods,
@@ -21,6 +27,11 @@ import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
 import { BlockNodeFrame } from "./BlockNodeFrame";
+import {
+  ConnectionHandle,
+  getConnectionInteractionClass,
+  getConnectionUiState,
+} from "./ConnectionHandle";
 
 type RestResourceNodeProps = NodeProps<EssaNode> & {
   data: RestResourceData;
@@ -79,9 +90,24 @@ export const RestResourceNode = ({
   selected,
 }: RestResourceNodeProps) => {
   const ctx = useDiagramContext();
+  const connectionState = getConnectionUiState(data);
   const [editing, setEditing] = useState<EditingTarget>(null);
   const [expandedMethodId, setExpandedMethodId] = useState<string | null>(null);
   const closeEditing = () => setEditing(null);
+  const linkedMethodIds = new Set(
+    ctx.edges.flatMap((edge) => {
+      if (edge.target !== id) {
+        const sourceMethodId =
+          edge.source === id
+            ? parseRestMethodSourceHandleId(edge.sourceHandle)
+            : null;
+        return sourceMethodId ? [sourceMethodId] : [];
+      }
+
+      const methodId = parseRestMethodTargetHandleId(edge.targetHandle);
+      return methodId ? [methodId] : [];
+    }),
+  );
 
   const remainingMethodKinds = restMethods.filter(
     (method) => !data.methods.some((item) => item.kind === method),
@@ -90,7 +116,6 @@ export const RestResourceNode = ({
   return (
     <BlockNodeFrame
       id={id}
-      kind="restResource"
       selected={selected}
       badge="API"
       variant="resource"
@@ -179,11 +204,18 @@ export const RestResourceNode = ({
 
         {data.methods.map((method) => {
           const expanded = expandedMethodId === method.id;
+          const inputEndpoint = getRestMethodInputEndpoint(id, method);
+          const outputEndpoint = getRestMethodOutputEndpoint(id, method);
 
           return (
             <div
               key={method.id}
-              className={`method-row nodrag${expanded ? " method-row--expanded" : ""}`}
+              className={`method-row nodrag${
+                expanded ? " method-row--expanded" : ""
+              } ${getConnectionInteractionClass(inputEndpoint, connectionState)} ${getConnectionInteractionClass(
+                outputEndpoint,
+                connectionState,
+              )}${linkedMethodIds.has(method.id) ? " method-row--linked" : ""}`}
             >
               <div
                 className="method-row__head"
@@ -220,6 +252,14 @@ export const RestResourceNode = ({
                 >
                   ×
                 </button>
+                <ConnectionHandle
+                  endpoint={inputEndpoint}
+                  state={connectionState}
+                />
+                <ConnectionHandle
+                  endpoint={outputEndpoint}
+                  state={connectionState}
+                />
               </div>
 
               {expanded ? (
@@ -414,10 +454,6 @@ const MethodPanel = ({
   <div className="method-row__panel">
     <div className="method-row__inputs">
       <span className="eyebrow">Inputs</span>
-
-      {method.input.length === 0 ? (
-        <p className="block-node__empty">No inputs.</p>
-      ) : null}
 
       {method.input.map((input) => {
         const isEditing = editingInputId === input.id;

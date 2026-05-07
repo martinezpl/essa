@@ -1,7 +1,11 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockNodeKindSchema = z.enum(["restResource", "psqlTable"]);
+export const blockNodeKindSchema = z.enum([
+  "appView",
+  "restResource",
+  "psqlTable",
+]);
 export type BlockNodeKind = z.infer<typeof blockNodeKindSchema>;
 export type BlockKind = BlockNodeKind;
 
@@ -206,6 +210,23 @@ export const restResourceDataSchema = z.object({
 export type RestResourceData = z.infer<typeof restResourceDataSchema> &
   Record<string, unknown>;
 
+export const appViewEventSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  description: z.string().optional(),
+});
+export type AppViewEvent = z.infer<typeof appViewEventSchema>;
+
+export const appViewDataSchema = z.object({
+  kind: z.literal("appView"),
+  viewName: z.string(),
+  route: z.string(),
+  description: z.string().optional(),
+  events: z.array(appViewEventSchema).default([]),
+});
+export type AppViewData = z.infer<typeof appViewDataSchema> &
+  Record<string, unknown>;
+
 export const psqlColumnSchema = z.preprocess(
   (value) => {
     if (!value || typeof value !== "object") return value;
@@ -317,6 +338,7 @@ export type AnnotationData = z.infer<typeof annotationDataSchema> &
   Record<string, unknown>;
 
 export const blockDataSchema = z.union([
+  appViewDataSchema,
   restResourceDataSchema,
   psqlTableDataSchema,
 ]);
@@ -324,6 +346,7 @@ export type BlockData = z.infer<typeof blockDataSchema> &
   Record<string, unknown>;
 
 export const canvasNodeDataSchema = z.union([
+  appViewDataSchema,
   restResourceDataSchema,
   psqlTableDataSchema,
   annotationDataSchema,
@@ -350,7 +373,12 @@ export type BlockDiagramNode = DiagramNode & {
 };
 export type EssaNode = Node<CanvasNodeData, CanvasNodeKind>;
 
-export const connectionKindSchema = z.enum(["read", "write", "read/write"]);
+export const connectionKindSchema = z.enum([
+  "read",
+  "write",
+  "read/write",
+  "navigate",
+]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;
 
 const legacyConnectionKindSchema = z.enum([
@@ -367,7 +395,12 @@ export const edgeDataSchema = z.object({
         return "write";
       }
 
-      if (kind === "read" || kind === "write" || kind === "read/write") {
+      if (
+        kind === "read" ||
+        kind === "write" ||
+        kind === "read/write" ||
+        kind === "navigate"
+      ) {
         return kind;
       }
 
@@ -401,7 +434,7 @@ export const diagramSchema = z.object({
 export type Diagram = z.infer<typeof diagramSchema>;
 
 export const diagramCollectionSchema = z.object({
-  version: z.literal(4),
+  version: z.literal(5),
   activeDiagramId: z.string().min(1),
   diagrams: z.array(diagramSchema).min(1),
 });

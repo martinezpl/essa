@@ -7,6 +7,8 @@ import type {
   DiagramEdge,
   DiagramNode,
   EdgeData,
+  AppViewData,
+  AppViewEvent,
   RestMethodInputField,
   RestMethodKind,
   RestResourceData,
@@ -19,6 +21,10 @@ import type {
   PsqlIndex,
   PsqlTableData,
 } from "../types";
+import {
+  getCompatibleEndpointConnection,
+  getConnectionEndpointByHandle,
+} from "../connectionEndpoints";
 import {
   connectionKindSchema,
   jsonFieldTypeSchema,
@@ -112,6 +118,12 @@ const cloneMethods = (methods: RestResourceMethod[]): RestResourceMethod[] =>
     output: { ...method.output },
   }));
 
+const cloneAppViewEvents = (events: AppViewEvent[]): AppViewEvent[] =>
+  events.map((event) => ({
+    ...event,
+    id: createId("event"),
+  }));
+
 export abstract class Block<D extends BlockData = BlockData> {
   abstract readonly kind: D["kind"];
   abstract readonly label: string;
@@ -169,14 +181,14 @@ export abstract class Block<D extends BlockData = BlockData> {
   }
 }
 
-const restResourcePorts: readonly ConnectionPort[] = [
-  {
-    id: "table-output",
-    direction: "output",
-    connectsTo: ["psqlTable"],
-    defaultKind: "read",
-  },
-];
+const restResourcePorts: readonly ConnectionPort[] = [];
+
+const appViewPorts: readonly ConnectionPort[] = [];
+
+export const createAppViewEvent = (): AppViewEvent => ({
+  id: createId("event"),
+  name: "",
+});
 
 export const createRestResourceMethodContract = (
   kind: RestMethodKind,
@@ -219,6 +231,73 @@ export const createPsqlEnum = (): PsqlEnum => ({
   name: "",
   values: [],
 });
+
+export class AppViewBlock extends Block<AppViewData> {
+  readonly kind = "appView";
+  readonly label = "App View";
+  readonly ports = appViewPorts;
+
+  static blankData(): AppViewData {
+    return {
+      kind: "appView",
+      viewName: "",
+      route: "",
+      description: "",
+      events: [],
+    };
+  }
+
+  static seededData(): AppViewData {
+    return {
+      kind: "appView",
+      viewName: "Items",
+      route: "/items",
+      description: "",
+      events: [
+        {
+          id: createId("event"),
+          name: "onClick::Submit",
+        },
+      ],
+    };
+  }
+
+  static create(position: Position, options: CreateBlockOptions = {}) {
+    return new AppViewBlock({
+      id: createId("node"),
+      position,
+      data: options.seed ? AppViewBlock.seededData() : AppViewBlock.blankData(),
+    });
+  }
+
+  static hydrate(node: DiagramNode) {
+    if (node.data.kind !== "appView") {
+      throw new Error(`Cannot hydrate ${node.data.kind} as appView`);
+    }
+
+    return new AppViewBlock({
+      id: node.id,
+      position: node.position,
+      selected: node.selected,
+      data: node.data,
+    });
+  }
+
+  clone() {
+    return new AppViewBlock({
+      id: createId("node"),
+      position: clonePosition(this.position),
+      data: {
+        ...this.data,
+        events: cloneAppViewEvents(this.data.events),
+      },
+    });
+  }
+
+  title() {
+    return this.data.viewName || "App view";
+  }
+}
 
 export class RestResourceBlock extends Block<RestResourceData> {
   readonly kind = "restResource";
@@ -536,7 +615,7 @@ export class AnnotationCanvasItem {
   }
 }
 
-export type AnyBlock = RestResourceBlock | PsqlTableBlock;
+export type AnyBlock = AppViewBlock | RestResourceBlock | PsqlTableBlock;
 export type AnyCanvasNode = AnyBlock | AnnotationCanvasItem;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
@@ -550,6 +629,14 @@ export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
 };
 
 export const blockDefinitions = {
+  appView: {
+    kind: "appView",
+    label: "App View",
+    ports: appViewPorts,
+    create: AppViewBlock.create,
+    hydrate: AppViewBlock.hydrate,
+    title: (data: AppViewData) => data.viewName || "App view",
+  },
   restResource: {
     kind: "restResource",
     label: "API",
@@ -638,19 +725,32 @@ export class Connection {
   readonly data: EdgeData;
   readonly id: string;
   readonly sourceId: string;
+  readonly sourceHandle?: string | null;
   readonly targetId: string;
+  readonly targetHandle?: string | null;
   readonly type?: string;
 
   constructor(edge: DiagramEdge) {
     this.id = edge.id;
     this.sourceId = edge.source;
+    this.sourceHandle = edge.sourceHandle;
     this.targetId = edge.target;
+    this.targetHandle = edge.targetHandle;
     this.type = edge.type;
     this.data = edge.data;
   }
 
-  static create(source: AnyBlock, target: AnyBlock) {
-    const kind = getCompatibleConnectionKind(source, target);
+  static create(
+    source: AnyBlock,
+    target: AnyBlock,
+    handles: Pick<DiagramEdge, "sourceHandle" | "targetHandle"> = {},
+  ) {
+    const kind = getCompatibleConnectionKind(
+      source,
+      target,
+      handles.sourceHandle,
+      handles.targetHandle,
+    );
 
     if (!kind) {
       return null;
@@ -659,7 +759,9 @@ export class Connection {
     return new Connection({
       id: createId("edge"),
       source: source.id,
+      sourceHandle: handles.sourceHandle,
       target: target.id,
+      targetHandle: handles.targetHandle,
       type: "smoothstep",
       data: { kind, dataPath: "all" },
     });
@@ -669,7 +771,9 @@ export class Connection {
     return new Connection({
       id: createId("edge"),
       source: nextIds.sourceId ?? this.sourceId,
+      sourceHandle: this.sourceHandle,
       target: nextIds.targetId ?? this.targetId,
+      targetHandle: this.targetHandle,
       type: this.type,
       data: {
         ...this.data,
@@ -681,7 +785,9 @@ export class Connection {
     return {
       id: this.id,
       source: this.sourceId,
+      sourceHandle: this.sourceHandle,
       target: this.targetId,
+      targetHandle: this.targetHandle,
       type: this.type,
       data: this.data,
     };
@@ -709,50 +815,48 @@ export const hydrateConnection = (edge: DiagramEdge) => new Connection(edge);
 export const getCompatibleConnectionKind = (
   source?: AnyBlock,
   target?: AnyBlock,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
 ): ConnectionKind | null => {
   if (!source || !target || source.id === target.id) {
     return null;
   }
 
-  const sourcePort = source.ports.find(
-    (port) =>
-      port.direction === "output" && port.connectsTo.includes(target.kind),
+  const nodes = [source.serialize(), target.serialize()];
+  const sourceEndpoint = getConnectionEndpointByHandle(
+    nodes,
+    source.id,
+    sourceHandle,
+    "output",
   );
-  const targetPort = target.ports.find(
-    (port) =>
-      port.direction === "input" && port.connectsTo.includes(source.kind),
+  const targetEndpoint = getConnectionEndpointByHandle(
+    nodes,
+    target.id,
+    targetHandle,
+    "input",
   );
 
-  if (!sourcePort || !targetPort) {
-    return null;
-  }
-
-  return sourcePort.defaultKind;
+  return getCompatibleEndpointConnection(sourceEndpoint, targetEndpoint, nodes);
 };
 
 export const getCompatibleConnectionKinds = (
   source?: AnyBlock,
   target?: AnyBlock,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
 ): ConnectionKind[] => {
   if (!source || !target || source.id === target.id) {
     return [];
   }
 
-  const targetAcceptsSource = target.ports.some(
-    (port) =>
-      port.direction === "input" && port.connectsTo.includes(source.kind),
+  const kind = getCompatibleConnectionKind(
+    source,
+    target,
+    sourceHandle,
+    targetHandle,
   );
 
-  if (!targetAcceptsSource) {
-    return [];
-  }
-
-  const hasCompatibleSourcePort = source.ports.some(
-    (port) =>
-      port.direction === "output" && port.connectsTo.includes(target.kind),
-  );
-
-  return hasCompatibleSourcePort ? Array.from(connectionKinds) : [];
+  return kind ? [kind] : [];
 };
 
 export class DiagramModel {
@@ -776,15 +880,32 @@ export class DiagramModel {
     return this.blocks.find((block) => block.id === blockId);
   }
 
-  hasDuplicateConnection(sourceId: string, targetId: string) {
+  hasDuplicateConnection(
+    sourceId: string,
+    targetId: string,
+    sourceHandle?: string | null,
+    targetHandle?: string | null,
+  ) {
     return this.connections.some(
       (connection) =>
-        connection.sourceId === sourceId && connection.targetId === targetId,
+        connection.sourceId === sourceId &&
+        connection.targetId === targetId &&
+        (connection.sourceHandle ?? null) === (sourceHandle ?? null) &&
+        (connection.targetHandle ?? null) === (targetHandle ?? null),
     );
   }
 
-  createConnection(sourceId?: string | null, targetId?: string | null) {
-    if (!sourceId || !targetId || this.hasDuplicateConnection(sourceId, targetId)) {
+  createConnection(
+    sourceId?: string | null,
+    targetId?: string | null,
+    sourceHandle?: string | null,
+    targetHandle?: string | null,
+  ) {
+    if (
+      !sourceId ||
+      !targetId ||
+      this.hasDuplicateConnection(sourceId, targetId, sourceHandle, targetHandle)
+    ) {
       return null;
     }
 
@@ -795,7 +916,7 @@ export class DiagramModel {
       return null;
     }
 
-    return Connection.create(source, target);
+    return Connection.create(source, target, { sourceHandle, targetHandle });
   }
 
   duplicateBlock(blockId: string) {

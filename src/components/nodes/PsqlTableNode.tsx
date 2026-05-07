@@ -6,11 +6,12 @@ import {
   psqlForeignKeyActions,
   psqlIndexMethods,
 } from "../../domain/options";
+import { getPsqlTableInputEndpoint } from "../../domain/connectionEndpoints";
 import {
-  parsePsqlColumnSourceHandleId,
-  parsePsqlForeignKeyTargetHandleId,
-  psqlColumnSourceHandleId,
-  psqlForeignKeyTargetHandleId,
+  parsePsqlForeignKeyIndicatorSourceHandleId,
+  parsePsqlForeignKeyIndicatorTargetHandleId,
+  psqlForeignKeyIndicatorSourceHandleId,
+  psqlForeignKeyIndicatorTargetHandleId,
 } from "../../domain/psqlForeignKeys";
 import { formatPsqlColumnType } from "../../domain/psqlTypes";
 import type {
@@ -30,6 +31,11 @@ import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { updateColumn } from "../blockEditors/helpers";
 import { TrashButton } from "../blockEditors/TrashButton";
 import { BlockNodeFrame } from "./BlockNodeFrame";
+import {
+  ConnectionHandle,
+  getConnectionInteractionClass,
+  getConnectionUiState,
+} from "./ConnectionHandle";
 
 type PsqlTableNodeProps = NodeProps<EssaNode> & {
   data: PsqlTableData;
@@ -96,6 +102,8 @@ const getPsqlFieldCandidates = (
 
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
+  const connectionState = getConnectionUiState(data);
+  const tableInputEndpoint = getPsqlTableInputEndpoint(id);
   const [editing, setEditing] = useState<EditingTarget>(null);
   const closeEditing = () => setEditing(null);
   const psqlTables = ctx.nodes.filter(
@@ -126,7 +134,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
     }
 
     if (edge.source === id) {
-      const columnId = parsePsqlColumnSourceHandleId(edge.sourceHandle);
+      const columnId = parsePsqlForeignKeyIndicatorSourceHandleId(
+        edge.sourceHandle,
+      );
 
       if (columnId) {
         linkedColumnIds.add(columnId);
@@ -134,7 +144,9 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
     }
 
     if (edge.target === id) {
-      const foreignKeyId = parsePsqlForeignKeyTargetHandleId(edge.targetHandle);
+      const foreignKeyId = parsePsqlForeignKeyIndicatorTargetHandleId(
+        edge.targetHandle,
+      );
 
       if (foreignKeyId) {
         linkedForeignKeyIds.add(foreignKeyId);
@@ -145,7 +157,6 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   return (
     <BlockNodeFrame
       id={id}
-      kind="psqlTable"
       selected={selected}
       badge="PSQL table"
       variant="table"
@@ -155,6 +166,17 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
       deleteAriaLabel="Delete table"
       onTitleChange={(next) => ctx.onUpdateNodeData(id, { tableName: next })}
     >
+      <div
+        className={`table-connection-target ${getConnectionInteractionClass(
+          tableInputEndpoint,
+          connectionState,
+        )}`}
+      >
+        <ConnectionHandle
+          endpoint={tableInputEndpoint}
+          state={connectionState}
+        />
+      </div>
       <section className="block-node__section">
         <h4 className="block-node__section-title">Columns</h4>
 
@@ -196,7 +218,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
               {data.primaryKey.includes(column.id) ? (
                 <Handle
                   className="field-row__handle field-row__handle--source"
-                  id={psqlColumnSourceHandleId(column.id)}
+                  id={psqlForeignKeyIndicatorSourceHandleId(column.id)}
                   position={Position.Right}
                   type="source"
                   isConnectable={false}
@@ -292,7 +314,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
             >
               <Handle
                 className="field-row__handle field-row__handle--target"
-                id={psqlForeignKeyTargetHandleId(foreignKey.id)}
+                id={psqlForeignKeyIndicatorTargetHandleId(foreignKey.id)}
                 position={Position.Left}
                 type="target"
                 isConnectable={false}

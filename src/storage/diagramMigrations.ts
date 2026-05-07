@@ -3,7 +3,7 @@ import {
   type DiagramCollection,
 } from "../domain/types";
 
-export const LATEST_DIAGRAM_COLLECTION_VERSION = 4;
+export const LATEST_DIAGRAM_COLLECTION_VERSION = 5;
 
 const migrateV1toV2 = (v1: Record<string, unknown>): Record<string, unknown> => {
   const diagrams = Array.isArray(v1.diagrams) ? v1.diagrams : [];
@@ -151,21 +151,32 @@ const migrateV3toV4 = (v3: Record<string, unknown>): Record<string, unknown> => 
   };
 };
 
+const migrateV4toV5 = (v4: Record<string, unknown>): Record<string, unknown> => ({
+  ...v4,
+  version: 5,
+});
+
 export const migrateDiagramCollection = (value: unknown): DiagramCollection => {
   const raw = value as Record<string, unknown>;
 
   if (raw?.version === 1) {
     return diagramCollectionSchema.parse(
-      migrateV3toV4(migrateV2toV3(migrateV1toV2(raw))),
+      migrateV4toV5(migrateV3toV4(migrateV2toV3(migrateV1toV2(raw)))),
     );
   }
 
   if (raw?.version === 2) {
-    return diagramCollectionSchema.parse(migrateV3toV4(migrateV2toV3(raw)));
+    return diagramCollectionSchema.parse(
+      migrateV4toV5(migrateV3toV4(migrateV2toV3(raw))),
+    );
   }
 
   if (raw?.version === 3) {
-    return diagramCollectionSchema.parse(migrateV3toV4(raw));
+    return diagramCollectionSchema.parse(migrateV4toV5(migrateV3toV4(raw)));
+  }
+
+  if (raw?.version === 4) {
+    return diagramCollectionSchema.parse(migrateV4toV5(raw));
   }
 
   return diagramCollectionSchema.parse(value);
