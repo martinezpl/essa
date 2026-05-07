@@ -24,6 +24,33 @@ describe("diagram migrations", () => {
     expect(migrateDiagramCollection(collection)).toEqual(collection);
   });
 
+  it("preserves latest-version collections that include annotations", () => {
+    const collection = createInitialCollection();
+    const annotated = {
+      ...collection,
+      diagrams: collection.diagrams.map((diagram) => ({
+        ...diagram,
+        nodes: [
+          ...diagram.nodes,
+          {
+            id: "annotation-1",
+            type: "annotation",
+            position: { x: 0, y: 0 },
+            data: {
+              kind: "annotation",
+              label: "Admin area",
+              color: "#818cf8",
+              width: 520,
+              height: 320,
+            },
+          },
+        ],
+      })),
+    };
+
+    expect(migrateDiagramCollection(annotated)).toEqual(annotated);
+  });
+
   it("migrates v2 collections to latest and adds column unique flags", () => {
     const v2 = {
       version: 2,

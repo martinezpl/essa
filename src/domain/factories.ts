@@ -1,17 +1,18 @@
 import type {
   BlockKind,
+  CanvasNodeKind,
   Diagram,
   DiagramNode,
   RestMethodKind,
   RestResourceData,
   RestResourceMethod,
   PsqlTableData,
-  AnnotationData,
 } from "./types";
 import {
   createBlock,
+  createCanvasNode,
   createRestResourceMethodContract,
-  hydrateBlock,
+  hydrateCanvasNode,
 } from "./model";
 import { createId } from "./id";
 export { createId } from "./id";
@@ -24,7 +25,7 @@ export const createRestResourceMethod = (
 
 export const blankBlockData = (
   kind: BlockKind,
-): RestResourceData | PsqlTableData | AnnotationData => {
+): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 });
 
   return block.data;
@@ -32,20 +33,20 @@ export const blankBlockData = (
 
 export const seededBlockData = (
   kind: BlockKind,
-): RestResourceData | PsqlTableData | AnnotationData => {
+): RestResourceData | PsqlTableData => {
   const block = createBlock(kind, { x: 0, y: 0 }, { seed: true });
 
   return block.data;
 };
 
 export const createDiagramNode = (
-  kind: BlockKind,
+  kind: CanvasNodeKind,
   position: { x: number; y: number },
   options: { seed?: boolean } = {},
-): DiagramNode => createBlock(kind, position, options).serialize();
+): DiagramNode => createCanvasNode(kind, position, options).serialize();
 
 export const cloneDiagramNode = (node: DiagramNode): DiagramNode => {
-  return hydrateBlock(node).clone().serialize();
+  return hydrateCanvasNode(node).clone().serialize();
 };
 
 export const createStarterDiagram = (): Diagram => {

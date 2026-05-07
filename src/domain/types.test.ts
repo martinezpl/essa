@@ -3,6 +3,7 @@ import {
   diagramSchema,
   edgeDataSchema,
   blockDataSchema,
+  canvasNodeDataSchema,
   psqlColumnTypeSchema,
   psqlColumnOptionsSchema,
   psqlEnumSchema,
@@ -32,11 +33,14 @@ describe("domain schemas", () => {
     });
   });
 
-  it("parses annotation block data", () => {
-    expect(blockDataSchema.parse({
+  it("keeps annotations out of block data but accepts them as canvas node data", () => {
+    const annotation = {
       kind: "annotation",
       label: "Admin area",
-    })).toEqual({
+    };
+
+    expect(blockDataSchema.safeParse(annotation).success).toBe(false);
+    expect(canvasNodeDataSchema.parse(annotation)).toEqual({
       kind: "annotation",
       label: "Admin area",
       color: "#818cf8",
@@ -337,5 +341,34 @@ describe("domain schemas", () => {
     });
     expect(diagram.psqlEnums).toEqual([]);
     expect(diagram.edges[0].data).toEqual({ kind: "write", dataPath: "all" });
+  });
+
+  it("parses persisted diagrams with annotation canvas nodes", () => {
+    const diagram = diagramSchema.parse({
+      id: "diagram-1",
+      name: "Annotated diagram",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      updatedAt: "2026-05-02T00:00:00.000Z",
+      nodes: [
+        {
+          id: "annotation-1",
+          type: "annotation",
+          position: { x: 0, y: 0 },
+          data: {
+            kind: "annotation",
+            label: "Admin area",
+          },
+        },
+      ],
+      edges: [],
+    });
+
+    expect(diagram.nodes[0].data).toEqual({
+      kind: "annotation",
+      label: "Admin area",
+      color: "#818cf8",
+      width: 520,
+      height: 320,
+    });
   });
 });

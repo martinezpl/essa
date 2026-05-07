@@ -18,6 +18,10 @@ export const getConnectionKind = (
     return null;
   }
 
+  if (source.data.kind === "annotation" || target.data.kind === "annotation") {
+    return null;
+  }
+
   return getCompatibleConnectionKind(hydrateBlock(source), hydrateBlock(target));
 };
 
@@ -44,7 +48,12 @@ export const createValidatedEdge = (
   const source = nodes.find((node) => node.id === sourceId);
   const target = nodes.find((node) => node.id === targetId);
 
-  if (!source || !target) {
+  if (
+    !source ||
+    !target ||
+    source.data.kind === "annotation" ||
+    target.data.kind === "annotation"
+  ) {
     return null;
   }
 

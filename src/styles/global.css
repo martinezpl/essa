@@ -73,7 +73,7 @@
    * Global multiplier for diagram-adjacent type (nodes, row popovers, edge
    * labels, combo rows, block/connection editors). Set to 1 for browser default.
    */
-  --essa-ui-scale: 1.8;
+  --essa-ui-scale: 2;
 
   /*
    * Canvas / diagram text — React Flow zoom shrinks perceived size; these
@@ -247,19 +247,19 @@ p {
 }
 
 h1 {
-  font-size: var(--text-canvas-2xl);
+  font-size: 1.4rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: var(--text-canvas-xl);
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.005em;
 }
 
 h3 {
-  font-size: var(--text-canvas-lg);
+  font-size: 0.85rem;
   font-weight: 700;
 }
 
@@ -269,7 +269,7 @@ h3 {
 
 .eyebrow {
   color: var(--text-subtle);
-  font-size: var(--text-canvas-xs);
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -277,7 +277,7 @@ h3 {
 
 .eyebrow_workspace {
   color: var(--text-subtle);
-  font-size: var(--text-canvas-xs);
+  font-size: 1rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   margin-left: 0.5rem;
@@ -2017,18 +2017,29 @@ h3 {
 
 /* React Flow handles */
 .react-flow__handle {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--bg-elevated);
-  background: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-ring);
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--bg-elevated);
+  opacity: 0.4;
+  background: var(--accent-strong);
+  box-shadow: 0 0 0 8px var(--accent-ring);
   transition: box-shadow var(--dur-fast) var(--ease),
     background var(--dur-fast) var(--ease);
 }
 
 .react-flow__handle:hover {
   background: var(--accent-strong);
-  box-shadow: 0 0 0 5px var(--accent-ring);
+  box-shadow: 0 0 0 12px var(--accent-ring);
+}
+
+.react-flow__handle.field-row__handle {
+  width: 0;
+  height: 0;
+  border: 0;
+  opacity: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
 }
 
 /* ── Block editor (NodeToolbar popover) ───────────────────────────────── */
@@ -2459,7 +2470,7 @@ h3 {
 .essa-edge__path {
   fill: none;
   stroke: var(--text-subtle);
-  stroke-width: 1.6;
+  stroke-width: 4;
   opacity: 0.35;
   transition: stroke var(--dur-fast) var(--ease),
     stroke-width var(--dur-fast) var(--ease),
@@ -2481,7 +2492,7 @@ h3 {
 
 .essa-edge__flow {
   fill: none;
-  stroke-width: 2;
+  stroke-width: 4;
   stroke-linecap: round;
   stroke-dasharray: 6 9;
   opacity: 0;

@@ -262,4 +262,20 @@ describe("diagram model", () => {
     expect(model.toOpenApiSpecs()).toHaveLength(2);
     expect(model.toPsqlSpecs()).toHaveLength(2);
   });
+
+  it("preserves annotations while excluding them from block export specs", () => {
+    const starter = createStarterDiagram();
+    const diagram: Diagram = {
+      ...starter,
+      nodes: [
+        ...starter.nodes,
+        createDiagramNode("annotation", { x: 10, y: 20 }),
+      ],
+    };
+    const model = hydrateDiagram(diagram);
+
+    expect(serializeDiagram(model).nodes).toHaveLength(diagram.nodes.length);
+    expect(serializeDiagram(model).nodes.at(-1)?.data.kind).toBe("annotation");
+    expect(model.toMermaidSpecs().blocks).toHaveLength(diagram.nodes.length - 1);
+  });
 });

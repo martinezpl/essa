@@ -26,7 +26,7 @@ import { PsqlTableNode } from "./nodes/PsqlTableNode";
 import { AnnotationNode } from "./nodes/AnnotationNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
 import { getNodeObstacle } from "./canvasObstacle";
-import type { BlockKind, DiagramEdge, DiagramNode } from "../domain/types";
+import type { CanvasNodeKind, DiagramEdge, DiagramNode } from "../domain/types";
 
 export type CanvasMode = "grip" | "select" | "annotate";
 export type CanvasInputMode = "touchpad" | "mouse";
@@ -37,7 +37,7 @@ type DiagramCanvasProps = {
   mode: CanvasMode;
   nodes: DiagramNode[];
   onAddNode: (
-    kind: BlockKind,
+    kind: CanvasNodeKind,
     position?: { x: number; y: number },
     dataPatch?: Partial<DiagramNode["data"]>,
   ) => string;
@@ -112,7 +112,6 @@ type AnnotationResizeDraft = {
 
 const MIN_ANNOTATION_SIZE = 24;
 const WHEEL_LINE_HEIGHT = 16;
-const contextMenuBlocks = blockList.filter(({ kind }) => kind !== "annotation");
 const annotationResizeDirections: AnnotationResizeDirection[] = [
   "nw",
   "n",
@@ -623,7 +622,7 @@ export const DiagramCanvas = ({
           style={{ left: contextMenu.left, top: contextMenu.top }}
         >
           <span className="eyebrow">Add block</span>
-          {contextMenuBlocks.map(({ kind, label }) => (
+          {blockList.map(({ kind, label }) => (
             <button
               key={kind}
               type="button"

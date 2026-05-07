@@ -1,12 +1,18 @@
 import { z } from "zod";
 import type { Edge, Node } from "@xyflow/react";
 
-export const blockKindSchema = z.enum([
+export const blockNodeKindSchema = z.enum([
   "restResource",
   "psqlTable",
+]);
+export type BlockNodeKind = z.infer<typeof blockNodeKindSchema>;
+export type BlockKind = BlockNodeKind;
+
+export const canvasNodeKindSchema = z.enum([
+  ...blockNodeKindSchema.options,
   "annotation",
 ]);
-export type BlockKind = z.infer<typeof blockKindSchema>;
+export type CanvasNodeKind = z.infer<typeof canvasNodeKindSchema>;
 
 export const restMethodKindSchema = z.enum([
   "POST /",
@@ -316,9 +322,16 @@ export type AnnotationData = z.infer<typeof annotationDataSchema> &
 export const blockDataSchema = z.union([
   restResourceDataSchema,
   psqlTableDataSchema,
-  annotationDataSchema,
 ]);
 export type BlockData = z.infer<typeof blockDataSchema> &
+  Record<string, unknown>;
+
+export const canvasNodeDataSchema = z.union([
+  restResourceDataSchema,
+  psqlTableDataSchema,
+  annotationDataSchema,
+]);
+export type CanvasNodeData = z.infer<typeof canvasNodeDataSchema> &
   Record<string, unknown>;
 
 export const positionSchema = z.object({
@@ -328,13 +341,17 @@ export const positionSchema = z.object({
 
 export const diagramNodeSchema = z.object({
   id: z.string().min(1),
-  type: blockKindSchema,
+  type: canvasNodeKindSchema,
   position: positionSchema,
-  data: blockDataSchema,
+  data: canvasNodeDataSchema,
   selected: z.boolean().optional(),
 });
 export type DiagramNode = z.infer<typeof diagramNodeSchema>;
-export type EssaNode = Node<BlockData, BlockKind>;
+export type BlockDiagramNode = DiagramNode & {
+  type: BlockNodeKind;
+  data: BlockData;
+};
+export type EssaNode = Node<CanvasNodeData, CanvasNodeKind>;
 
 export const connectionKindSchema = z.enum(["read", "write", "read/write"]);
 export type ConnectionKind = z.infer<typeof connectionKindSchema>;

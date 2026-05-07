@@ -1,6 +1,7 @@
 import type {
   BlockData,
   BlockKind,
+  CanvasNodeKind,
   ConnectionKind,
   Diagram,
   DiagramEdge,
@@ -456,10 +457,25 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 }
 
-export class AnnotationBlock extends Block<AnnotationData> {
+export class AnnotationCanvasItem {
   readonly kind = "annotation";
   readonly label = "Annotation";
-  readonly ports = [];
+  readonly data: AnnotationData;
+  readonly id: string;
+  readonly position: Position;
+  readonly selected?: boolean;
+
+  private constructor(node: {
+    data: AnnotationData;
+    id: string;
+    position: Position;
+    selected?: boolean;
+  }) {
+    this.data = node.data;
+    this.id = node.id;
+    this.position = node.position;
+    this.selected = node.selected;
+  }
 
   static blankData(): AnnotationData {
     return {
@@ -472,10 +488,10 @@ export class AnnotationBlock extends Block<AnnotationData> {
   }
 
   static create(position: Position) {
-    return new AnnotationBlock({
+    return new AnnotationCanvasItem({
       id: createId("node"),
       position,
-      data: AnnotationBlock.blankData(),
+      data: AnnotationCanvasItem.blankData(),
     });
   }
 
@@ -484,7 +500,7 @@ export class AnnotationBlock extends Block<AnnotationData> {
       throw new Error(`Cannot hydrate ${node.data.kind} as annotation`);
     }
 
-    return new AnnotationBlock({
+    return new AnnotationCanvasItem({
       id: node.id,
       position: node.position,
       selected: node.selected,
@@ -493,7 +509,7 @@ export class AnnotationBlock extends Block<AnnotationData> {
   }
 
   clone() {
-    return new AnnotationBlock({
+    return new AnnotationCanvasItem({
       id: createId("node"),
       position: clonePosition(this.position),
       data: { ...this.data },
@@ -503,9 +519,25 @@ export class AnnotationBlock extends Block<AnnotationData> {
   title() {
     return this.data.label || "annotation";
   }
+
+  serialize(): DiagramNode {
+    const serialized: DiagramNode = {
+      id: this.id,
+      type: this.kind,
+      position: this.position,
+      data: this.data,
+    };
+
+    if (this.selected !== undefined) {
+      serialized.selected = this.selected;
+    }
+
+    return serialized;
+  }
 }
 
-export type AnyBlock = RestResourceBlock | PsqlTableBlock | AnnotationBlock;
+export type AnyBlock = RestResourceBlock | PsqlTableBlock;
+export type AnyCanvasNode = AnyBlock | AnnotationCanvasItem;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
   kind: B["kind"];
@@ -537,19 +569,22 @@ export const blockDefinitions = {
     hydrate: PsqlTableBlock.hydrate,
     title: (data: PsqlTableData) => data.tableName || "PSQL table",
   },
-  annotation: {
-    kind: "annotation",
-    label: "Annotation",
-    ports: [],
-    create: AnnotationBlock.create,
-    hydrate: AnnotationBlock.hydrate,
-    title: (data: AnnotationData) => data.label || "annotation",
-  },
 } satisfies {
   [K in BlockKind]: BlockDefinition<Extract<AnyBlock, { kind: K }>>;
 };
 
 export const blockList = Object.values(blockDefinitions);
+export const annotationDefinition = {
+  kind: "annotation",
+  label: "Annotation",
+  create: AnnotationCanvasItem.create,
+  hydrate: AnnotationCanvasItem.hydrate,
+  title: (data: AnnotationData) => data.label || "annotation",
+};
+export const canvasNodeDefinitions = {
+  ...blockDefinitions,
+  annotation: annotationDefinition,
+};
 export const connectionKinds = connectionKindSchema.options;
 export const restMethodKinds = restMethodKindSchema.options;
 export const psqlColumnTypes = psqlColumnTypeSchema.options;
@@ -566,11 +601,38 @@ export const createBlock = (
   options?: CreateBlockOptions,
 ): AnyBlock => blockDefinitions[kind].create(position, options);
 
+export const createCanvasNode = (
+  kind: CanvasNodeKind,
+  position: Position,
+  options?: CreateBlockOptions,
+): AnyCanvasNode =>
+  kind === "annotation"
+    ? AnnotationCanvasItem.create(position)
+    : createBlock(kind, position, options);
+
 export const hydrateBlock = (node: DiagramNode): AnyBlock =>
-  blockDefinitions[node.data.kind].hydrate(node);
+  node.data.kind === "annotation"
+    ? (() => {
+        throw new Error("Cannot hydrate annotation as a block");
+      })()
+    : blockDefinitions[node.data.kind].hydrate(node);
+
+export const hydrateCanvasNode = (node: DiagramNode): AnyCanvasNode =>
+  node.data.kind === "annotation"
+    ? AnnotationCanvasItem.hydrate(node)
+    : hydrateBlock(node);
 
 export const getBlockTitle = (node: DiagramNode) =>
-  blockDefinitions[node.data.kind].title(node.data as never);
+  node.data.kind === "annotation"
+    ? (() => {
+        throw new Error("Cannot get block title for annotation");
+      })()
+    : blockDefinitions[node.data.kind].title(node.data as never);
+
+export const getCanvasNodeTitle = (node: DiagramNode) =>
+  node.data.kind === "annotation"
+    ? annotationDefinition.title(node.data)
+    : getBlockTitle(node);
 
 export class Connection {
   readonly data: EdgeData;
@@ -700,7 +762,9 @@ export class DiagramModel {
 
   constructor(diagram: Diagram) {
     this.diagram = diagram;
-    this.blocks = diagram.nodes.map(hydrateBlock);
+    this.blocks = diagram.nodes.flatMap((node) =>
+      node.data.kind === "annotation" ? [] : [hydrateBlock(node)],
+    );
     this.connections = diagram.edges.map(hydrateConnection);
   }
 
@@ -741,7 +805,9 @@ export class DiagramModel {
   serialize(): Diagram {
     return {
       ...this.diagram,
-      nodes: this.blocks.map((block) => block.serialize()),
+      nodes: this.diagram.nodes.map(
+        (node) => this.getBlock(node.id)?.serialize() ?? node,
+      ),
       edges: this.connections.map((connection) => connection.serialize()),
     };
   }

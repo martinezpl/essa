@@ -31,8 +31,8 @@ import {
   reconcileDiagramForPsqlTableNode,
 } from "../domain/psqlTableReferences";
 import type {
-  BlockData,
-  BlockKind,
+  CanvasNodeData,
+  CanvasNodeKind,
   Diagram,
   DiagramCollection,
   DiagramEdge,
@@ -62,7 +62,7 @@ import {
   undoHistory,
 } from "./history";
 
-type NodeDataPatch = Partial<BlockData>;
+type NodeDataPatch = Partial<CanvasNodeData>;
 type LayoutNode = DiagramNode & {
   measured?: { width?: number; height?: number };
   width?: number;
@@ -427,7 +427,7 @@ export const useDiagramStore = () => {
 
   const addNode = useCallback(
     (
-      kind: BlockKind,
+      kind: CanvasNodeKind,
       position?: { x: number; y: number },
       dataPatch?: NodeDataPatch,
     ) => {
@@ -444,7 +444,7 @@ export const useDiagramStore = () => {
             data: {
               ...createdNode.data,
               ...dataPatch,
-            } as BlockData,
+            } as CanvasNodeData,
           }
         : createdNode;
 
@@ -568,7 +568,7 @@ export const useDiagramStore = () => {
                     data: {
                       ...item.data,
                       ...patch,
-                    } as BlockData,
+                    } as CanvasNodeData,
                   }
                 : item,
             ),

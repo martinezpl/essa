@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import {
@@ -15,13 +15,12 @@ import type {
   RestResourceData,
   RestResourceMethod,
 } from "../../domain/types";
-import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
 import { RowEditPopover } from "../blockEditors/RowEditPopover";
 import { TrashButton } from "../blockEditors/TrashButton";
-import { BlockHandles } from "./BlockHandles";
+import { BlockNodeFrame } from "./BlockNodeFrame";
 
 type RestResourceNodeProps = NodeProps<EssaNode> & {
   data: RestResourceData;
@@ -74,8 +73,6 @@ const getSelectedEnumId = (
       )?.id ?? "")
     : "";
 
-const nameMinWidth = (name: string) => Math.max(440, name.length * 20 + 50);
-
 export const RestResourceNode = ({
   id,
   data,
@@ -84,10 +81,6 @@ export const RestResourceNode = ({
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
   const [expandedMethodId, setExpandedMethodId] = useState<string | null>(null);
-  const [titleLayout, setTitleLayout] = useState(data.resourceName);
-  const handleTitleDraftChange = useCallback((draft: string) => {
-    setTitleLayout(draft);
-  }, []);
   const closeEditing = () => setEditing(null);
 
   const remainingMethodKinds = restMethods.filter(
@@ -95,36 +88,18 @@ export const RestResourceNode = ({
   );
 
   return (
-    <article
-      className={`block-node block-node--resource block-node--editable${
-        selected ? " block-node--editing" : ""
-      }`}
-      style={{ minWidth: nameMinWidth(titleLayout) }}
+    <BlockNodeFrame
+      id={id}
+      kind="restResource"
+      selected={selected}
+      badge="API"
+      variant="resource"
+      title={data.resourceName}
+      titlePlaceholder="resource"
+      titleAriaLabel="Resource name"
+      deleteAriaLabel="Delete resource"
+      onTitleChange={(next) => ctx.onUpdateNodeData(id, { resourceName: next })}
     >
-      <BlockHandles kind="restResource" />
-
-      <header className="block-node__head">
-        <span className="block-node__badge">API</span>
-        <span className="block-node__head-spacer" />
-        <span className="block-node__head-trash">
-          <TrashButton
-            ariaLabel="Delete resource"
-            onClick={() => ctx.onDeleteNode(id)}
-          />
-        </span>
-      </header>
-
-      <BlockTitleInput
-        nodeId={id}
-        committedValue={data.resourceName}
-        onCommit={(next) => ctx.onUpdateNodeData(id, { resourceName: next })}
-        onDraftChange={handleTitleDraftChange}
-        aria-label="Resource name"
-        className="block-node__title-input nodrag nowheel"
-        emptyClassName="block-node__title-input--placeholder"
-        placeholder="resource"
-      />
-
       <textarea
         aria-label="Resource description"
         className="block-node__description-input nodrag nowheel"
@@ -312,7 +287,7 @@ export const RestResourceNode = ({
           />
         ) : null}
       </section>
-    </article>
+    </BlockNodeFrame>
   );
 };
 

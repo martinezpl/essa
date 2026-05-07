@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { useDiagramContext } from "../../app/diagramContext";
 import { psqlColumnTypes, psqlForeignKeyActions, psqlIndexMethods } from "../../domain/options";
@@ -20,13 +20,12 @@ import type {
   PsqlIndex,
   PsqlTableData,
 } from "../../domain/types";
-import { BlockTitleInput } from "../blockEditors/BlockTitleInput";
 import { ChipSelector } from "../blockEditors/ChipSelector";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { updateColumn } from "../blockEditors/helpers";
 import { TrashButton } from "../blockEditors/TrashButton";
-import { BlockHandles } from "./BlockHandles";
+import { BlockNodeFrame } from "./BlockNodeFrame";
 
 type PsqlTableNodeProps = NodeProps<EssaNode> & {
   data: PsqlTableData;
@@ -86,9 +85,6 @@ const formatForeignKeyReference = (
   return `${targetTable.data.tableName || "table"}.${targetColumn.name || "column"}`;
 };
 
-const nameMinWidth = (name: string) =>
-  Math.max(440, name.length * 20 + 50);
-
 const getPsqlFieldCandidates = (
   columns: PsqlColumn[],
   foreignKeys: PsqlForeignKey[],
@@ -97,10 +93,6 @@ const getPsqlFieldCandidates = (
 export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   const ctx = useDiagramContext();
   const [editing, setEditing] = useState<EditingTarget>(null);
-  const [titleLayout, setTitleLayout] = useState(data.tableName);
-  const handleTitleDraftChange = useCallback((draft: string) => {
-    setTitleLayout(draft);
-  }, []);
   const closeEditing = () => setEditing(null);
   const psqlTables = ctx.nodes.filter(
     (node): node is PsqlTableDiagramNode => node.data.kind === "psqlTable",
@@ -144,36 +136,18 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
   });
 
   return (
-    <article
-      className={`block-node block-node--table block-node--editable${
-        selected ? " block-node--editing" : ""
-      }`}
-      style={{ minWidth: nameMinWidth(titleLayout) }}
+    <BlockNodeFrame
+      id={id}
+      kind="psqlTable"
+      selected={selected}
+      badge="PSQL table"
+      variant="table"
+      title={data.tableName}
+      titlePlaceholder="table_name"
+      titleAriaLabel="Table name"
+      deleteAriaLabel="Delete table"
+      onTitleChange={(next) => ctx.onUpdateNodeData(id, { tableName: next })}
     >
-      <BlockHandles kind="psqlTable" />
-
-      <header className="block-node__head">
-        <span className="block-node__badge">PSQL table</span>
-        <span className="block-node__head-spacer" />
-        <span className="block-node__head-trash">
-          <TrashButton
-            ariaLabel="Delete table"
-            onClick={() => ctx.onDeleteNode(id)}
-          />
-        </span>
-      </header>
-
-      <BlockTitleInput
-        nodeId={id}
-        committedValue={data.tableName}
-        onCommit={(next) => ctx.onUpdateNodeData(id, { tableName: next })}
-        onDraftChange={handleTitleDraftChange}
-        aria-label="Table name"
-        className="block-node__title-input nodrag nowheel"
-        emptyClassName="block-node__title-input--placeholder"
-        placeholder="table_name"
-      />
-
       <section className="block-node__section">
         <h4 className="block-node__section-title">Columns</h4>
 
@@ -472,7 +446,7 @@ export const PsqlTableNode = ({ id, data, selected }: PsqlTableNodeProps) => {
           + Add index
         </button>
       </section>
-    </article>
+    </BlockNodeFrame>
   );
 };
 
