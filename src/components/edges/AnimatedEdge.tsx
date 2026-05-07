@@ -83,7 +83,11 @@ export const AnimatedEdge = ({
             ) : (
               <>
                 <span className="essa-edge__label-kind">{kind}</span>
-                <span className="essa-edge__label-data">{dataPath}</span>
+                <span className="essa-edge__label-data">
+                  {dataPath === "all"
+                    ? "all"
+                    : `${dataPath.split(",").filter(Boolean).length} fields`}
+                </span>
               </>
             )}
           </div>

@@ -73,18 +73,18 @@
    * Global multiplier for diagram-adjacent type (nodes, row popovers, edge
    * labels, combo rows, block/connection editors). Set to 1 for browser default.
    */
-  --essa-ui-scale: 2;
+  --essa-ui-scale: 1.8;
 
   /*
    * Canvas / diagram text — React Flow zoom shrinks perceived size; these
    * rem steps stay readable around ~50% zoom while keeping a clear hierarchy.
    */
-  --text-canvas-xs: calc(0.9375rem * var(--essa-ui-scale)); /* pills, chips */
-  --text-canvas-sm: calc(1rem * var(--essa-ui-scale)); /* meta, types, hints */
-  --text-canvas-md: calc(1.0625rem * var(--essa-ui-scale)); /* nested rows */
-  --text-canvas-lg: calc(1.1875rem * var(--essa-ui-scale)); /* field rows */
+  --text-canvas-xs: calc(1rem * var(--essa-ui-scale)); /* pills, chips */
+  --text-canvas-sm: calc(1.1rem * var(--essa-ui-scale)); /* meta, types, hints */
+  --text-canvas-md: calc(1.2rem * var(--essa-ui-scale)); /* nested rows */
+  --text-canvas-lg: calc(1.3rem * var(--essa-ui-scale)); /* field rows */
   --text-canvas-xl: calc(1.5rem * var(--essa-ui-scale)); /* static titles */
-  --text-canvas-2xl: calc(1.625rem * var(--essa-ui-scale)); /* editable title */
+  --text-canvas-2xl: calc(1.8rem * var(--essa-ui-scale)); /* editable title */
 
   /* Default text size inside diagram nodes */
   --text-block-base: calc(1rem * var(--essa-ui-scale));
@@ -210,7 +210,7 @@ textarea {
   background: var(--bg-elevated);
   color: var(--text);
   padding: 0.55rem 0.75rem;
-  font-size: 0.95rem;
+  font-size: var(--text-canvas-xs);
   transition: border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease);
 }
@@ -231,7 +231,7 @@ label {
   display: grid;
   gap: 0.35rem;
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-canvas-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -247,19 +247,19 @@ p {
 }
 
 h1 {
-  font-size: 1.4rem;
+  font-size: var(--text-canvas-2xl);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: 1.05rem;
+  font-size: var(--text-canvas-xl);
   font-weight: 700;
   letter-spacing: -0.005em;
 }
 
 h3 {
-  font-size: 0.85rem;
+  font-size: var(--text-canvas-lg);
   font-weight: 700;
 }
 
@@ -269,7 +269,7 @@ h3 {
 
 .eyebrow {
   color: var(--text-subtle);
-  font-size: 0.75rem;
+  font-size: var(--text-canvas-xs);
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -277,7 +277,7 @@ h3 {
 
 .eyebrow_workspace {
   color: var(--text-subtle);
-  font-size: 1rem;
+  font-size: var(--text-canvas-xs);
   font-weight: 500;
   letter-spacing: 0.1em;
   margin-left: 0.5rem;
@@ -2171,7 +2171,7 @@ h3 {
   flex-direction: row;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.9rem;
+  font-size: var(--text-canvas-xs);
   color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 0;
@@ -2244,7 +2244,7 @@ h3 {
 
 /* Connection editor anchored to edge midpoint */
 .connection-editor {
-  width: min(280px, 80vw);
+  width: min(360px, 85vw);
 }
 
 /* ── React Flow overrides (light + dark) ──────────────────────────────── */
@@ -2621,7 +2621,7 @@ h3 {
   box-shadow: var(--shadow-sm);
   color: var(--text-muted);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: var(--text-canvas-xs);
   line-height: 1.35;
   pointer-events: none;
   user-select: none;
@@ -2635,7 +2635,7 @@ h3 {
   color: var(--text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 0.62rem;
+  font-size: var(--text-canvas-xs);
   align-self: center;
 }
 
