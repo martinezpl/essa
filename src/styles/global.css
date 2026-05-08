@@ -269,7 +269,7 @@ h3 {
 
 .eyebrow {
   color: var(--text-subtle);
-  font-size: var(--text-canvas-xs);
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1716,6 +1716,13 @@ h3 {
   min-width: 0;
 }
 
+.app-view-event-row__name-fields {
+  display: grid;
+  grid-template-columns: max-content auto max-content;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .app-view-event-row__input,
 .app-view-event-row__description {
   background: transparent;
@@ -1728,6 +1735,16 @@ h3 {
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: var(--text-canvas-lg);
+  min-width: 8ch;
+  max-width: 32ch;
+}
+
+.app-view-event-row__separator {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-canvas-lg);
+  font-weight: 700;
+  user-select: none;
 }
 
 .app-view-event-row__description {
@@ -2114,18 +2131,24 @@ h3 {
 }
 
 .react-flow__handle.connection-handle {
-  width: 12px;
-  height: 42px;
-  border: 1px solid color-mix(in srgb, var(--accent) 56%, transparent);
+  width: 16px;
+  height: 15%;
+  border: 1px solid color-mix(in srgb, var(--verb-get) 56%, transparent);
   border-radius: 999px;
   opacity: 0;
-  background: color-mix(in srgb, var(--accent) 28%, var(--bg-elevated));
+  background: color-mix(in srgb, var(--verb-get) 28%, var(--bg-elevated));
   box-shadow: 0 0 0 4px transparent;
   pointer-events: none;
   transition: opacity var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease),
     background var(--dur-fast) var(--ease);
+}
+
+.field-row > .react-flow__handle.connection-handle,
+.app-view-event-row > .react-flow__handle.connection-handle,
+.method-row__head > .react-flow__handle.connection-handle {
+  height: 100%;
 }
 
 .react-flow__handle.connection-handle--input {
@@ -2136,10 +2159,8 @@ h3 {
   transform: translate(50%, -50%);
 }
 
-.block-node:hover > .connection-handle,
-.block-node:hover .table-connection-target > .connection-handle,
-.app-view-event-row:hover .connection-handle,
-.method-row:hover .connection-handle,
+.block-node:hover .connection-handle,
+.block-node.block-node--editing .connection-handle,
 .canvas-shell--connecting .connection-handle--active,
 .canvas-shell--connecting .connection-handle--valid-target {
   opacity: 1;
@@ -2155,9 +2176,9 @@ h3 {
 }
 
 .react-flow__handle.connection-handle--active {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 34%, var(--bg-elevated));
-  box-shadow: 0 0 0 8px var(--accent-ring);
+  border-color: var(--verb-get);
+  background: color-mix(in srgb, var(--verb-get) 38%, var(--bg-elevated));
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--verb-get) 30%, transparent);
 }
 
 .react-flow__handle.field-row__handle {
@@ -2383,7 +2404,7 @@ h3 {
 
 /* Connection editor anchored to edge midpoint */
 .connection-editor {
-  width: min(360px, 85vw);
+  width: min(420px, 90vw);
 }
 
 /* ── React Flow overrides (light + dark) ──────────────────────────────── */

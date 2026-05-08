@@ -520,8 +520,8 @@ describe("diagram model", () => {
   it("collects intermediate export specs", () => {
     const model = hydrateDiagram(createStarterDiagram());
 
-    expect(model.toMermaidSpecs().blocks).toHaveLength(4);
-    expect(model.toMermaidSpecs().connections).toHaveLength(2);
+    expect(model.toMermaidSpecs().blocks).toHaveLength(5);
+    expect(model.toMermaidSpecs().connections).toHaveLength(3);
     expect(model.toOpenApiSpecs()).toHaveLength(2);
     expect(model.toPsqlSpecs()).toHaveLength(2);
   });

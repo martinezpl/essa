@@ -519,34 +519,61 @@ export const DiagramCanvas = ({
           }
         }
         onConnectStart={(_, params) => {
-          if (params.handleType !== "source") {
-            setConnectionDrag(null);
+          if (params.handleType === "source") {
+            const sourceEndpoint = getConnectionEndpointByHandle(
+              nodes,
+              params.nodeId,
+              params.handleId,
+              "output",
+            );
+
+            if (!sourceEndpoint) {
+              setConnectionDrag(null);
+              return;
+            }
+
+            const validTargetEndpointIds = getAllConnectionEndpoints(nodes)
+              .filter((endpoint) => endpoint.direction === "input")
+              .filter((endpoint) =>
+                getCompatibleEndpointConnection(sourceEndpoint, endpoint, nodes),
+              )
+              .map((endpoint) => endpoint.id);
+
+            setConnectionDrag({
+              activeEndpointId: sourceEndpoint.id,
+              validTargetEndpointIds,
+            });
             return;
           }
 
-          const sourceEndpoint = getConnectionEndpointByHandle(
-            nodes,
-            params.nodeId,
-            params.handleId,
-            "output",
-          );
+          if (params.handleType === "target") {
+            const targetEndpoint = getConnectionEndpointByHandle(
+              nodes,
+              params.nodeId,
+              params.handleId,
+              "input",
+            );
 
-          if (!sourceEndpoint) {
-            setConnectionDrag(null);
+            if (!targetEndpoint) {
+              setConnectionDrag(null);
+              return;
+            }
+
+            const validSourceEndpointIds = getAllConnectionEndpoints(nodes)
+              .filter((endpoint) => endpoint.direction === "output")
+              .filter((endpoint) =>
+                getCompatibleEndpointConnection(endpoint, targetEndpoint, nodes),
+              )
+              .map((endpoint) => endpoint.id);
+
+            setConnectionDrag({
+              activeEndpointId: targetEndpoint.id,
+              validTargetEndpointIds: validSourceEndpointIds,
+            });
             return;
           }
 
-          const validTargetEndpointIds = getAllConnectionEndpoints(nodes)
-            .filter((endpoint) => endpoint.direction === "input")
-            .filter((endpoint) =>
-              getCompatibleEndpointConnection(sourceEndpoint, endpoint, nodes),
-            )
-            .map((endpoint) => endpoint.id);
-
-          setConnectionDrag({
-            activeEndpointId: sourceEndpoint.id,
-            validTargetEndpointIds,
-          });
+          setConnectionDrag(null);
         }}
         onConnectEnd={() => setConnectionDrag(null)}
         onEdgesChange={onEdgesChange}

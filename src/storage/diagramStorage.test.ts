@@ -45,6 +45,7 @@ describe("diagram storage", () => {
     expect(collection.diagrams[0]).toMatchObject({
       name: "Starter Diagram",
       nodes: expect.arrayContaining([
+        expect.objectContaining({ type: "appView" }),
         expect.objectContaining({ type: "restResource" }),
         expect.objectContaining({ type: "psqlTable" }),
       ]),

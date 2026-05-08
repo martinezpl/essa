@@ -15,6 +15,10 @@ import {
   createRestResourceMethodContract,
   hydrateCanvasNode,
 } from "./model";
+import {
+  appViewOnLoadSourceHandleId,
+  restMethodTargetHandleId,
+} from "./connectionEndpoints";
 import { createId } from "./id";
 export { createId } from "./id";
 
@@ -53,10 +57,12 @@ export const cloneDiagramNode = (node: DiagramNode): DiagramNode => {
 export const createStarterDiagram = (): Diagram => {
   const createdAt = nowIso();
   const statusEnumId = createId("psql-enum");
+  const feedViewId = createId("node");
   const postsResourceId = createId("node");
   const usersResourceId = createId("node");
   const postsTableId = createId("node");
   const usersTableId = createId("node");
+  const postsListMethodId = createId("method");
   const postIdColumnId = createId("column");
   const postTitleColumnId = createId("column");
   const postStatusColumnId = createId("column");
@@ -79,6 +85,24 @@ export const createStarterDiagram = (): Diagram => {
     ],
     nodes: [
       {
+        id: feedViewId,
+        type: "appView",
+        position: { x: -1149.1362725975898, y: -428.6522552849637 },
+        data: {
+          kind: "appView",
+          viewName: "Feed",
+          route: "/feed",
+          description:
+            "Main reader-facing entry point that loads the latest published posts.",
+          events: [
+            {
+              id: createId("event"),
+              name: "RefreshButton::onClick",
+            },
+          ],
+        },
+      },
+      {
         id: postsResourceId,
         type: "restResource",
         position: { x: -74.56451606595385, y: -475.0711173803418 },
@@ -90,6 +114,7 @@ export const createStarterDiagram = (): Diagram => {
           methods: [
             {
               ...createRestResourceMethodContract("GET /"),
+              id: postsListMethodId,
               input: [
                 {
                   id: createId("input"),
@@ -322,6 +347,15 @@ export const createStarterDiagram = (): Diagram => {
       },
     ],
     edges: [
+      {
+        id: createId("edge"),
+        source: feedViewId,
+        sourceHandle: appViewOnLoadSourceHandleId(),
+        target: postsResourceId,
+        targetHandle: restMethodTargetHandleId(postsListMethodId),
+        type: "smoothstep",
+        data: { kind: "read", dataPath: "all" },
+      },
       {
         id: createId("edge"),
         source: postsResourceId,

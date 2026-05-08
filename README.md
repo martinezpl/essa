@@ -1,11 +1,46 @@
 # Essa ![](public/logo-mini.png)
 
-Essa is a web tool for designing application diagrams from a model-first perspective that connects REST resources to PSQL tables.
+Essa is a model-first diagramming tool for sketching application behavior across pages, APIs, and PostgreSQL storage.
 
-## Easily translate your ideas into LLM-compatible input
+## What You Can Model
 
-Export your diagrams into Mermaid, REST resources into openAPI and PSQL tables into SQL. 
+Essa diagrams are built from a few high-signal blocks:
 
-## Coming soon
+- **App Views** represent pages or screens. Every view has an **on load** lifecycle, plus user-named events such as `SubmitButton::onClick` that map to API methods or other views.
+- **API Resources** define methods, inputs, and response schemas.
+- **PSQL Tables** define PostgreSQL tables, columns, enums, indexes, and foreign keys.
+- **Annotations** let you add freeform notes directly to the canvas.
 
-I'm adjusting this tool to my personal workstyle so I'll be adding features as I need them. Most likely different types of databases, non-REST APIs and frontend components.
+## Connections
+
+Connections describe intent rather than only drawing lines:
+
+- App View events and lifecycles can connect to REST methods for `read`, `write`, or `read/write` data flow.
+- App View events can connect to other App Views with `navigate` edges.
+- REST methods can connect to PSQL tables to describe table reads and writes.
+- Navigation edges include a data field for describing what is passed to the destination view.
+- PSQL field-level foreign key edges are generated indicators, not user-created connection handles.
+
+Handles stay out of the way until you hover a block or start a connection. While dragging, viable targets are highlighted.
+
+## Exports
+
+Use the diagram export menu to save:
+
+- `.essa` files for preserving and sharing the editable diagram.
+- `.md` files containing a Mermaid relationship flowchart, Mermaid ER diagram, OpenAPI JSON, and PostgreSQL DDL.
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+Useful checks:
+
+```bash
+npm run build
+npm run lint
+npm run test
+```

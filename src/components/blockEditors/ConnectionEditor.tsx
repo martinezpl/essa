@@ -43,10 +43,12 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
   const optionList = [...dataOptions].filter(Boolean);
   const allowedKinds =
     sourceNode && targetNode
-      ? getCompatibleConnectionKinds(hydrateBlock(sourceNode), hydrateBlock(targetNode))
+      ? getCompatibleConnectionKinds(
+          hydrateBlock(sourceNode),
+          hydrateBlock(targetNode),
+        )
       : [];
-  const kindOptions =
-    allowedKinds.length > 0 ? allowedKinds : [edge.data.kind];
+  const kindOptions = allowedKinds.length > 0 ? allowedKinds : [edge.data.kind];
   const canSelectWrittenColumns =
     edge.data.kind !== "read" &&
     sourceNode?.data.kind === "restResource" &&
@@ -61,6 +63,7 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
     edge.data.dataPath === "all"
       ? []
       : parseSelectedDataPath(edge.data.dataPath);
+  const isNavigateConnection = edge.data.kind === "navigate";
 
   return (
     <div className="connection-editor nowheel">
@@ -97,7 +100,21 @@ export const ConnectionEditor = ({ edge }: ConnectionEditorProps) => {
         />
       </label>
 
-      {edge.data.kind !== "read" ? (
+      {isNavigateConnection ? (
+        <label>
+          Data
+          <input
+            aria-label="Navigation data"
+            placeholder="Data passed"
+            value={edge.data.dataPath === "all" ? "" : edge.data.dataPath}
+            onChange={(event) =>
+              ctx.onUpdateEdgeData(edge.id, {
+                dataPath: event.target.value || "all",
+              })
+            }
+          />
+        </label>
+      ) : edge.data.kind !== "read" ? (
         canSelectWrittenColumns ? (
           <>
             <label>

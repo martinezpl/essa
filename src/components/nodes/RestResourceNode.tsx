@@ -21,6 +21,7 @@ import type {
   RestResourceData,
   RestResourceMethod,
 } from "../../domain/types";
+import { BlockTextareaInput } from "../blockEditors/BlockTextareaInput";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
@@ -125,15 +126,14 @@ export const RestResourceNode = ({
       deleteAriaLabel="Delete resource"
       onTitleChange={(next) => ctx.onUpdateNodeData(id, { resourceName: next })}
     >
-      <textarea
+      <BlockTextareaInput
+        nodeId={id}
         aria-label="Resource description"
         className="block-node__description-input nodrag nowheel"
         placeholder="Context"
         rows={2}
-        value={data.description ?? ""}
-        onChange={(event) =>
-          ctx.onUpdateNodeData(id, { description: event.target.value })
-        }
+        committedValue={data.description ?? ""}
+        onCommit={(next) => ctx.onUpdateNodeData(id, { description: next })}
       />
 
       <section className="block-node__section">
@@ -453,8 +453,6 @@ const MethodPanel = ({
 }: MethodPanelProps) => (
   <div className="method-row__panel">
     <div className="method-row__inputs">
-      <span className="eyebrow">Inputs</span>
-
       {method.input.map((input) => {
         const isEditing = editingInputId === input.id;
 

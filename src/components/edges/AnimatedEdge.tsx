@@ -37,6 +37,14 @@ export const AnimatedEdge = ({
   const linked = Boolean(data?.linked);
   const readonly = Boolean(data?.readonly);
   const isForeignKeyEdge = readonly && dataPath === "FK";
+  const labelData =
+    kind === "navigate"
+      ? dataPath === "all"
+        ? "data"
+        : dataPath
+      : dataPath === "all"
+        ? "all"
+        : `${dataPath.split(",").filter(Boolean).length} fields`;
   const kindClass = isForeignKeyEdge
     ? "essa-edge--fk"
     : `essa-edge--${kind.replace("/", "-")}`;
@@ -83,11 +91,7 @@ export const AnimatedEdge = ({
             ) : (
               <>
                 <span className="essa-edge__label-kind">{kind}</span>
-                <span className="essa-edge__label-data">
-                  {dataPath === "all"
-                    ? "all"
-                    : `${dataPath.split(",").filter(Boolean).length} fields`}
-                </span>
+                <span className="essa-edge__label-data">{labelData}</span>
               </>
             )}
           </div>

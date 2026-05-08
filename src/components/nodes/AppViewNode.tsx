@@ -9,6 +9,7 @@ import {
 } from "../../domain/connectionEndpoints";
 import { createAppViewEvent } from "../../domain/model";
 import type { AppViewData, AppViewEvent, EssaNode } from "../../domain/types";
+import { BlockTextareaInput } from "../blockEditors/BlockTextareaInput";
 import { TrashButton } from "../blockEditors/TrashButton";
 import { BlockNodeFrame } from "./BlockNodeFrame";
 import {
@@ -29,6 +30,27 @@ const updateEvent = (
   events.map((event) =>
     event.id === eventId ? { ...event, ...patch } : event,
   );
+
+const EVENT_NAME_SEPARATOR = "::";
+
+const parseEventName = (name: string) => {
+  const separatorIndex = name.indexOf(EVENT_NAME_SEPARATOR);
+
+  if (separatorIndex === -1) {
+    return { component: name, action: "" };
+  }
+
+  return {
+    component: name.slice(0, separatorIndex),
+    action: name.slice(separatorIndex + EVENT_NAME_SEPARATOR.length),
+  };
+};
+
+const formatEventName = (component: string, action: string) =>
+  `${component}${EVENT_NAME_SEPARATOR}${action}`;
+
+const eventNameInputWidth = (value: string, placeholder: string, min = 10) =>
+  `${Math.max(min, value.length || placeholder.length, 1) + 1}ch`;
 
 export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
   const ctx = useDiagramContext();
@@ -73,15 +95,14 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
         }
       />
 
-      <textarea
+      <BlockTextareaInput
+        nodeId={id}
         aria-label="View description"
         className="block-node__description-input nodrag nowheel"
         placeholder="Context"
         rows={2}
-        value={data.description ?? ""}
-        onChange={(event) =>
-          ctx.onUpdateNodeData(id, { description: event.target.value })
-        }
+        committedValue={data.description ?? ""}
+        onCommit={(next) => ctx.onUpdateNodeData(id, { description: next })}
       />
 
       <section className="block-node__section">
@@ -90,9 +111,7 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
           className={`field-row app-view-event-row ${getConnectionInteractionClass(
             onLoadEndpoint,
             connectionState,
-          )}${
-            linkedOnLoad ? " field-row--linked" : ""
-          }`}
+          )}${linkedOnLoad ? " field-row--linked" : ""}`}
         >
           <span className="field-row__name">onLoad</span>
           <span className="field-row__type">fetch</span>
@@ -112,6 +131,7 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
         {data.events.map((event) => {
           const isLinked = linkedEventIds.has(event.id);
           const eventEndpoint = getAppViewEventEndpoint(id, event);
+          const eventName = parseEventName(event.name);
 
           return (
             <div
@@ -119,28 +139,59 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
               className={`app-view-event-row app-view-event-row--editable ${getConnectionInteractionClass(
                 eventEndpoint,
                 connectionState,
-              )}${
-                isLinked ? " field-row--linked" : ""
-              }`}
+              )}${isLinked ? " field-row--linked" : ""}`}
             >
               <div className="app-view-event-row__body">
-                <input
-                  aria-label="Event name"
-                  className="app-view-event-row__input nodrag nowheel"
-                  placeholder="onClick::Submit"
-                  value={event.name}
-                  onChange={(inputEvent) =>
-                    ctx.onUpdateNodeData(id, {
-                      events: updateEvent(data.events, event.id, {
-                        name: inputEvent.target.value,
-                      }),
-                    })
-                  }
-                />
+                <div className="app-view-event-row__name-fields">
+                  <input
+                    aria-label="Event component"
+                    className="app-view-event-row__input nodrag nowheel"
+                    placeholder="Component"
+                    style={{
+                      width: eventNameInputWidth(
+                        eventName.component,
+                        "Component",
+                      ),
+                    }}
+                    value={eventName.component}
+                    onChange={(inputEvent) =>
+                      ctx.onUpdateNodeData(id, {
+                        events: updateEvent(data.events, event.id, {
+                          name: formatEventName(
+                            inputEvent.target.value,
+                            eventName.action,
+                          ),
+                        }),
+                      })
+                    }
+                  />
+                  <span className="app-view-event-row__separator">
+                    {EVENT_NAME_SEPARATOR}
+                  </span>
+                  <input
+                    aria-label="Event action"
+                    className="app-view-event-row__input nodrag nowheel"
+                    placeholder="Action"
+                    style={{
+                      width: eventNameInputWidth(eventName.action, "Action", 8),
+                    }}
+                    value={eventName.action}
+                    onChange={(inputEvent) =>
+                      ctx.onUpdateNodeData(id, {
+                        events: updateEvent(data.events, event.id, {
+                          name: formatEventName(
+                            eventName.component,
+                            inputEvent.target.value,
+                          ),
+                        }),
+                      })
+                    }
+                  />
+                </div>
                 <textarea
                   aria-label="Event description"
                   className="app-view-event-row__description nodrag nowheel"
-                  placeholder="What triggers this event?"
+                  placeholder="Context"
                   rows={1}
                   value={event.description ?? ""}
                   onChange={(inputEvent) =>
@@ -160,7 +211,10 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
                   })
                 }
               />
-              <ConnectionHandle endpoint={eventEndpoint} state={connectionState} />
+              <ConnectionHandle
+                endpoint={eventEndpoint}
+                state={connectionState}
+              />
             </div>
           );
         })}
