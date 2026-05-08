@@ -252,15 +252,15 @@ export const RestResourceNode = ({
                 >
                   ×
                 </button>
-                <ConnectionHandle
-                  endpoint={inputEndpoint}
-                  state={connectionState}
-                />
-                <ConnectionHandle
-                  endpoint={outputEndpoint}
-                  state={connectionState}
-                />
               </div>
+              <ConnectionHandle
+                endpoint={inputEndpoint}
+                state={connectionState}
+              />
+              <ConnectionHandle
+                endpoint={outputEndpoint}
+                state={connectionState}
+              />
 
               {expanded ? (
                 <MethodPanel

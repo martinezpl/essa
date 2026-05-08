@@ -49,7 +49,7 @@ const parseEventName = (name: string) => {
 const formatEventName = (component: string, action: string) =>
   `${component}${EVENT_NAME_SEPARATOR}${action}`;
 
-const eventNameInputWidth = (value: string, placeholder: string, min = 10) =>
+const eventNameInputWidth = (value: string, placeholder: string, min = 8) =>
   `${Math.max(min, value.length || placeholder.length, 1) + 1}ch`;
 
 export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
@@ -121,13 +121,6 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
 
       <section className="block-node__section">
         <h4 className="block-node__section-title">Events</h4>
-
-        {data.events.length === 0 ? (
-          <p className="block-node__empty">
-            Add named events like onClick::Submit or onSubmit::Login.
-          </p>
-        ) : null}
-
         {data.events.map((event) => {
           const isLinked = linkedEventIds.has(event.id);
           const eventEndpoint = getAppViewEventEndpoint(id, event);
@@ -173,7 +166,7 @@ export const AppViewNode = ({ id, data, selected }: AppViewNodeProps) => {
                     className="app-view-event-row__input nodrag nowheel"
                     placeholder="Action"
                     style={{
-                      width: eventNameInputWidth(eventName.action, "Action", 8),
+                      width: eventNameInputWidth(eventName.action, "Action", 6),
                     }}
                     value={eventName.action}
                     onChange={(inputEvent) =>

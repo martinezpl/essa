@@ -1748,6 +1748,8 @@ h3 {
 }
 
 .app-view-event-row__description {
+  width: 100%;
+  min-width: 0;
   resize: vertical;
   min-height: 2rem;
   color: var(--text-muted);
@@ -1779,6 +1781,7 @@ h3 {
 
 /* Method row (expandable) */
 .method-row {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -2139,6 +2142,7 @@ h3 {
   background: color-mix(in srgb, var(--verb-get) 28%, var(--bg-elevated));
   box-shadow: 0 0 0 4px transparent;
   pointer-events: none;
+  z-index: 999;
   transition: opacity var(--dur-fast) var(--ease),
     border-color var(--dur-fast) var(--ease),
     box-shadow var(--dur-fast) var(--ease),
@@ -2147,7 +2151,7 @@ h3 {
 
 .field-row > .react-flow__handle.connection-handle,
 .app-view-event-row > .react-flow__handle.connection-handle,
-.method-row__head > .react-flow__handle.connection-handle {
+.method-row > .react-flow__handle.connection-handle {
   height: 100%;
 }
 
