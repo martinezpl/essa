@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveResourceSchema,
   deriveResourceSchemas,
+  getResourceConnectedTables,
   getResourceSchemaOptions,
 } from "./resourceSchema";
 import type { Diagram, DiagramNode } from "./types";
@@ -110,26 +111,32 @@ describe("resource schema derivation", () => {
         id: "table-1-column-id",
         name: "id",
         type: "string",
+        isArray: false,
         nullable: false,
         sourceTableId: "table-1",
         sourceColumnId: "column-id",
+        exclude: [],
       },
       {
         id: "table-1-column-price",
         name: "price",
         type: "number",
+        isArray: false,
         nullable: true,
         sourceTableId: "table-1",
         sourceColumnId: "column-price",
+        exclude: [],
       },
       {
         id: "table-1-column-status",
         name: "status",
         type: "string",
+        isArray: false,
         enum: ["draft"],
         nullable: false,
         sourceTableId: "table-1",
         sourceColumnId: "column-status",
+        exclude: [],
       },
     ]);
   });
@@ -159,6 +166,19 @@ describe("resource schema derivation", () => {
       "price",
       "status",
     ]);
+  });
+
+  it("getResourceConnectedTables returns only tables connected via edges", () => {
+    const diagram = createDiagram();
+    const tables = getResourceConnectedTables(diagram, resourceNode.id);
+
+    expect(tables).toHaveLength(1);
+    expect(tables[0]?.id).toBe(psqlTableNode.id);
+  });
+
+  it("getResourceConnectedTables returns empty when no edges", () => {
+    const diagram = createDiagram({ edges: [] });
+    expect(getResourceConnectedTables(diagram, resourceNode.id)).toHaveLength(0);
   });
 
   it("builds field selection options with all first", () => {

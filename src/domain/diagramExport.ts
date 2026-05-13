@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createId } from "./id";
-import { deriveResourceSchemas } from "./resourceSchema";
+import { deriveResourceSchemas, psqlToJsonType } from "./resourceSchema";
 import { formatPsqlColumnType, getRequiredExtension } from "./psqlTypes";
 import {
   parsePsqlForeignKeyIndicatorSourceHandleId,
@@ -529,7 +529,8 @@ const formatResourceSchemaFieldType = (
     ? psqlEnums.find((item) => sameValues(item.values, field.enum ?? []))?.name
     : undefined;
 
-  return enumName || field.type;
+  const base = enumName || field.type;
+  return field.isArray ? `[${base}]` : base;
 };
 
 const formatNodeLabel = (
@@ -982,7 +983,85 @@ const createOpenApiJsonSchema = (
   ...(type === "object" ? { additionalProperties: true } : {}),
 });
 
-const createOpenApiObjectSchema = (fields: ResourceSchemaField[]): OpenApiSchema => {
+/** Builds an inline object schema from a PSQL table's columns, excluding any column IDs in `excludeColumnIds`. */
+const createOpenApiTableObjectSchema = (
+  table: PsqlTableDiagramNode,
+  excludeColumnIds: ReadonlySet<string>,
+): OpenApiSchema => {
+  const visibleColumns = table.data.columns.filter(
+    (column) => column.name.trim() && !excludeColumnIds.has(column.id),
+  );
+
+  if (visibleColumns.length === 0) {
+    return { type: "object", additionalProperties: true };
+  }
+
+  const properties = Object.fromEntries(
+    visibleColumns.map((column) => [
+      column.name.trim(),
+      {
+        type: psqlToJsonType[column.type],
+        ...(column.nullable ? { nullable: true } : {}),
+      } as OpenApiSchema,
+    ]),
+  );
+  const required = visibleColumns
+    .filter((column) => !column.nullable)
+    .map((column) => column.name.trim());
+
+  return {
+    type: "object",
+    properties,
+    ...(required.length ? { required } : {}),
+  };
+};
+
+/**
+ * Builds the OpenAPI schema for a single resource schema field, honouring:
+ * - `field.isArray`: wraps the inner schema in `{ type: "array", items: ... }`
+ * - `field.type === "object"` + `field.sourceTableId` set to a connected table: inlines that table's columns
+ * - `field.exclude`: column IDs to drop when building the inline object schema
+ */
+const createOpenApiFieldSchema = (
+  field: ResourceSchemaField,
+  psqlTableById: Map<string, PsqlTableDiagramNode>,
+): OpenApiSchema => {
+  let inner: OpenApiSchema;
+
+  if (field.type === "object" && field.sourceTableId) {
+    const table = psqlTableById.get(field.sourceTableId);
+    if (table) {
+      inner = createOpenApiTableObjectSchema(table, new Set(field.exclude));
+    } else {
+      inner = createOpenApiJsonSchema("object", {
+        description: field.description,
+        nullable: field.nullable,
+      });
+    }
+  } else {
+    inner = createOpenApiJsonSchema(field.type, {
+      description: field.description,
+      enum: field.enum,
+      nullable: field.nullable,
+    });
+  }
+
+  if (field.isArray) {
+    return {
+      type: "array",
+      items: inner,
+      ...(field.description?.trim() ? { description: field.description.trim() } : {}),
+      ...(field.nullable ? { nullable: true } : {}),
+    };
+  }
+
+  return inner;
+};
+
+const createOpenApiObjectSchema = (
+  fields: ResourceSchemaField[],
+  psqlTableById: Map<string, PsqlTableDiagramNode>,
+): OpenApiSchema => {
   if (fields.length === 0) {
     return {
       type: "object",
@@ -990,20 +1069,15 @@ const createOpenApiObjectSchema = (fields: ResourceSchemaField[]): OpenApiSchema
     };
   }
 
+  const namedFields = fields.filter((field) => field.name.trim());
   const properties = Object.fromEntries(
-    fields
-      .filter((field) => field.name.trim())
-      .map((field) => [
-        field.name.trim(),
-        createOpenApiJsonSchema(field.type, {
-          description: field.description,
-          enum: field.enum,
-          nullable: field.nullable,
-        }),
-      ]),
+    namedFields.map((field) => [
+      field.name.trim(),
+      createOpenApiFieldSchema(field, psqlTableById),
+    ]),
   );
-  const required = fields
-    .filter((field) => field.name.trim() && !field.nullable)
+  const required = namedFields
+    .filter((field) => !field.nullable)
     .map((field) => field.name.trim());
 
   return {
@@ -1013,13 +1087,24 @@ const createOpenApiObjectSchema = (fields: ResourceSchemaField[]): OpenApiSchema
   };
 };
 
+const isGetMethod = (kind: RestResourceDiagramNode["data"]["methods"][number]["kind"]) =>
+  kind === "GET /" || kind === "GET /{id}";
+
 const createOpenApiResponseSchema = (
   fields: ResourceSchemaField[],
-  returnsArray: boolean,
+  method: RestResourceDiagramNode["data"]["methods"][number],
+  psqlTableById: Map<string, PsqlTableDiagramNode>,
 ): OpenApiSchema => {
-  const itemSchema = createOpenApiObjectSchema(fields);
+  // Apply output.exclude only on GET methods (field-level exclusion from the response object)
+  const outputExclude = method.output.exclude ?? [];
+  const visibleFields =
+    isGetMethod(method.kind) && outputExclude.length > 0
+      ? fields.filter((field) => !outputExclude.includes(field.id))
+      : fields;
 
-  return returnsArray
+  const itemSchema = createOpenApiObjectSchema(visibleFields, psqlTableById);
+
+  return method.output.returnsArray
     ? {
         type: "array",
         items: itemSchema,
@@ -1088,6 +1173,7 @@ const createOpenApiOperation = (
   resource: RestResourceDiagramNode,
   method: RestResourceDiagramNode["data"]["methods"][number],
   schema: ResourceSchemaField[],
+  psqlTableById: Map<string, PsqlTableDiagramNode>,
 ): OpenApiOperation => {
   const payloadFields = method.input.filter((field) => field.mode === "payload");
   const responseStatus = method.kind === "POST /" ? "201" : "200";
@@ -1103,10 +1189,7 @@ const createOpenApiOperation = (
             description: "Success",
             content: {
               "application/json": {
-                schema: createOpenApiResponseSchema(
-                  schema,
-                  method.output.returnsArray,
-                ),
+                schema: createOpenApiResponseSchema(schema, method, psqlTableById),
               },
             },
           },
@@ -1137,6 +1220,9 @@ const createOpenApiOperation = (
 
 const serializeOpenApiDocument = (diagram: Diagram) => {
   const resourceSchemas = deriveResourceSchemas(diagram);
+  const psqlTableById = new Map(
+    getPsqlTableNodes(diagram).map((node) => [node.id, node]),
+  );
   const paths: OpenApiDocument["paths"] = {};
 
   getRestResourceNodes(diagram).forEach((resource) => {
@@ -1157,6 +1243,7 @@ const serializeOpenApiDocument = (diagram: Diagram) => {
           resource,
           method,
           schema,
+          psqlTableById,
         ),
       };
     });

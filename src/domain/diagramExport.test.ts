@@ -10,7 +10,7 @@ import {
   psqlColumnSourceHandleId,
   psqlForeignKeyTargetHandleId,
 } from "./psqlForeignKeys";
-import type { Diagram } from "./types";
+import type { Diagram, ResourceSchemaField, RestResourceMethod } from "./types";
 
 const createDiagram = (): Diagram => ({
   id: "diagram-1",
@@ -46,7 +46,7 @@ const createDiagram = (): Diagram => ({
                 description: "Filter by publication status",
               },
             ],
-            output: { returnsArray: true },
+            output: { returnsArray: true, exclude: [] },
           },
         ],
         schema: [
@@ -54,10 +54,12 @@ const createDiagram = (): Diagram => ({
             id: "schema-field-1",
             name: "status",
             type: "string",
+            isArray: false,
             enum: ["draft", "published"],
             nullable: false,
             sourceTableId: "table-posts",
             sourceColumnId: "column-status",
+            exclude: [],
             description: "Current publication status",
           },
         ],
@@ -321,5 +323,216 @@ describe("diagram export", () => {
     expect(markdown).toContain('CREATE INDEX ON "posts" ("status");');
     expect(markdown).toContain('CREATE INDEX ON "posts" ("author_id");');
     expect(markdown).not.toContain("idx_posts");
+  });
+
+  it("OpenAPI: output.exclude removes fields from GET / response body schema", () => {
+    const base = createDiagram();
+    const diagram: Diagram = {
+      ...base,
+      nodes: base.nodes.map((node) => {
+        if (node.data.kind !== "restResource") return node;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            methods: node.data.methods.map((method) =>
+              method.kind === "GET /"
+                ? {
+                    ...method,
+                    output: { ...method.output, exclude: ["schema-field-1"] },
+                  }
+                : method,
+            ) as RestResourceMethod[],
+          },
+        };
+      }),
+    };
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    // All fields excluded → response schema falls back to open object (additionalProperties: true)
+    // and the "properties" key is absent from the GET / items schema
+    const openApiJson = JSON.parse(
+      markdown.slice(
+        markdown.indexOf("```json\n") + "```json\n".length,
+        markdown.indexOf("\n```\n", markdown.indexOf("```json\n")),
+      ),
+    ) as Record<string, unknown>;
+    const paths = openApiJson.paths as Record<string, Record<string, unknown>>;
+    const getOp = paths["/posts"]?.["get"] as Record<string, unknown> | undefined;
+    const response200 = (getOp?.responses as Record<string, unknown>)?.["200"] as
+      | Record<string, unknown>
+      | undefined;
+    const responseSchema = (
+      (response200?.content as Record<string, unknown>)?.["application/json"] as
+        | Record<string, unknown>
+        | undefined
+    )?.schema as Record<string, unknown> | undefined;
+    const itemsSchema = responseSchema?.items as Record<string, unknown> | undefined;
+    // The excluded field's name ("status") should not appear as a property key
+    expect(itemsSchema?.properties).toBeUndefined();
+    expect(itemsSchema?.additionalProperties).toBe(true);
+  });
+
+  it("OpenAPI: isArray wraps field schema in { type: array, items: ... }", () => {
+    const base = createDiagram();
+    const diagram: Diagram = {
+      ...base,
+      nodes: base.nodes.map((node) => {
+        if (node.data.kind !== "restResource") return node;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            schema: node.data.schema.map((field) =>
+              field.name === "status"
+                ? ({ ...field, isArray: true } as ResourceSchemaField)
+                : field,
+            ),
+          },
+        };
+      }),
+    };
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    const openApiSection = markdown.slice(markdown.indexOf("## OpenAPI"));
+    // status field should now be an array type wrapping the original schema
+    expect(openApiSection).toContain('"type": "array"');
+  });
+
+  it("OpenAPI: object field with sourceTableId inlines connected table columns", () => {
+    const tableNode = {
+      id: "table-meta",
+      type: "psqlTable" as const,
+      position: { x: 300, y: 0 },
+      data: {
+        kind: "psqlTable" as const,
+        tableName: "post_meta",
+        primaryKey: [],
+        columns: [
+          { id: "col-key", name: "key", type: "text" as const, nullable: false, unique: false },
+          { id: "col-val", name: "value", type: "text" as const, nullable: true, unique: false },
+        ],
+        foreignKeys: [],
+        indices: [],
+      },
+    };
+
+    const objectField: ResourceSchemaField = {
+      id: "sf-meta",
+      name: "meta",
+      type: "object",
+      isArray: false,
+      nullable: false,
+      sourceTableId: "table-meta",
+      sourceColumnId: "",
+      exclude: [],
+    };
+
+    const base = createDiagram();
+    const diagram: Diagram = {
+      ...base,
+      nodes: [
+        ...base.nodes.map((node) => {
+          if (node.data.kind !== "restResource") return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              schema: [objectField],
+            },
+          };
+        }),
+        tableNode,
+      ],
+      edges: [
+        ...base.edges,
+        {
+          id: "edge-meta",
+          source: "resource-1",
+          target: "table-meta",
+          type: "smoothstep",
+          data: { kind: "read" as const, dataPath: "all" },
+        },
+      ],
+    };
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    const openApiSection = markdown.slice(markdown.indexOf("## OpenAPI"));
+    expect(openApiSection).toContain('"meta"');
+    expect(openApiSection).toContain('"key"');
+    expect(openApiSection).toContain('"value"');
+  });
+
+  it("OpenAPI: object field with sourceTableId and exclude omits listed columns", () => {
+    const tableNode = {
+      id: "table-meta",
+      type: "psqlTable" as const,
+      position: { x: 300, y: 0 },
+      data: {
+        kind: "psqlTable" as const,
+        tableName: "post_meta",
+        primaryKey: [],
+        columns: [
+          { id: "col-key", name: "key", type: "text" as const, nullable: false, unique: false },
+          { id: "col-val", name: "value", type: "text" as const, nullable: true, unique: false },
+        ],
+        foreignKeys: [],
+        indices: [],
+      },
+    };
+
+    const objectField: ResourceSchemaField = {
+      id: "sf-meta",
+      name: "meta",
+      type: "object",
+      isArray: false,
+      nullable: false,
+      sourceTableId: "table-meta",
+      sourceColumnId: "",
+      exclude: ["col-val"],
+    };
+
+    const base = createDiagram();
+    const diagram: Diagram = {
+      ...base,
+      nodes: [
+        ...base.nodes.map((node) => {
+          if (node.data.kind !== "restResource") return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              schema: [objectField],
+            },
+          };
+        }),
+        tableNode,
+      ],
+      edges: [
+        ...base.edges,
+        {
+          id: "edge-meta",
+          source: "resource-1",
+          target: "table-meta",
+          type: "smoothstep",
+          data: { kind: "read" as const, dataPath: "all" },
+        },
+      ],
+    };
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    const jsonStart = markdown.indexOf("```json\n", markdown.indexOf("## OpenAPI")) + "```json\n".length;
+    const jsonEnd = markdown.indexOf("\n```\n", jsonStart);
+    const openApiJson = JSON.parse(markdown.slice(jsonStart, jsonEnd)) as Record<string, unknown>;
+    const paths = openApiJson.paths as Record<string, Record<string, unknown>>;
+    const getOp = paths["/posts"]?.["get"] as Record<string, unknown>;
+    const response200 = (getOp?.responses as Record<string, unknown>)?.["200"] as Record<string, unknown>;
+    const responseSchema = ((response200?.content as Record<string, unknown>)?.["application/json"] as Record<string, unknown>)?.schema as Record<string, unknown>;
+    const itemsSchema = responseSchema?.items as Record<string, unknown>;
+    const metaProperties = (itemsSchema?.properties as Record<string, unknown>)?.["meta"] as Record<string, unknown>;
+    const nestedProperties = metaProperties?.properties as Record<string, unknown> | undefined;
+
+    expect(nestedProperties?.["key"]).toBeDefined();
+    expect(nestedProperties?.["value"]).toBeUndefined();
   });
 });

@@ -81,16 +81,19 @@ const restMethodInputArraySchema = z.preprocess((value) => {
 export const restMethodOutputSchema = z.preprocess(
   (value) => {
     if (value && typeof value === "object" && "returnsArray" in value) {
+      const v = value as { returnsArray?: unknown; exclude?: unknown };
       return {
-        returnsArray: Boolean(
-          (value as { returnsArray?: unknown }).returnsArray,
-        ),
+        returnsArray: Boolean(v.returnsArray),
+        exclude: Array.isArray(v.exclude) ? v.exclude : [],
       };
     }
 
-    return { returnsArray: false };
+    return { returnsArray: false, exclude: [] };
   },
-  z.object({ returnsArray: z.boolean() }),
+  z.object({
+    returnsArray: z.boolean(),
+    exclude: z.array(z.string()).default([]),
+  }),
 );
 export type RestMethodOutput = z.infer<typeof restMethodOutputSchema>;
 
@@ -105,7 +108,7 @@ const defaultMethodContract = (kind: RestMethodKind) => ({
   id: `method-${kind}`,
   kind,
   input: [] as RestMethodInputField[],
-  output: { returnsArray: kind === "GET /" },
+  output: { returnsArray: kind === "GET /", exclude: [] as string[] },
 });
 
 export const restResourceMethodSchema = z.union([
@@ -192,10 +195,12 @@ export const resourceSchemaFieldSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
   type: jsonFieldTypeSchema,
+  isArray: z.boolean().default(false),
   enum: z.array(z.string()).optional(),
   nullable: z.boolean(),
   sourceTableId: z.string(),
   sourceColumnId: z.string(),
+  exclude: z.array(z.string()).default([]),
   description: z.string().optional(),
 });
 export type ResourceSchemaField = z.infer<typeof resourceSchemaFieldSchema>;
@@ -434,7 +439,7 @@ export const diagramSchema = z.object({
 export type Diagram = z.infer<typeof diagramSchema>;
 
 export const diagramCollectionSchema = z.object({
-  version: z.literal(5),
+  version: z.literal(6),
   activeDiagramId: z.string().min(1),
   diagrams: z.array(diagramSchema).min(1),
 });

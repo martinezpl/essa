@@ -3,7 +3,7 @@ import {
   type DiagramCollection,
 } from "../domain/types";
 
-export const LATEST_DIAGRAM_COLLECTION_VERSION = 5;
+export const LATEST_DIAGRAM_COLLECTION_VERSION = 6;
 
 const migrateV1toV2 = (v1: Record<string, unknown>): Record<string, unknown> => {
   const diagrams = Array.isArray(v1.diagrams) ? v1.diagrams : [];
@@ -156,27 +156,39 @@ const migrateV4toV5 = (v4: Record<string, unknown>): Record<string, unknown> => 
   version: 5,
 });
 
+// v6 adds isArray + exclude to resource schema fields and exclude to method output.
+// Zod defaults handle the new fields; this step just advances the version key so
+// the app writes to essa.diagrams.v6 without touching the v5 backup.
+const migrateV5toV6 = (v5: Record<string, unknown>): Record<string, unknown> => ({
+  ...v5,
+  version: 6,
+});
+
 export const migrateDiagramCollection = (value: unknown): DiagramCollection => {
   const raw = value as Record<string, unknown>;
 
   if (raw?.version === 1) {
     return diagramCollectionSchema.parse(
-      migrateV4toV5(migrateV3toV4(migrateV2toV3(migrateV1toV2(raw)))),
+      migrateV5toV6(migrateV4toV5(migrateV3toV4(migrateV2toV3(migrateV1toV2(raw))))),
     );
   }
 
   if (raw?.version === 2) {
     return diagramCollectionSchema.parse(
-      migrateV4toV5(migrateV3toV4(migrateV2toV3(raw))),
+      migrateV5toV6(migrateV4toV5(migrateV3toV4(migrateV2toV3(raw)))),
     );
   }
 
   if (raw?.version === 3) {
-    return diagramCollectionSchema.parse(migrateV4toV5(migrateV3toV4(raw)));
+    return diagramCollectionSchema.parse(migrateV5toV6(migrateV4toV5(migrateV3toV4(raw))));
   }
 
   if (raw?.version === 4) {
-    return diagramCollectionSchema.parse(migrateV4toV5(raw));
+    return diagramCollectionSchema.parse(migrateV5toV6(migrateV4toV5(raw)));
+  }
+
+  if (raw?.version === 5) {
+    return diagramCollectionSchema.parse(migrateV5toV6(raw));
   }
 
   return diagramCollectionSchema.parse(value);

@@ -1,5 +1,6 @@
 import type {
   Diagram,
+  DiagramNode,
   JsonFieldType,
   PsqlColumn,
   PsqlEnum,
@@ -7,7 +8,11 @@ import type {
   ResourceSchemaField,
 } from "./types";
 
-const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
+type PsqlTableDiagramNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
+
+export const psqlToJsonType: Record<PsqlColumnType, JsonFieldType> = {
   smallint: "integer",
   integer: "integer",
   bigint: "integer",
@@ -70,6 +75,16 @@ const isResourceTableEdge = (
   (edge.source === resourceId && edge.target === tableId) ||
   (edge.source === tableId && edge.target === resourceId);
 
+export const getResourceConnectedTables = (
+  diagram: Diagram,
+  resourceId: string,
+): PsqlTableDiagramNode[] =>
+  diagram.nodes.filter(
+    (node): node is PsqlTableDiagramNode =>
+      node.data.kind === "psqlTable" &&
+      diagram.edges.some((edge) => isResourceTableEdge(edge, resourceId, node.id)),
+  );
+
 const getColumnEnumValues = (column: PsqlColumn, psqlEnums: PsqlEnum[]) =>
   column.type === "enum"
     ? psqlEnums.find((psqlEnum) => psqlEnum.id === column.options?.enumId)
@@ -80,33 +95,25 @@ export const deriveResourceSchema = (
   diagram: Diagram,
   resourceId: string,
 ): ResourceSchemaField[] => {
-  const connectedTables = diagram.nodes.filter(
-    (node) =>
-      node.data.kind === "psqlTable" &&
-      diagram.edges.some((edge) =>
-        isResourceTableEdge(edge, resourceId, node.id),
-      ),
-  );
+  const connectedTables = getResourceConnectedTables(diagram, resourceId);
 
-  return connectedTables.flatMap((tableNode) => {
-    if (tableNode.data.kind !== "psqlTable") {
-      return [];
-    }
-
-    return tableNode.data.columns
+  return connectedTables.flatMap((tableNode) =>
+    tableNode.data.columns
       .filter((column) => column.name.trim())
       .map((column) => ({
         id: `${tableNode.id}-${column.id}`,
         name: column.name,
         type: psqlToJsonType[column.type],
+        isArray: false,
         ...(getColumnEnumValues(column, diagram.psqlEnums)
           ? { enum: getColumnEnumValues(column, diagram.psqlEnums) }
           : {}),
         nullable: column.nullable,
         sourceTableId: tableNode.id,
         sourceColumnId: column.id,
-      }));
-  });
+        exclude: [],
+      })),
+  );
 };
 
 export const deriveResourceSchemas = (diagram: Diagram) =>

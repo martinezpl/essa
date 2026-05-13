@@ -13,6 +13,7 @@ import {
   restMethods,
 } from "../../domain/options";
 import type {
+  DiagramNode,
   EssaNode,
   PsqlEnum,
   ResourceSchemaField,
@@ -22,6 +23,7 @@ import type {
   RestResourceMethod,
 } from "../../domain/types";
 import { BlockTextareaInput } from "../blockEditors/BlockTextareaInput";
+import { ChipSelector } from "../blockEditors/ChipSelector";
 import { ComboInput } from "../blockEditors/ComboInput";
 import { EditableFieldRow } from "../blockEditors/EditableFieldRow";
 import { httpVerbClass, updateSchemaField } from "../blockEditors/helpers";
@@ -33,6 +35,10 @@ import {
   getConnectionInteractionClass,
   getConnectionUiState,
 } from "./ConnectionHandle";
+
+type PsqlTableDiagramNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "psqlTable" }>;
+};
 
 type RestResourceNodeProps = NodeProps<EssaNode> & {
   data: RestResourceData;
@@ -70,7 +76,8 @@ const formatResourceFieldType = (
       )?.name
     : undefined;
 
-  return enumName || field.type;
+  const base = enumName || field.type;
+  return field.isArray ? `[${base}]` : base;
 };
 
 const getSelectedEnumId = (
@@ -85,6 +92,21 @@ const getSelectedEnumId = (
       )?.id ?? "")
     : "";
 
+const getConnectedPsqlTables = (
+  nodes: DiagramNode[],
+  edges: Array<{ source: string; target: string }>,
+  resourceId: string,
+): PsqlTableDiagramNode[] =>
+  nodes.filter(
+    (node): node is PsqlTableDiagramNode =>
+      node.data.kind === "psqlTable" &&
+      edges.some(
+        (edge) =>
+          (edge.source === resourceId && edge.target === node.id) ||
+          (edge.source === node.id && edge.target === resourceId),
+      ),
+  );
+
 export const RestResourceNode = ({
   id,
   data,
@@ -95,6 +117,9 @@ export const RestResourceNode = ({
   const [editing, setEditing] = useState<EditingTarget>(null);
   const [expandedMethodId, setExpandedMethodId] = useState<string | null>(null);
   const closeEditing = () => setEditing(null);
+  const connectedTables = getConnectedPsqlTables(ctx.nodes, ctx.edges, id);
+  const resolvedSchema =
+    data.schema.length > 0 ? data.schema : (ctx.resourceSchemas.get(id) ?? []);
   const linkedMethodIds = new Set(
     ctx.edges.flatMap((edge) => {
       if (edge.target !== id) {
@@ -159,6 +184,7 @@ export const RestResourceNode = ({
                 <SchemaFieldPopover
                   field={field}
                   psqlEnums={ctx.psqlEnums}
+                  connectedTables={connectedTables}
                   onChange={(patch) =>
                     ctx.onReplaceResourceSchema(
                       id,
@@ -265,6 +291,7 @@ export const RestResourceNode = ({
               {expanded ? (
                 <MethodPanel
                   method={method}
+                  resolvedSchema={resolvedSchema}
                   onChange={(updater) =>
                     ctx.onUpdateRestMethod(id, method.id, updater)
                   }
@@ -334,6 +361,7 @@ export const RestResourceNode = ({
 type SchemaFieldPopoverProps = {
   field: ResourceSchemaField;
   psqlEnums: PsqlEnum[];
+  connectedTables: PsqlTableDiagramNode[];
   onChange: (patch: Partial<ResourceSchemaField>) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -342,93 +370,156 @@ type SchemaFieldPopoverProps = {
 const SchemaFieldPopover = ({
   field,
   psqlEnums,
+  connectedTables,
   onChange,
   onDelete,
   onClose,
-}: SchemaFieldPopoverProps) => (
-  <div className="row-popover__inner">
-    <div className="row-popover__header">
-      <span className="eyebrow">Schema field</span>
-      <TrashButton ariaLabel="Remove field" onClick={onDelete} />
-    </div>
+}: SchemaFieldPopoverProps) => {
+  const referencedTable =
+    field.type === "object" && field.sourceTableId
+      ? connectedTables.find((t) => t.id === field.sourceTableId)
+      : undefined;
 
-    <label>
-      Name
-      <input
-        placeholder="field"
-        value={field.name}
-        onChange={(event) => onChange({ name: event.target.value })}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            onClose();
-          }
-        }}
-      />
-    </label>
+  const excludeColumnCandidates = referencedTable
+    ? referencedTable.data.columns
+        .filter((col) => col.name.trim())
+        .map((col) => ({ id: col.id, name: col.name }))
+    : [];
 
-    <label>
-      Type
-      <ComboInput
-        ariaLabel="Schema field type"
-        value={field.type}
-        options={jsonFieldTypes}
-        onChange={(value) =>
-          onChange({
-            type: value as ResourceSchemaField["type"],
-            enum: undefined,
-          })
-        }
-      />
-    </label>
+  return (
+    <div className="row-popover__inner">
+      <div className="row-popover__header">
+        <span className="eyebrow">Schema field</span>
+        <TrashButton ariaLabel="Remove field" onClick={onDelete} />
+      </div>
 
-    {psqlEnums.length > 0 ? (
       <label>
-        Enum
+        Name
+        <input
+          placeholder="field"
+          value={field.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              onClose();
+            }
+          }}
+        />
+      </label>
+
+      <label>
+        Type
         <ComboInput
-          ariaLabel="Schema field enum"
-          value={getSelectedEnumId(field, psqlEnums)}
-          options={[
-            { value: "", label: "None" },
-            ...psqlEnums.map((psqlEnum) => ({
-              value: psqlEnum.id,
-              label: psqlEnum.name || "unnamed_enum",
-            })),
-          ]}
+          ariaLabel="Schema field type"
+          value={field.type}
+          options={jsonFieldTypes}
           onChange={(value) =>
             onChange({
-              type: "string",
-              enum: value
-                ? psqlEnums.find((item) => item.id === value)?.values
-                : undefined,
+              type: value as ResourceSchemaField["type"],
+              enum: undefined,
+              sourceTableId: "",
+              sourceColumnId: "",
+              exclude: [],
             })
           }
         />
       </label>
-    ) : null}
 
-    <label className="checkbox-field">
-      <input
-        type="checkbox"
-        checked={field.nullable}
-        onChange={(event) => onChange({ nullable: event.target.checked })}
-      />
-      nullable
-    </label>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={field.isArray}
+          onChange={(event) => onChange({ isArray: event.target.checked })}
+        />
+        array
+      </label>
 
-    <label>
-      Description
-      <textarea
-        rows={2}
-        placeholder="Optional"
-        value={field.description ?? ""}
-        onChange={(event) => onChange({ description: event.target.value })}
-      />
-    </label>
-  </div>
-);
+      {field.type === "object" && connectedTables.length > 0 ? (
+        <label>
+          Reference table
+          <ComboInput
+            ariaLabel="Object reference table"
+            value={field.sourceTableId}
+            options={[
+              { value: "", label: "None" },
+              ...connectedTables.map((t) => ({
+                value: t.id,
+                label: t.data.tableName || "unnamed_table",
+              })),
+            ]}
+            onChange={(value) =>
+              onChange({
+                sourceTableId: value,
+                sourceColumnId: "",
+                exclude: [],
+              })
+            }
+          />
+        </label>
+      ) : null}
+
+      {referencedTable && excludeColumnCandidates.length > 0 ? (
+        <div>
+          <span className="method-row__hint">Exclude columns</span>
+          <ChipSelector
+            candidates={excludeColumnCandidates}
+            value={field.exclude}
+            onChange={(next) => onChange({ exclude: next })}
+            emptyLabel="No columns."
+          />
+        </div>
+      ) : null}
+
+      {psqlEnums.length > 0 && field.type !== "object" ? (
+        <label>
+          Enum
+          <ComboInput
+            ariaLabel="Schema field enum"
+            value={getSelectedEnumId(field, psqlEnums)}
+            options={[
+              { value: "", label: "None" },
+              ...psqlEnums.map((psqlEnum) => ({
+                value: psqlEnum.id,
+                label: psqlEnum.name || "unnamed_enum",
+              })),
+            ]}
+            onChange={(value) =>
+              onChange({
+                type: "string",
+                enum: value
+                  ? psqlEnums.find((item) => item.id === value)?.values
+                  : undefined,
+              })
+            }
+          />
+        </label>
+      ) : null}
+
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={field.nullable}
+          onChange={(event) => onChange({ nullable: event.target.checked })}
+        />
+        nullable
+      </label>
+
+      <label>
+        Description
+        <textarea
+          rows={2}
+          placeholder="Optional"
+          value={field.description ?? ""}
+          onChange={(event) => onChange({ description: event.target.value })}
+        />
+      </label>
+    </div>
+  );
+};
 
 type MethodPanelProps = {
   method: RestResourceMethod;
+  resolvedSchema: ResourceSchemaField[];
   onChange: (
     updater: (method: RestResourceMethod) => RestResourceMethod,
   ) => void;
@@ -442,82 +533,111 @@ type MethodPanelProps = {
   onDeleteInput: (inputId: string) => void;
 };
 
+const isGetMethodKind = (kind: RestMethodKind) =>
+  kind === "GET /" || kind === "GET /{id}";
+
 const MethodPanel = ({
   method,
+  resolvedSchema,
   onChange,
   onAddInput,
   editingInputId,
   setEditingInput,
   onUpdateInput,
   onDeleteInput,
-}: MethodPanelProps) => (
-  <div className="method-row__panel">
-    <div className="method-row__inputs">
-      {method.input.map((input) => {
-        const isEditing = editingInputId === input.id;
+}: MethodPanelProps) => {
+  const schemaFieldCandidates = resolvedSchema
+    .filter((field) => field.name.trim())
+    .map((field) => ({ id: field.id, name: field.name }));
 
-        return (
-          <EditableFieldRow
-            key={input.id}
-            variant="sub"
-            stopPointerPropagation
-            isEditing={isEditing}
-            onOpen={() => setEditingInput(input.id)}
-            onClose={() => setEditingInput(null)}
-            popover={
-              <InputPopover
-                input={input}
-                onChange={(patch) => onUpdateInput(input.id, patch)}
-                onDelete={() => onDeleteInput(input.id)}
-                onClose={() => setEditingInput(null)}
-              />
-            }
-          >
-            <span className="field-row__name">{input.name || "—"}</span>
-            <span className="field-row__type">{input.type}</span>
-            <span className="field-row__flags">
-              <span
-                className={`flag-chip flag-chip--${
-                  input.mode === "query" ? "query" : "payload"
-                }`}
-              >
-                {input.mode}
+  return (
+    <div className="method-row__panel">
+      <div className="method-row__inputs">
+        {method.input.map((input) => {
+          const isEditing = editingInputId === input.id;
+
+          return (
+            <EditableFieldRow
+              key={input.id}
+              variant="sub"
+              stopPointerPropagation
+              isEditing={isEditing}
+              onOpen={() => setEditingInput(input.id)}
+              onClose={() => setEditingInput(null)}
+              popover={
+                <InputPopover
+                  input={input}
+                  onChange={(patch) => onUpdateInput(input.id, patch)}
+                  onDelete={() => onDeleteInput(input.id)}
+                  onClose={() => setEditingInput(null)}
+                />
+              }
+            >
+              <span className="field-row__name">{input.name || "—"}</span>
+              <span className="field-row__type">{input.type}</span>
+              <span className="field-row__flags">
+                <span
+                  className={`flag-chip flag-chip--${
+                    input.mode === "query" ? "query" : "payload"
+                  }`}
+                >
+                  {input.mode}
+                </span>
               </span>
-            </span>
-          </EditableFieldRow>
-        );
-      })}
+            </EditableFieldRow>
+          );
+        })}
 
-      <button
-        type="button"
-        className="field-row field-row--button field-row--sub nodrag"
-        onClick={(event) => {
-          event.stopPropagation();
-          onAddInput();
-        }}
-      >
-        + Add input
-      </button>
+        <button
+          type="button"
+          className="field-row field-row--button field-row--sub nodrag"
+          onClick={(event) => {
+            event.stopPropagation();
+            onAddInput();
+          }}
+        >
+          + Add input
+        </button>
+      </div>
+
+      <label className="checkbox-field method-row__returns">
+        <input
+          type="checkbox"
+          checked={method.output.returnsArray}
+          onChange={(event) =>
+            onChange((current) => ({
+              ...current,
+              output: {
+                ...current.output,
+                returnsArray: event.target.checked,
+              },
+            }))
+          }
+        />
+        Returns array (output := resource schema)
+      </label>
+
+      {isGetMethodKind(method.kind) && schemaFieldCandidates.length > 0 ? (
+        <>
+          <span className="method-row__exclude-label">Exclude</span>
+          <div className="method-row__exclude">
+            <ChipSelector
+              candidates={schemaFieldCandidates}
+              value={method.output.exclude}
+              onChange={(next) =>
+                onChange((current) => ({
+                  ...current,
+                  output: { ...current.output, exclude: next },
+                }))
+              }
+              emptyLabel="No schema fields."
+            />
+          </div>
+        </>
+      ) : null}
     </div>
-
-    <label className="checkbox-field method-row__returns">
-      <input
-        type="checkbox"
-        checked={method.output.returnsArray}
-        onChange={(event) =>
-          onChange((current) => ({
-            ...current,
-            output: {
-              ...current.output,
-              returnsArray: event.target.checked,
-            },
-          }))
-        }
-      />
-      Returns array (output := resource schema)
-    </label>
-  </div>
-);
+  );
+};
 
 type InputPopoverProps = {
   input: RestMethodInputField;

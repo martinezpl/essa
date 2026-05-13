@@ -198,6 +198,7 @@ export const createRestResourceMethodContract = (
   input: [],
   output: {
     returnsArray: kind === "GET /",
+    exclude: [],
   },
 });
 
@@ -312,9 +313,11 @@ export class RestResourceBlock extends Block<RestResourceData> {
       id: createId("schema-field"),
       name: "",
       type: "string",
+      isArray: false,
       nullable: false,
       sourceTableId: "",
       sourceColumnId: "",
+      exclude: [],
     };
   }
 

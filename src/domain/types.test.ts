@@ -9,6 +9,7 @@ import {
   psqlEnumSchema,
   psqlIndexSchema,
   restResourceMethodSchema,
+  resourceSchemaFieldSchema,
   psqlColumnSchema,
   psqlTableDataSchema,
   appViewDataSchema,
@@ -85,13 +86,13 @@ describe("domain schemas", () => {
       id: "method-GET /",
       kind: "GET /",
       input: [],
-      output: { returnsArray: true },
+      output: { returnsArray: true, exclude: [] },
     });
     expect(restResourceMethodSchema.parse("DELETE /{id}")).toEqual({
       id: "method-DELETE /{id}",
       kind: "DELETE /{id}",
       input: [],
-      output: { returnsArray: false },
+      output: { returnsArray: false, exclude: [] },
     });
   });
 
@@ -104,7 +105,7 @@ describe("domain schemas", () => {
     });
 
     expect(parsed.input).toEqual([]);
-    expect(parsed.output).toEqual({ returnsArray: false });
+    expect(parsed.output).toEqual({ returnsArray: false, exclude: [] });
   });
 
   it("round-trips method input fields", () => {
@@ -130,7 +131,7 @@ describe("domain schemas", () => {
         mode: "payload",
       },
     ]);
-    expect(parsed.output).toEqual({ returnsArray: true });
+    expect(parsed.output).toEqual({ returnsArray: true, exclude: [] });
   });
 
   it("forces query method inputs to use string types", () => {
@@ -365,13 +366,66 @@ describe("domain schemas", () => {
         {
           kind: "GET /",
           input: [],
-          output: { returnsArray: true },
+          output: { returnsArray: true, exclude: [] },
         },
       ],
       schema: [],
     });
     expect(diagram.psqlEnums).toEqual([]);
     expect(diagram.edges[0].data).toEqual({ kind: "write", dataPath: "all" });
+  });
+
+  it("defaults isArray and exclude on resource schema fields that lack them", () => {
+    const field = resourceSchemaFieldSchema.parse({
+      id: "sf-1",
+      name: "title",
+      type: "string",
+      nullable: false,
+      sourceTableId: "",
+      sourceColumnId: "",
+    });
+
+    expect(field.isArray).toBe(false);
+    expect(field.exclude).toEqual([]);
+  });
+
+  it("round-trips resource schema field with isArray and exclude set", () => {
+    const field = resourceSchemaFieldSchema.parse({
+      id: "sf-2",
+      name: "author",
+      type: "object",
+      isArray: true,
+      nullable: false,
+      sourceTableId: "table-1",
+      sourceColumnId: "",
+      exclude: ["col-password"],
+    });
+
+    expect(field.isArray).toBe(true);
+    expect(field.exclude).toEqual(["col-password"]);
+    expect(field.sourceTableId).toBe("table-1");
+  });
+
+  it("defaults output.exclude on method outputs that lack it", () => {
+    const method = restResourceMethodSchema.parse({
+      id: "method-1",
+      kind: "GET /",
+      input: [],
+      output: { returnsArray: true },
+    });
+
+    expect(method.output.exclude).toEqual([]);
+  });
+
+  it("round-trips output.exclude when set", () => {
+    const method = restResourceMethodSchema.parse({
+      id: "method-1",
+      kind: "GET /",
+      input: [],
+      output: { returnsArray: true, exclude: ["sf-1", "sf-2"] },
+    });
+
+    expect(method.output.exclude).toEqual(["sf-1", "sf-2"]);
   });
 
   it("parses persisted diagrams with annotation canvas nodes", () => {

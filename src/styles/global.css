@@ -73,7 +73,7 @@
    * Global multiplier for diagram-adjacent type (nodes, row popovers, edge
    * labels, combo rows, block/connection editors). Set to 1 for browser default.
    */
-  --essa-ui-scale: 2;
+  --essa-ui-scale: 2.1;
 
   /*
    * Canvas / diagram text — React Flow zoom shrinks perceived size; these
@@ -96,7 +96,7 @@
 
   /* Edge midpoint labels */
   --text-edge-label: calc(0.9375rem * var(--essa-ui-scale));
-  --text-edge-kind: calc(0.8125rem * var(--essa-ui-scale));
+  --text-edge-kind: calc(1.1125rem * var(--essa-ui-scale));
 
   /* Form controls (checkbox, native selects, icon buttons) — not text-token size */
   --control-checkbox-size: 2rem;
@@ -201,6 +201,7 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
+
 input,
 select,
 textarea {
@@ -269,7 +270,7 @@ h3 {
 
 .eyebrow {
   color: var(--text-subtle);
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1252,11 +1253,12 @@ h3 {
 
 .block-node {
   position: relative;
+  box-sizing: border-box;
   background: var(--bg-elevated);
   border: 8px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  min-width: 440px;
+  min-width: 640px;
   padding: 1.4rem 1.6rem 1.6rem;
   color: var(--text);
   font-size: var(--text-block-base);
@@ -1592,8 +1594,9 @@ h3 {
 /* Field-shaped clickable rows */
 .field-row {
   position: relative;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.5rem;
   align-items: center;
   padding: 0.65rem 0.85rem;
@@ -1641,6 +1644,10 @@ h3 {
 }
 
 .field-row__type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-mono);
   color: var(--text-muted);
   font-size: var(--text-canvas-sm);
@@ -1782,6 +1789,7 @@ h3 {
 /* Method row (expandable) */
 .method-row {
   position: relative;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -1829,6 +1837,8 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  min-width: 0;
+  max-width: 100%;
   padding-top: 0.3rem;
   border-top: 1px dashed var(--border);
   font-size: var(--text-canvas-xs);
@@ -1838,11 +1848,43 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .method-row__returns {
   font-size: var(--text-canvas-xs);
   line-height: var(--lh-snug);
+}
+
+.method-row__exclude-label {
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: var(--text-canvas-sm);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: var(--lh-snug);
+  text-transform: uppercase;
+}
+
+.method-row__exclude {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.method-row__exclude .chip-picker {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.method-row__exclude .chip {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .add-method-anchor {

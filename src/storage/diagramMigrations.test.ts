@@ -158,7 +158,7 @@ describe("diagram migrations", () => {
     });
   });
 
-  it("migrates v4 collections to v5 without changing diagrams", () => {
+  it("migrates v4 collections to latest without changing diagrams", () => {
     const collection = createInitialCollection();
     const v4 = {
       ...collection,
@@ -169,5 +169,65 @@ describe("diagram migrations", () => {
       ...collection,
       version: LATEST_DIAGRAM_COLLECTION_VERSION,
     });
+  });
+
+  it("migrates v5 collections to v6 and gains isArray/exclude defaults on schema fields and method outputs", () => {
+    const v5 = {
+      version: 5,
+      activeDiagramId: "diagram-1",
+      diagrams: [
+        {
+          id: "diagram-1",
+          name: "Migrated",
+          createdAt: "2026-05-02T00:00:00.000Z",
+          updatedAt: "2026-05-02T00:00:00.000Z",
+          psqlEnums: [],
+          nodes: [
+            {
+              id: "resource-1",
+              type: "restResource",
+              position: { x: 0, y: 0 },
+              data: {
+                kind: "restResource",
+                resourceName: "items",
+                methods: [
+                  {
+                    id: "method-1",
+                    kind: "GET /",
+                    input: [],
+                    output: { returnsArray: true },
+                  },
+                ],
+                schema: [
+                  {
+                    id: "sf-1",
+                    name: "id",
+                    type: "string",
+                    nullable: false,
+                    sourceTableId: "",
+                    sourceColumnId: "",
+                  },
+                ],
+              },
+            },
+          ],
+          edges: [],
+        },
+      ],
+    };
+
+    const result = migrateDiagramCollection(v5);
+
+    expect(result.version).toBe(6);
+    const resource = result.diagrams[0]?.nodes[0];
+    if (resource?.data.kind !== "restResource") {
+      throw new Error("Expected restResource node");
+    }
+    const field = resource.data.schema[0];
+    expect(field?.isArray).toBe(false);
+    expect(field?.exclude).toEqual([]);
+
+    const method = resource.data.methods[0];
+    expect(method?.output.exclude).toEqual([]);
   });
 });
