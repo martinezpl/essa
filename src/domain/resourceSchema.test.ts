@@ -188,9 +188,11 @@ describe("resource schema derivation", () => {
           id: "field-1",
           name: "name",
           type: "string",
+          isArray: false,
           nullable: false,
           sourceTableId: "table-1",
           sourceColumnId: "column-name",
+          exclude: [],
         },
       ]),
     ).toEqual(["all", "name"]);
