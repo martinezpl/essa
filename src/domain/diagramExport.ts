@@ -664,7 +664,7 @@ const formatErAttributeRow = (
   attributeKeys: readonly ("PK" | "FK" | "UK")[],
   commentParts: string[],
 ) => {
-  const keyPart = attributeKeys.length ? ` ${attributeKeys.join(" ")}` : "";
+  const keyPart = attributeKeys.length ? ` ${attributeKeys.join(",")}` : "";
   return `    ${erFieldType(sqlType)} ${erFieldName(name)}${keyPart}${formatErComment(
     commentParts,
   )}`;
