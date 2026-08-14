@@ -245,6 +245,44 @@ describe("diagram export", () => {
     expect(markdown).not.toContain("string note");
   });
 
+  it("omits wildcard blocks from Mermaid flowchart and ER export", () => {
+    const base = createDiagram();
+    const wildcardId = "wildcard-1";
+    const diagram: Diagram = {
+      ...base,
+      nodes: [
+        ...base.nodes,
+        {
+          id: wildcardId,
+          type: "wildcard",
+          position: { x: 0, y: 0 },
+          data: {
+            kind: "wildcard",
+            name: "Payment provider",
+            description: "Third-party billing system",
+            children: [{ id: "child-1", name: "onChargeSucceeded webhook" }],
+          },
+        },
+      ],
+      edges: [
+        ...base.edges,
+        {
+          id: "edge-to-wildcard",
+          source: "resource-1",
+          target: wildcardId,
+          type: "smoothstep",
+          data: { kind: "read/write", dataPath: "all" },
+        },
+      ],
+    };
+
+    const mermaid = serializeMermaidDiagram(diagram);
+    expect(mermaid).not.toContain("Payment provider");
+
+    const markdown = serializeMarkdownDiagram(diagram);
+    expect(markdown).not.toContain("Payment provider");
+  });
+
   it("exports a compact detailed Mermaid flowchart", () => {
     const mermaid = serializeMermaidDiagram(createDiagram());
 

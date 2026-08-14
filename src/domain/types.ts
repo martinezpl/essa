@@ -5,6 +5,7 @@ export const blockNodeKindSchema = z.enum([
   "appView",
   "restResource",
   "psqlTable",
+  "wildcard",
 ]);
 export type BlockNodeKind = z.infer<typeof blockNodeKindSchema>;
 export type BlockKind = BlockNodeKind;
@@ -332,6 +333,22 @@ export const psqlTableDataSchema = z.object({
 export type PsqlTableData = z.infer<typeof psqlTableDataSchema> &
   Record<string, unknown>;
 
+export const wildcardChildSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  description: z.string().optional(),
+});
+export type WildcardChild = z.infer<typeof wildcardChildSchema>;
+
+export const wildcardDataSchema = z.object({
+  kind: z.literal("wildcard"),
+  name: z.string(),
+  description: z.string().optional(),
+  children: z.array(wildcardChildSchema).default([]),
+});
+export type WildcardData = z.infer<typeof wildcardDataSchema> &
+  Record<string, unknown>;
+
 export const annotationDataSchema = z.object({
   kind: z.literal("annotation"),
   label: z.string(),
@@ -346,6 +363,7 @@ export const blockDataSchema = z.union([
   appViewDataSchema,
   restResourceDataSchema,
   psqlTableDataSchema,
+  wildcardDataSchema,
 ]);
 export type BlockData = z.infer<typeof blockDataSchema> &
   Record<string, unknown>;
@@ -354,6 +372,7 @@ export const canvasNodeDataSchema = z.union([
   appViewDataSchema,
   restResourceDataSchema,
   psqlTableDataSchema,
+  wildcardDataSchema,
   annotationDataSchema,
 ]);
 export type CanvasNodeData = z.infer<typeof canvasNodeDataSchema> &

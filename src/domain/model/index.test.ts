@@ -7,6 +7,8 @@ import {
   psqlTableInputHandleId,
   restMethodSourceHandleId,
   restMethodTargetHandleId,
+  wildcardInputHandleId,
+  wildcardOutputHandleId,
 } from "../connectionEndpoints";
 import type { Diagram, DiagramNode } from "../types";
 import {
@@ -14,6 +16,7 @@ import {
   DiagramModel,
   RestResourceBlock,
   PsqlTableBlock,
+  WildcardBlock,
   createResourceSchemaField,
   createRestMethodInput,
   createRestResourceMethodContract,
@@ -21,6 +24,7 @@ import {
   createPsqlEnum,
   createPsqlForeignKey,
   createPsqlIndex,
+  createWildcardChild,
   getCompatibleConnectionKind,
   getCompatibleConnectionKinds,
   hydrateDiagram,
@@ -61,6 +65,18 @@ const asPsqlTableNode = (node: DiagramNode): PsqlTableNode => {
   }
 
   return node as PsqlTableNode;
+};
+
+type WildcardNode = DiagramNode & {
+  data: Extract<DiagramNode["data"], { kind: "wildcard" }>;
+};
+
+const asWildcardNode = (node: DiagramNode): WildcardNode => {
+  if (node.data.kind !== "wildcard") {
+    throw new Error("Expected wildcard test node");
+  }
+
+  return node as WildcardNode;
 };
 
 describe("block model", () => {
@@ -169,6 +185,22 @@ describe("block model", () => {
     });
   });
 
+  it("creates and clones wildcard children", () => {
+    const node = asWildcardNode(
+      WildcardBlock.create({ x: 10, y: 20 }, { seed: true }).serialize(),
+    );
+    const clone = asWildcardNode(
+      WildcardBlock.hydrate(node).clone().serialize(),
+    );
+
+    expect(node.type).toBe("wildcard");
+    expect(node.data).toMatchObject({ kind: "wildcard", name: "External system" });
+    expect(clone.id).not.toBe(node.id);
+    expect(clone.data.children).toHaveLength(node.data.children.length);
+    expect(clone.data.children[0]?.id).not.toBe(node.data.children[0]?.id);
+    expect(clone.data.children[0]?.name).toBe(node.data.children[0]?.name);
+  });
+
   it("creates new PSQL tables with an id UUID primary key", () => {
     const table = asPsqlTableNode(createDiagramNode("psqlTable", { x: 0, y: 0 }));
 
@@ -232,6 +264,7 @@ describe("block model", () => {
       onDelete: "NO ACTION",
       onUpdate: "NO ACTION",
     });
+    expect(createWildcardChild()).toMatchObject({ name: "" });
     expect(createPsqlEnum()).toMatchObject({
       name: "",
       values: [],
@@ -506,6 +539,67 @@ describe("connection model", () => {
         appViewInputHandleId(),
       ),
     ).toBeNull();
+  });
+
+  it("connects a wildcard to any other block kind in either direction", () => {
+    const view = asAppViewNode(createDiagramNode("appView", { x: 0, y: 0 }));
+    const table = asPsqlTableNode(createDiagramNode("psqlTable", { x: 200, y: 0 }));
+    const wildcard = asWildcardNode(createDiagramNode("wildcard", { x: 400, y: 0 }));
+    const otherWildcard = asWildcardNode(
+      createDiagramNode("wildcard", { x: 600, y: 0 }),
+    );
+    const diagram: Diagram = {
+      id: "diagram-1",
+      name: "Test diagram",
+      createdAt: "2026-05-02T00:00:00.000Z",
+      updatedAt: "2026-05-02T00:00:00.000Z",
+      psqlEnums: [],
+      nodes: [view, table, wildcard, otherWildcard],
+      edges: [],
+    };
+    const model = DiagramModel.hydrate(diagram);
+
+    expect(
+      model
+        .createConnection(
+          wildcard.id,
+          table.id,
+          wildcardOutputHandleId(),
+          psqlTableInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({ data: { kind: "read/write", dataPath: "all" } });
+
+    expect(
+      model
+        .createConnection(
+          view.id,
+          wildcard.id,
+          appViewOnLoadSourceHandleId(),
+          wildcardInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({ data: { kind: "read/write", dataPath: "all" } });
+
+    expect(
+      model
+        .createConnection(
+          wildcard.id,
+          otherWildcard.id,
+          wildcardOutputHandleId(),
+          wildcardInputHandleId(),
+        )
+        ?.serialize(),
+    ).toMatchObject({ data: { kind: "read/write", dataPath: "all" } });
+
+    expect(
+      getCompatibleConnectionKinds(
+        WildcardBlock.hydrate(wildcard),
+        PsqlTableBlock.hydrate(table),
+        wildcardOutputHandleId(),
+        psqlTableInputHandleId(),
+      ),
+    ).toEqual(["read", "write", "read/write"]);
   });
 });
 

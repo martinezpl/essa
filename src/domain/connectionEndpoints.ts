@@ -13,6 +13,8 @@ const REST_METHOD_SOURCE_HANDLE_PREFIX = "rest-method-source-";
 const REST_METHOD_TARGET_HANDLE_PREFIX = "rest-method-target-";
 const PSQL_TABLE_INPUT_HANDLE_ID = "psql-table-input";
 const PSQL_TABLE_INPUT_LEGACY_HANDLE_ID = "resource-input";
+const WILDCARD_INPUT_HANDLE_ID = "wildcard-input";
+const WILDCARD_OUTPUT_HANDLE_ID = "wildcard-output";
 
 type ConnectableNode = Pick<DiagramNode, "id" | "data">;
 
@@ -22,7 +24,8 @@ export type ConnectionEndpointOwnerKind =
   | "appViewLifecycle"
   | "appViewEvent"
   | "restMethod"
-  | "psqlTable";
+  | "psqlTable"
+  | "wildcard";
 
 export type ConnectionEndpoint = {
   id: string;
@@ -49,6 +52,10 @@ export const restMethodTargetHandleId = (methodId: string) =>
   `${REST_METHOD_TARGET_HANDLE_PREFIX}${methodId}`;
 
 export const psqlTableInputHandleId = () => PSQL_TABLE_INPUT_HANDLE_ID;
+
+export const wildcardInputHandleId = () => WILDCARD_INPUT_HANDLE_ID;
+
+export const wildcardOutputHandleId = () => WILDCARD_OUTPUT_HANDLE_ID;
 
 const endpointId = (
   nodeId: string,
@@ -163,6 +170,28 @@ export const getPsqlTableInputEndpoint = (
   label: "Store data",
 });
 
+export const getWildcardInputEndpoint = (
+  nodeId: string,
+): ConnectionEndpoint => ({
+  id: endpointId(nodeId, "input", WILDCARD_INPUT_HANDLE_ID),
+  nodeId,
+  handleId: WILDCARD_INPUT_HANDLE_ID,
+  ownerKind: "wildcard",
+  direction: "input",
+  label: "Connect",
+});
+
+export const getWildcardOutputEndpoint = (
+  nodeId: string,
+): ConnectionEndpoint => ({
+  id: endpointId(nodeId, "output", WILDCARD_OUTPUT_HANDLE_ID),
+  nodeId,
+  handleId: WILDCARD_OUTPUT_HANDLE_ID,
+  ownerKind: "wildcard",
+  direction: "output",
+  label: "Connect",
+});
+
 export const getNodeConnectionEndpoints = (
   node: ConnectableNode,
 ): ConnectionEndpoint[] => {
@@ -185,6 +214,13 @@ export const getNodeConnectionEndpoints = (
 
   if (node.data.kind === "psqlTable") {
     return [getPsqlTableInputEndpoint(node.id)];
+  }
+
+  if (node.data.kind === "wildcard") {
+    return [
+      getWildcardInputEndpoint(node.id),
+      getWildcardOutputEndpoint(node.id),
+    ];
   }
 
   return [];
@@ -295,6 +331,13 @@ export const getCompatibleEndpointConnection = (
   ) {
     const methodKind = restMethodKindForEndpoint(sourceEndpoint, nodes);
     return methodKind ? connectionKindForRestMethod(methodKind) : null;
+  }
+
+  if (
+    sourceEndpoint.ownerKind === "wildcard" ||
+    targetEndpoint.ownerKind === "wildcard"
+  ) {
+    return "read/write";
   }
 
   return null;

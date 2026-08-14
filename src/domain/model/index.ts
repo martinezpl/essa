@@ -20,6 +20,8 @@ import type {
   PsqlForeignKey,
   PsqlIndex,
   PsqlTableData,
+  WildcardChild,
+  WildcardData,
 } from "../types";
 import {
   getCompatibleEndpointConnection,
@@ -122,6 +124,12 @@ const cloneAppViewEvents = (events: AppViewEvent[]): AppViewEvent[] =>
   events.map((event) => ({
     ...event,
     id: createId("event"),
+  }));
+
+const cloneWildcardChildren = (children: WildcardChild[]): WildcardChild[] =>
+  children.map((child) => ({
+    ...child,
+    id: createId("wildcard-child"),
   }));
 
 export abstract class Block<D extends BlockData = BlockData> {
@@ -231,6 +239,11 @@ export const createPsqlEnum = (): PsqlEnum => ({
   id: createId("psql-enum"),
   name: "",
   values: [],
+});
+
+export const createWildcardChild = (): WildcardChild => ({
+  id: createId("wildcard-child"),
+  name: "",
 });
 
 export class AppViewBlock extends Block<AppViewData> {
@@ -539,6 +552,83 @@ export class PsqlTableBlock extends Block<PsqlTableData> {
   }
 }
 
+const wildcardPorts: readonly ConnectionPort[] = [
+  {
+    id: "wildcard-input",
+    direction: "input",
+    connectsTo: ["appView", "restResource", "psqlTable", "wildcard"],
+    defaultKind: "read/write",
+  },
+  {
+    id: "wildcard-output",
+    direction: "output",
+    connectsTo: ["appView", "restResource", "psqlTable", "wildcard"],
+    defaultKind: "read/write",
+  },
+];
+
+export class WildcardBlock extends Block<WildcardData> {
+  readonly kind = "wildcard";
+  readonly label = "Wildcard";
+  readonly ports = wildcardPorts;
+
+  static blankData(): WildcardData {
+    return {
+      kind: "wildcard",
+      name: "",
+      description: "",
+      children: [],
+    };
+  }
+
+  static seededData(): WildcardData {
+    return {
+      kind: "wildcard",
+      name: "External system",
+      description: "",
+      children: [createWildcardChild()],
+    };
+  }
+
+  static create(position: Position, options: CreateBlockOptions = {}) {
+    return new WildcardBlock({
+      id: createId("node"),
+      position,
+      data: options.seed
+        ? WildcardBlock.seededData()
+        : WildcardBlock.blankData(),
+    });
+  }
+
+  static hydrate(node: DiagramNode) {
+    if (node.data.kind !== "wildcard") {
+      throw new Error(`Cannot hydrate ${node.data.kind} as wildcard`);
+    }
+
+    return new WildcardBlock({
+      id: node.id,
+      position: node.position,
+      selected: node.selected,
+      data: node.data,
+    });
+  }
+
+  clone() {
+    return new WildcardBlock({
+      id: createId("node"),
+      position: clonePosition(this.position),
+      data: {
+        ...this.data,
+        children: cloneWildcardChildren(this.data.children),
+      },
+    });
+  }
+
+  title() {
+    return this.data.name || "Wildcard";
+  }
+}
+
 export class AnnotationCanvasItem {
   readonly kind = "annotation";
   readonly label = "Annotation";
@@ -618,7 +708,11 @@ export class AnnotationCanvasItem {
   }
 }
 
-export type AnyBlock = AppViewBlock | RestResourceBlock | PsqlTableBlock;
+export type AnyBlock =
+  | AppViewBlock
+  | RestResourceBlock
+  | PsqlTableBlock
+  | WildcardBlock;
 export type AnyCanvasNode = AnyBlock | AnnotationCanvasItem;
 
 export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
@@ -658,6 +752,14 @@ export const blockDefinitions = {
     create: PsqlTableBlock.create,
     hydrate: PsqlTableBlock.hydrate,
     title: (data: PsqlTableData) => data.tableName || "PSQL table",
+  },
+  wildcard: {
+    kind: "wildcard",
+    label: "Wildcard",
+    ports: wildcardPorts,
+    create: WildcardBlock.create,
+    hydrate: WildcardBlock.hydrate,
+    title: (data: WildcardData) => data.name || "Wildcard",
   },
 } satisfies {
   [K in BlockKind]: BlockDefinition<Extract<AnyBlock, { kind: K }>>;
@@ -859,7 +961,15 @@ export const getCompatibleConnectionKinds = (
     targetHandle,
   );
 
-  return kind ? [kind] : [];
+  if (!kind) {
+    return [];
+  }
+
+  if (source.kind === "wildcard" || target.kind === "wildcard") {
+    return ["read", "write", "read/write"];
+  }
+
+  return [kind];
 };
 
 export class DiagramModel {

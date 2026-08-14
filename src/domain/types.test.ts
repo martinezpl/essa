@@ -13,6 +13,7 @@ import {
   psqlColumnSchema,
   psqlTableDataSchema,
   appViewDataSchema,
+  wildcardDataSchema,
 } from "./types";
 
 describe("domain schemas", () => {
@@ -62,6 +63,39 @@ describe("domain schemas", () => {
           name: "onClick::Submit",
         },
       ],
+    });
+  });
+
+  it("parses wildcard data with named children", () => {
+    expect(
+      wildcardDataSchema.parse({
+        kind: "wildcard",
+        name: "External system",
+        description: "Third-party service outside our control.",
+        children: [
+          {
+            id: "child-webhook",
+            name: "onOrderPaid webhook",
+            description: "Fires after checkout completes.",
+          },
+        ],
+      }),
+    ).toEqual({
+      kind: "wildcard",
+      name: "External system",
+      description: "Third-party service outside our control.",
+      children: [
+        {
+          id: "child-webhook",
+          name: "onOrderPaid webhook",
+          description: "Fires after checkout completes.",
+        },
+      ],
+    });
+
+    expect(blockDataSchema.parse({ kind: "wildcard", name: "" })).toMatchObject({
+      kind: "wildcard",
+      children: [],
     });
   });
 

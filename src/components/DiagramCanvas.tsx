@@ -29,6 +29,7 @@ import { blockList } from "../domain/model";
 import { AppViewNode } from "./nodes/AppViewNode";
 import { RestResourceNode } from "./nodes/RestResourceNode";
 import { PsqlTableNode } from "./nodes/PsqlTableNode";
+import { WildcardNode } from "./nodes/WildcardNode";
 import { AnnotationNode } from "./nodes/AnnotationNode";
 import { AnimatedEdge } from "./edges/AnimatedEdge";
 import { getNodeObstacle } from "./canvasObstacle";
@@ -77,6 +78,7 @@ const nodeTypes = {
   appView: AppViewNode,
   restResource: RestResourceNode,
   psqlTable: PsqlTableNode,
+  wildcard: WildcardNode,
   annotation: AnnotationNode,
 } satisfies NodeTypes;
 

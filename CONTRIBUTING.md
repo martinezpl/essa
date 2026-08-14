@@ -13,6 +13,7 @@
 - **App View**: A page or screen block. It has a view name, route, optional description, a default `onLoad` lifecycle output, and user-named event outputs.
 - **Resource**: A REST API resource block. It models endpoint methods, service context, query or payload inputs, outputs, and OpenAPI-compatible schema fields.
 - **PSQL table**: A PostgreSQL table block. It models columns, foreign keys, indices, and SQL-oriented table metadata.
+- **Wildcard**: A block for anything outside the modeled system. It has a name, description, and named children with their own descriptions. Children are descriptive only and are never connectable.
 - **Annotation**: A canvas-only note. It is not a connectable block and is not part of generated API or SQL output.
 
 ## Codebase Shape
@@ -57,6 +58,15 @@ PSQL Tables model PostgreSQL storage.
 - Foreign key row handles are indicator handles. They may render derived FK edges, but they should not be included in endpoint compatibility.
 - Keep SQL-facing behavior in table data and export helpers rather than UI-only state.
 
+### Wildcards
+
+Wildcards model anything outside the modeled system, such as a third-party service or external actor.
+
+- The block has one input endpoint and one output endpoint; both accept a connection to or from any other block kind.
+- Children are name/description rows only. They are not connectable and do not own endpoints.
+- Because a wildcard endpoint has no method or column context to infer intent from, its connections default to `read/write` and the editor exposes all three connection kinds (`read`, `write`, `read/write`) for the user to pick.
+- Wildcards are excluded from OpenAPI export, PostgreSQL DDL export, and both Mermaid diagrams (relationship flowchart and ER diagram), the same way App Views are.
+
 ## Connection Conventions
 
 User-created connections should always be endpoint-to-endpoint.
@@ -76,6 +86,7 @@ Current user-connectable endpoint matrix:
 - App View event output -> REST method input: `read` or `write` based on method kind.
 - App View event output -> App View input: `navigate`.
 - REST method output -> PSQL table input: `read` or `write` based on method kind.
+- Wildcard output -> any block input, and any block output -> Wildcard input: `read`, `write`, or `read/write` (no method context to infer from, so the editor lets the user choose).
 
 ## UI Conventions
 

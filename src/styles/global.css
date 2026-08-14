@@ -35,6 +35,8 @@
   --resource-soft: rgb(6 182 212 / 14%);
   --table: #10b981;
   --table-soft: rgb(16 185 129 / 14%);
+  --wildcard: #f59e0b;
+  --wildcard-soft: rgb(245 158 11 / 14%);
 
   --verb-get: #16a34a;
   --verb-get-soft: rgb(22 163 74 / 14%);
@@ -1000,6 +1002,7 @@ h3 {
 .floating-dock__dot--appView { background: var(--view); }
 .floating-dock__dot--restResource { background: var(--resource); }
 .floating-dock__dot--psqlTable { background: var(--table); }
+.floating-dock__dot--wildcard { background: var(--wildcard); }
 .floating-dock__dot--annotation { background: var(--read-write); }
 
 .canvas-mode-dock {
@@ -1361,6 +1364,7 @@ h3 {
 .block-node--view .block-node__badge { color: var(--view); }
 .block-node--resource .block-node__badge { color: var(--resource); }
 .block-node--table .block-node__badge { color: var(--table); }
+.block-node--wildcard .block-node__badge { color: var(--wildcard); }
 
 .annotation-node {
   position: relative;
@@ -1755,6 +1759,56 @@ h3 {
 }
 
 .app-view-event-row__description {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  min-height: 2rem;
+  color: var(--text-muted);
+  font-size: var(--text-canvas-sm);
+  line-height: var(--lh-snug);
+}
+
+.wildcard-child-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  font-size: var(--text-canvas-lg);
+  line-height: var(--lh-tight);
+  transition: background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.wildcard-child-row:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-ring);
+}
+
+.wildcard-child-row__body {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.wildcard-child-row__input,
+.wildcard-child-row__description {
+  background: transparent;
+  border-color: transparent;
+  padding: 0.15rem 0.2rem;
+  box-shadow: none;
+}
+
+.wildcard-child-row__input {
+  font-weight: 700;
+  font-size: var(--text-canvas-lg);
+}
+
+.wildcard-child-row__description {
   width: 100%;
   min-width: 0;
   resize: vertical;
