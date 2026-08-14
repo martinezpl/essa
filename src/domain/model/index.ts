@@ -726,6 +726,14 @@ export type BlockDefinition<B extends AnyBlock = AnyBlock> = {
 };
 
 export const blockDefinitions = {
+  wildcard: {
+    kind: "wildcard",
+    label: "Wildcard",
+    ports: wildcardPorts,
+    create: WildcardBlock.create,
+    hydrate: WildcardBlock.hydrate,
+    title: (data: WildcardData) => data.name || "Wildcard",
+  },
   appView: {
     kind: "appView",
     label: "App View",
@@ -752,14 +760,6 @@ export const blockDefinitions = {
     create: PsqlTableBlock.create,
     hydrate: PsqlTableBlock.hydrate,
     title: (data: PsqlTableData) => data.tableName || "PSQL table",
-  },
-  wildcard: {
-    kind: "wildcard",
-    label: "Wildcard",
-    ports: wildcardPorts,
-    create: WildcardBlock.create,
-    hydrate: WildcardBlock.hydrate,
-    title: (data: WildcardData) => data.name || "Wildcard",
   },
 } satisfies {
   [K in BlockKind]: BlockDefinition<Extract<AnyBlock, { kind: K }>>;
